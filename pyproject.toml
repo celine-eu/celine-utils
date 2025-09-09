@@ -26,4 +26,4 @@ package-dir = {"" = "."}
 packages = ["celine"]
 
 [project.scripts]
-celine-cli = "celine.cli"
+celine-cli = "celine.cli:__main__"
