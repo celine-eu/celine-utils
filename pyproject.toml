@@ -21,9 +21,9 @@ dev = [
     "debugpy>=1.8.16",
 ]
 
-[tool.setuptools]
-package-dir = {"" = "."}
-packages = ["celine"]
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
 
 [project.scripts]
 celine-cli = "celine.cli:__main__"
