@@ -1,0 +1,29 @@
+[project]
+name = "celine-utils"
+version = "0.1.0"
+description = "CELINE utils"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bcrypt>=4.3.0",
+    "paho-mqtt>=2.1.0",
+    "prefect-dbt>=0.7.6",
+    "psycopg2-binary>=2.9.10",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "python-dotenv>=1.1.1",
+    "python-keycloak>=5.8.1",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.16",
+]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["celine"]
+
+[project.scripts]
+celine-cli = "celine.cli"

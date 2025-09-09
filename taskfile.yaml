@@ -1,0 +1,35 @@
+version: "3"
+
+tasks:
+  setup:
+    desc: Setup environment
+    cmds:
+      - |
+        if ! command -v uv >/dev/null 2>&1; then
+          echo "ERROR: uv is not installed. Install it first."
+          exit 1
+        fi
+      - |
+        if [ ! -d ".venv" ]; then
+          echo "No .venv found, running 'uv sync'..."
+          uv sync
+        fi
+
+  cli:
+    cmds:
+      - cmd: uv run -m celine.cli {{.CLI_ARGS}}
+        silent: true
+
+  cli-dbg:
+    cmds:
+      - task: clean-pycache
+      - cmd: DEBUGGER=1 DEBUGGER_WAIT=0 uv run -m celine.cli {{.CLI_ARGS}}
+
+  clean-pycache:
+    cmds:
+      - find . -type d -name "__pycache__" -exec rm -r {} +
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - uv run python3 -m unittest discover -v .
