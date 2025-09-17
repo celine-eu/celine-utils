@@ -20,11 +20,12 @@ def main():
 
         # Get model and fetch rows
         model = client.get_model(schema, table)
-        with client.get_engine().connect() as conn:
-            rows = conn.execute(model.select().limit(5))
-            print("\nData frame:")
-            df = client.rows_to_dataframe(rows)
-            print(df)
+        df = (
+            client.select(schema, table)
+            # .where(model.c.something == "active")
+            .limit(10).to_dataframe()
+        )
+        print(df)
     else:
         print("No tables found in database.")
 

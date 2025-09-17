@@ -1,58 +1,81 @@
-from sqlalchemy import create_engine, Engine, URL, MetaData, Table, inspect
+from sqlalchemy import create_engine, Engine, URL, MetaData, Table, inspect, select, Row
+from sqlalchemy.sql import Select
 import pandas as pd
 from celine.common.logger import get_logger
 from .config import PostgresConfig
+from typing import Sequence, Any
+
+
+class ExecSelect:
+    """
+    Wrapper around SQLAlchemy Select with bound engine.
+    """
+
+    def __init__(self, engine: Engine, stmt: Select):
+        self._engine = engine
+        self._stmt = stmt
+
+    def where(self, *criteria) -> "ExecSelect":
+        return ExecSelect(self._engine, self._stmt.where(*criteria))
+
+    def order_by(self, *clauses) -> "ExecSelect":
+        return ExecSelect(self._engine, self._stmt.order_by(*clauses))
+
+    def limit(self, n: int) -> "ExecSelect":
+        return ExecSelect(self._engine, self._stmt.limit(n))
+
+    def offset(self, n: int) -> "ExecSelect":
+        return ExecSelect(self._engine, self._stmt.offset(n))
+
+    def exec(self) -> Sequence[Row[Any]]:
+        with self._engine.connect() as conn:
+            result = conn.execute(self._stmt)
+            return result.fetchall()
+
+    def to_dataframe(self) -> pd.DataFrame:
+        with self._engine.connect() as conn:
+            result = conn.execute(self._stmt)
+            rows = result.fetchall()
+
+        if not rows:
+            return pd.DataFrame()
+
+        return pd.DataFrame([dict(r._mapping) for r in rows])
 
 
 class DatasetClient:
     logger = get_logger(__name__)
     engine: Engine | None = None
 
+    # ---------- Engine ----------
     def get_engine(self) -> Engine:
         if self.engine is None:
             config = PostgresConfig()
             self.logger.debug(f"Connecting {config.user}@{config.host}:{config.port}")
-            try:
-                self.engine = create_engine(
-                    URL.create(
-                        drivername="postgresql+psycopg2",
-                        database=config.db,
-                        host=config.host,
-                        port=config.port,
-                        username=config.user,
-                        password=config.password,
-                        query={},
-                    ),
+            self.engine = create_engine(
+                URL.create(
+                    drivername="postgresql+psycopg2",
+                    database=config.db,
+                    host=config.host,
+                    port=config.port,
+                    username=config.user,
+                    password=config.password,
                 )
-            except Exception as e:
-                self.logger.error(f"Failed to setup connection: {e}")
-                raise
-
+            )
         return self.engine
 
+    # ---------- Introspection ----------
     def get_database_schemas(self) -> dict[str, list[str]]:
-        """
-        Return a dict of { schema_name: [table_names] }
-        """
-        engine = self.get_engine()
-        inspector = inspect(engine)
-
+        inspector = inspect(self.get_engine())
         schemas = {}
         for schema in inspector.get_schema_names():
             tables = inspector.get_table_names(schema=schema)
-            if tables:  # only include if schema has tables
+            if tables:
                 schemas[schema] = tables
-
         return schemas
 
     def get_table_structure(self, schema: str, table: str) -> list[dict]:
-        """
-        Return the table fields names and types as a list of dicts:
-        [{ "name": ..., "type": ..., "nullable": ..., "default": ...}, ...]
-        """
-        engine = self.get_engine()
-        inspector = inspect(engine)
-
+        inspector = inspect(self.get_engine())
         columns = inspector.get_columns(table, schema=schema)
         return [
             {
@@ -65,44 +88,11 @@ class DatasetClient:
         ]
 
     def get_model(self, schema: str, table: str) -> Table:
-        """
-        Return a SQLAlchemy Table object (reflected from DB).
-        Can be used with ORM or Core queries.
-        """
-        engine = self.get_engine()
         metadata = MetaData(schema=schema)
-        model = Table(table, metadata, autoload_with=engine)
-        return model
+        return Table(table, metadata, autoload_with=self.get_engine())
 
-    def rows_to_dataframe(self, rows, columns=None) -> pd.DataFrame:
-        """
-        Convert SQLAlchemy rows (Result objects) into a pandas DataFrame.
-
-        Args:
-            rows: iterable of SQLAlchemy Row objects or list of dicts
-            columns: optional list of column names. If None, inferred from rows.
-
-        Returns:
-            pd.DataFrame
-        """
-
-        # Ensure materialized list of rows
-        if not isinstance(rows, list):
-            rows = list(rows)
-
-        if not rows:
-            return pd.DataFrame(columns=columns or [])
-        # SQLAlchemy 1.4+ rows can be converted with _mapping
-        if hasattr(rows[0], "_mapping"):
-            data = [dict(row._mapping) for row in rows]
-        elif isinstance(rows[0], dict):
-            data = list(rows)
-        else:
-            data = [tuple(row) for row in rows]
-
-        inferred_columns = (
-            columns
-            if columns
-            else list(data[0].keys()) if isinstance(data[0], dict) else None
-        )
-        return pd.DataFrame(data, columns=inferred_columns)
+    # ---------- Query Builder ----------
+    def select(self, schema: str, table: str) -> ExecSelect:
+        model = self.get_model(schema, table)
+        stmt = select(model)
+        return ExecSelect(self.get_engine(), stmt)
