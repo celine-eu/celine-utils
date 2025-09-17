@@ -41,7 +41,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     # Only configure if this is the first time for this logger
     if not len(logger.handlers):
         # Determine the log level based on whether it's a celine module
-        if name.startswith("celine."):
+        if str(name).startswith("celine."):
             # Get log level specifically for celine modules
             log_level = os.getenv("CELINE_LOG_LEVEL", "DEBUG").upper()
         else:
