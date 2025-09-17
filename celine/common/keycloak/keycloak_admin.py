@@ -8,7 +8,7 @@ from keycloak import KeycloakAdmin, KeycloakOpenID
 
 class KeycloakAdminClient:
 
-    admin: KeycloakAdmin
+    admin: KeycloakAdmin | None = None
 
     def __init__(self, config: KeycloakAdminConfig):
         self.logger = get_logger(__name__)
