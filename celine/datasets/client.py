@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Engine, URL, MetaData, Table, inspect
+import pandas as pd
 from celine.common.logger import get_logger
 from .config import PostgresConfig
 
@@ -72,3 +73,36 @@ class DatasetClient:
         metadata = MetaData(schema=schema)
         model = Table(table, metadata, autoload_with=engine)
         return model
+
+    def rows_to_dataframe(self, rows, columns=None) -> pd.DataFrame:
+        """
+        Convert SQLAlchemy rows (Result objects) into a pandas DataFrame.
+
+        Args:
+            rows: iterable of SQLAlchemy Row objects or list of dicts
+            columns: optional list of column names. If None, inferred from rows.
+
+        Returns:
+            pd.DataFrame
+        """
+
+        # Ensure materialized list of rows
+        if not isinstance(rows, list):
+            rows = list(rows)
+
+        if not rows:
+            return pd.DataFrame(columns=columns or [])
+        # SQLAlchemy 1.4+ rows can be converted with _mapping
+        if hasattr(rows[0], "_mapping"):
+            data = [dict(row._mapping) for row in rows]
+        elif isinstance(rows[0], dict):
+            data = list(rows)
+        else:
+            data = [tuple(row) for row in rows]
+
+        inferred_columns = (
+            columns
+            if columns
+            else list(data[0].keys()) if isinstance(data[0], dict) else None
+        )
+        return pd.DataFrame(data, columns=inferred_columns)
