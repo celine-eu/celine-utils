@@ -1,4 +1,5 @@
 from . import DatasetClient
+import json
 
 
 def main():
@@ -6,7 +7,7 @@ def main():
 
     # List schemas and tables
     schemas = client.get_database_schemas()
-    print("Schemas and tables:", schemas)
+    print("Schemas and tables:", json.dumps(schemas, indent=4))
 
     # Example: pick the first schema + table
     if schemas:
@@ -16,7 +17,7 @@ def main():
 
         # Get table structure
         structure = client.get_table_structure(schema, table)
-        print("Structure:", structure)
+        print("Structure:", json.dumps(structure, indent=4))
 
         # Get model and fetch rows
         model = client.get_model(schema, table)
