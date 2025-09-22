@@ -22,3 +22,10 @@ class PipelineConfig(AppBaseSettings):
     postgres_db: str = Field(default="datasets", alias="POSTGRES_DB")
     postgres_user: str = Field(default="postgres", alias="POSTGRES_USER")
     postgres_password: str = Field(default="postgres", alias="POSTGRES_PASSWORD")
+
+    meltano_database_uri: str | None = Field(default=None, alias="MELTANO_DATABASE_URI")
+
+    openlineage_url: str = Field(
+        default="http://marquez-api:5000", alias="OPENLINEAGE_URL"
+    )
+    openlineage_api_key: str | None = Field(default=None, alias="OPENLINEAGE_API_KEY")
