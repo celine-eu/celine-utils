@@ -1,16 +1,17 @@
-import subprocess
+import subprocess, os, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, List
-from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+from uuid import uuid4
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine, Result
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+
+from openlineage.client import OpenLineageClient
+from openlineage.client.run import RunEvent, RunState, Job, Run
 
 from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
-
-import os
 
 TASK_RESULT_SUCCESS = "success"
 TASK_RESULT_FAILED = "failed"
@@ -25,166 +26,128 @@ class PipelineRunner:
     def __init__(self, cfg: PipelineConfig):
         self.cfg = cfg
         self.logger = get_logger(cfg.app_name or "Pipeline")
+        self.client = OpenLineageClient()
 
     # ---------- Helpers ----------
     def _project_path(self, suffix: str = "") -> Optional[str]:
-        root = Path(os.environ.get("PIPELINES_ROOT", "./"))  # default root is cwd
-
+        root = Path(os.environ.get("PIPELINES_ROOT", "./"))
         if self.cfg.app_name:
             return str(root / "apps" / self.cfg.app_name / suffix.lstrip("/"))
-
-        # try to detect project name from the file path
-        parts = Path(__file__).resolve().parts
-        try:
-            idx = parts.index("apps")
-            pid = parts[idx + 1]
-            return str(root / "apps" / pid / suffix.lstrip("/"))
-        except (ValueError, IndexError):
-            return None
+        return None
 
     def _task_result(
-        self,
-        status: bool | str = True,
-        command: Optional[str] = None,
-        details: Optional[Dict[str, Any] | str] = None,
+        self, status: bool | str, command: str, details: Any = None
     ) -> Dict[str, Any]:
-        result: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+        result = {
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "command": command,
+            "status": (
+                TASK_RESULT_SUCCESS
+                if status is True
+                else (TASK_RESULT_FAILED if status is False else status)
+            ),
         }
-
-        if isinstance(status, bool):
-            result["status"] = TASK_RESULT_SUCCESS if status else TASK_RESULT_FAILED
-        else:
-            result["status"] = status
-
-        if command is not None:
-            result["command"] = command
         if details is not None:
             result["details"] = details
         return result
 
-    def _build_engine(self) -> Engine:
+    def _emit_event(
+        self, job_name, state, run_id, inputs=None, outputs=None, facets=None
+    ):
         try:
-            url = (
-                f"postgresql+psycopg2://{self.cfg.postgres_user}:"
-                f"{self.cfg.postgres_password}@{self.cfg.postgres_host}:"
-                f"{self.cfg.postgres_port}/{self.cfg.postgres_db}"
+            event = RunEvent(
+                eventType=state,
+                eventTime=datetime.datetime.utcnow().isoformat(),
+                run=Run(runId=run_id, facets=facets or {}),
+                job=Job(namespace=f"celine.{self.cfg.app_name}", name=job_name),
+                inputs=inputs or [],
+                outputs=outputs or [],
+                producer="celine-utils",
             )
-            return create_engine(url, future=True)
+            self.client.emit(event)
+            self.logger.debug(f"Emitted {state} for {job_name} ({run_id})")
         except Exception as e:
-            self.logger.error(f"Failed to build SQLAlchemy engine: {e}")
-            raise
+            self.logger.warning(f"Failed to emit {state} for {job_name}: {e}")
+
+    def _build_engine(self) -> Engine:
+        url = (
+            f"postgresql+psycopg2://{self.cfg.postgres_user}:"
+            f"{self.cfg.postgres_password}@{self.cfg.postgres_host}:"
+            f"{self.cfg.postgres_port}/{self.cfg.postgres_db}"
+        )
+        return create_engine(url, future=True)
 
     # ---------- Meltano ----------
     def run_meltano(self, command: str = "run import") -> Dict[str, Any]:
+        run_id = str(uuid4())
+        job_name = f"meltano:{command}"
+        self._emit_event(job_name, RunState.START, run_id)
+
         project_root = self.cfg.meltano_project_root or self._project_path("/meltano")
         if not project_root:
-            raise ValueError("MELTANO_PROJECT_ROOT not configured or resolvable")
-
-        self.logger.info(f"Running Meltano command: meltano {command}")
+            return self._task_result(False, command, "MELTANO_PROJECT_ROOT not set")
 
         try:
-            result: subprocess.CompletedProcess[str] = subprocess.run(
+            result = subprocess.run(
                 f"meltano {command}",
                 shell=True,
                 capture_output=True,
                 text=True,
                 cwd=project_root,
             )
-        except Exception as e:
-            self.logger.error(f"Failed to run Meltano command: {e}")
-            return self._task_result(status=False, command=command, details=str(e))
-
-        if result.returncode != 0:
-            self.logger.error(f"Meltano command failed:\n{result.stderr}")
-            return self._task_result(
-                status=False, command=command, details=result.stderr
+            lineage = MeltanoLineage(self.cfg)
+            inputs, outputs = lineage._collect_inputs_outputs(
+                command.replace("run ", "")
             )
 
-        self.logger.info(f"Meltano command succeeded: {command}")
-
-        # Hook lineage
-        try:
-            lineage = MeltanoLineage(self.cfg)
-            lineage.emit_run(job_name=command.replace("run ", ""))
+            if result.returncode == 0:
+                self._emit_event(
+                    job_name, RunState.COMPLETE, run_id, inputs=inputs, outputs=outputs
+                )
+                return self._task_result(True, command, result.stdout)
+            else:
+                facets = {"errorMessage": {"message": result.stderr}}
+                self._emit_event(
+                    job_name,
+                    RunState.FAIL,
+                    run_id,
+                    inputs=inputs,
+                    outputs=outputs,
+                    facets=facets,
+                )
+                return self._task_result(False, command, result.stderr)
         except Exception as e:
-            self.logger.warning(f"Failed to emit Meltano lineage: {e}")
-
-        return self._task_result(status=True, command=command)
-
-    # ---------- Data Validation ----------
-    def validate_raw_data(self, tables: Optional[List[str]] = None) -> Dict[str, Any]:
-        tables = tables or []
-        validation_results: Dict[str, Dict[str, Any]] = {}
-
-        try:
-            engine = self._build_engine()
-            with engine.connect() as conn:
-                for table in tables:
-                    query = text(
-                        f"""
-                        SELECT COUNT(*) AS total_records,
-                               MAX(synced_at) AS latest_extraction,
-                               COUNT(DISTINCT DATE(synced_at)) AS extraction_days
-                        FROM raw.{table}
-                        WHERE synced_at >= CURRENT_DATE - INTERVAL '7 days'
-                        """
-                    )
-                    result: Result = conn.execute(query)
-                    row = result.mappings().first()
-
-                    if row is None:
-                        self.logger.warning(
-                            f"Validation query for {table} yielded no results."
-                        )
-                        continue
-
-                    validation_results[table] = {
-                        "total_records": row["total_records"],
-                        "latest_extraction": (
-                            row["latest_extraction"].isoformat()
-                            if row["latest_extraction"]
-                            else None
-                        ),
-                        "extraction_days": row["extraction_days"],
-                    }
-                    self.logger.info(
-                        f"{table}: {row['total_records']} records "
-                        f"(latest: {validation_results[table]['latest_extraction']})"
-                    )
-        except Exception as e:
-            self.logger.error(f"Validation failed due to error: {e}")
-            return self._task_result(status=False, details={"error": str(e)})
-
-        if all(validation_results[t]["total_records"] > 0 for t in validation_results):
-            self.logger.info("Validation passed")
-            return self._task_result(status=True, details=validation_results)
-        else:
-            self.logger.warning("Validation failed: one or more tables empty")
-            return self._task_result(status=False, details=validation_results)
+            self._emit_event(
+                job_name,
+                RunState.ABORT,
+                run_id,
+                facets={"errorMessage": {"message": str(e)}},
+            )
+            return self._task_result(False, command, str(e))
 
     # ---------- dbt ----------
     def run_dbt(self, tag: str, job_name: str | None = None) -> Dict[str, Any]:
+        run_id = str(uuid4())
+        job_name = job_name or f"dbt:{tag}"
+
+        # Prefect/orchestration START event (dbt-ol will emit its own detailed events)
+        self._emit_event(job_name, RunState.START, run_id)
+
         project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
         profiles_dir = self.cfg.dbt_profiles_dir or project_dir
-
         if not project_dir:
-            raise ValueError("DBT_PROJECT_DIR not configured or resolvable")
+            return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
-        # use dbt-ol wrapper binary instead of dbt
         command = (
             ["dbt-ol", "run", "--select", tag] if tag != "test" else ["dbt-ol", "test"]
         )
-        self.logger.info(f"Running dbt via OpenLineage wrapper: {' '.join(command)}")
-
         try:
             env = {
                 **os.environ,
                 "DBT_PROFILES_DIR": str(profiles_dir or ""),
-                "OPENLINEAGE_NAMESPACE": f"celine.dbt.{self.cfg.app_name}",
-                "OPENLINEAGE_DBT_JOB_NAME": job_name or tag,
+                "OPENLINEAGE_NAMESPACE": f"celine.{self.cfg.app_name}",
+                "OPENLINEAGE_DBT_JOB_NAME": job_name,
             }
-
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -192,22 +155,31 @@ class PipelineRunner:
                 cwd=project_dir,
                 env=env,
             )
-        except Exception as e:
-            self.logger.error(f"dbt-ol execution failed: {e}")
+
+            # Only use exit code to decide success/failure
+            success = result.returncode == 0
+            status = TASK_RESULT_SUCCESS if success else TASK_RESULT_FAILED
+
+            # Don’t duplicate COMPLETE/FAIL events, dbt-ol already does it.
+            if success:
+                self.logger.info(f"dbt {tag} succeeded")
+            else:
+                self.logger.error(
+                    f"dbt {tag} failed with exit code {result.returncode}"
+                )
+
             return self._task_result(
-                status=False, command=" ".join(command), details=str(e)
+                status=success,
+                command=" ".join(command),
+                details=(result.stdout + "\n" + result.stderr).strip(),
             )
 
-        # if result.returncode != 0:
-        #     self.logger.error(f"dbt-ol command failed:\n{result.stderr}")
-        #     return self._task_result(
-        #         status=False, command=" ".join(command), details=result.stderr
-        #     )
-
-        self.logger.info(f"dbt {tag} finished via dbt-ol")
-        status = result.returncode == 0
-        return self._task_result(
-            status=status,
-            command=" ".join(command),
-            details=result.stdout if status else result.stderr,
-        )
+        except Exception as e:
+            # Only orchestration-level ABORT
+            self._emit_event(
+                job_name,
+                RunState.ABORT,
+                run_id,
+                facets={"errorMessage": {"message": str(e)}},
+            )
+            return self._task_result(False, " ".join(command), str(e))

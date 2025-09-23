@@ -15,16 +15,6 @@ def meltano_run_import(cfg: dict = {}) -> Dict[str, Any]:
     return meltano_run("run import", cfg)
 
 
-def validate_raw_data_task(
-    cfg: dict = {}, tables: list[str] | None = None
-) -> Dict[str, Any]:
-    """
-    Prefect task wrapper for PipelineRunner.validate_raw_data.
-    """
-    runner = PipelineRunner(PipelineConfig(**cfg))
-    return runner.validate_raw_data(tables)
-
-
 def dbt_run(tag: str, cfg: dict = {}) -> Dict[str, Any]:
     """
     Prefect task wrapper for PipelineRunner.run_dbt.

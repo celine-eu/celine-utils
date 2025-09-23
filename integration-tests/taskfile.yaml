@@ -5,6 +5,14 @@ tasks:
     cmds:
       - docker compose up -d
 
+  stop:
+    cmds:
+      - docker compose down
+
+  reset:
+    cmds:
+      - docker compose down -v
+
   run:
     desc: Run integration tests
     cmds:
