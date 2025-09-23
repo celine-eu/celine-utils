@@ -1,0 +1,11 @@
+version: "3"
+
+tasks:
+  start:
+    cmds:
+      - docker compose up -d
+
+  run:
+    desc: Run integration tests
+    cmds:
+      - uv run pytest -vv -o log_cli=true --log-cli-level=DEBUG

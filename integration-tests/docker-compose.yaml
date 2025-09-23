@@ -50,11 +50,11 @@ services:
     env_file:
       - path: .env.local
         required: true
-      - path: ./apps/test/.env
+      - path: ./apps/demo_app/.env
         required: false
     environment:
       
-      APP_NAME: test
+      APP_NAME: demo_app
 
       POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}

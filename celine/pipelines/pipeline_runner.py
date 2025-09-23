@@ -164,14 +164,14 @@ class PipelineRunner:
             return self._task_result(status=False, details=validation_results)
 
     # ---------- dbt ----------
-    def run_dbt(self, tag: str) -> Dict[str, Any]:
+    def run_dbt(self, tag: str, job_name: str | None = None) -> Dict[str, Any]:
         project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
         profiles_dir = self.cfg.dbt_profiles_dir or project_dir
 
         if not project_dir:
             raise ValueError("DBT_PROJECT_DIR not configured or resolvable")
 
-        # use dbtol wrapper binary instead of dbt
+        # use dbt-ol wrapper binary instead of dbt
         command = (
             ["dbt-ol", "run", "--select", tag] if tag != "test" else ["dbt-ol", "test"]
         )
@@ -182,6 +182,7 @@ class PipelineRunner:
                 **os.environ,
                 "DBT_PROFILES_DIR": str(profiles_dir or ""),
                 "OPENLINEAGE_NAMESPACE": f"celine.dbt.{self.cfg.app_name}",
+                "OPENLINEAGE_DBT_JOB_NAME": job_name or tag,
             }
 
             result = subprocess.run(
@@ -192,18 +193,21 @@ class PipelineRunner:
                 env=env,
             )
         except Exception as e:
-            self.logger.error(f"dbtol execution failed: {e}")
+            self.logger.error(f"dbt-ol execution failed: {e}")
             return self._task_result(
                 status=False, command=" ".join(command), details=str(e)
             )
 
-        if result.returncode != 0:
-            self.logger.error(f"dbtol command failed:\n{result.stderr}")
-            return self._task_result(
-                status=False, command=" ".join(command), details=result.stderr
-            )
+        # if result.returncode != 0:
+        #     self.logger.error(f"dbt-ol command failed:\n{result.stderr}")
+        #     return self._task_result(
+        #         status=False, command=" ".join(command), details=result.stderr
+        #     )
 
-        self.logger.info(f"dbt {tag} finished with success via dbtol")
+        self.logger.info(f"dbt {tag} finished via dbt-ol")
+        status = result.returncode == 0
         return self._task_result(
-            status=True, command=" ".join(command), details=result.stdout
+            status=status,
+            command=" ".join(command),
+            details=result.stdout if status else result.stderr,
         )

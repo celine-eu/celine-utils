@@ -33,3 +33,8 @@ tasks:
     desc: Run unit tests
     cmds:
       - uv run python3 -m unittest discover -v .
+
+  integration-tests:
+    desc: Run integration tests
+    cmds:
+      - cd integration-tests && task run

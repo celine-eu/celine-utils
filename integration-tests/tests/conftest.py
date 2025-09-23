@@ -12,19 +12,22 @@ def set_envs():
     """
     Ensure required environment variables are set for integration tests.
     """
-    test_app_root = Path(ROOT.parent / "apps" / "test")
+    app_name = "demo_app"
+    demo_app_path = Path(ROOT.parent / "apps" / app_name)
+
+    print(f"demo_app_path={demo_app_path}")
 
     env_defaults = {
         "POSTGRES_HOST": "172.17.0.1",
         "PIPELINES_ROOT": "./",  # point to test apps
-        "APP_NAME": "test",
+        "APP_NAME": app_name,
         "POSTGRES_USER": "postgres",
         "POSTGRES_PASSWORD": "postgres",
         "POSTGRES_PORT": "15432",
         "POSTGRES_DB": "datasets",
-        "MELTANO_PROJECT_ROOT": str(test_app_root / "meltano"),
-        "DBT_PROJECT_DIR": str(test_app_root / "dbt"),
-        "DBT_PROFILES_DIR": str(test_app_root / "dbt"),
+        "MELTANO_PROJECT_ROOT": str(demo_app_path / "meltano"),
+        "DBT_PROJECT_DIR": str(demo_app_path / "dbt"),
+        "DBT_PROFILES_DIR": str(demo_app_path / "dbt"),
         "OPENLINEAGE_URL": "http://172.17.0.1:5000",
     }
 
