@@ -7,14 +7,31 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from openlineage.client import OpenLineageClient
-from openlineage.client.run import RunEvent, RunState, Job, Run
+from openlineage.client.event_v2 import RunEvent, Run, Job
+from openlineage.client.generated.base import EventType
+
+from openlineage.client.generated.error_message_run import ErrorMessageRunFacet
+from openlineage.client.generated.nominal_time_run import NominalTimeRunFacet
+from openlineage.client.generated.environment_variables_run import (
+    EnvironmentVariablesRunFacet,
+    EnvironmentVariable,
+)
+from openlineage.client.generated.processing_engine_run import ProcessingEngineRunFacet
 
 from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
 
+import importlib.metadata
+
+OPENLINEAGE_CLIENT_VERSION = importlib.metadata.version("openlineage-python")
+
+
 TASK_RESULT_SUCCESS = "success"
 TASK_RESULT_FAILED = "failed"
+
+PRODUCER = "https://github.com/celine-eu/celine-utils"
+VERSION = "v1.0.0"
 
 
 class PipelineRunner:
@@ -51,23 +68,58 @@ class PipelineRunner:
             result["details"] = details
         return result
 
+    def _default_run_facets(self) -> dict:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        return {
+            "nominalTime": NominalTimeRunFacet(
+                nominalStartTime=now.isoformat(), nominalEndTime=None
+            ),
+            "environmentVariables": EnvironmentVariablesRunFacet(
+                environmentVariables=[
+                    EnvironmentVariable(k, v)
+                    for k, v in os.environ.items()
+                    if k in ["PIPELINES_ROOT", "DBT_PROFILES_DIR"]
+                ]
+            ),
+            "processingEngine": ProcessingEngineRunFacet(
+                name=PRODUCER,
+                version=VERSION,
+                openlineageAdapterVersion=OPENLINEAGE_CLIENT_VERSION,
+            ),
+        }
+
     def _emit_event(
-        self, job_name, state, run_id, inputs=None, outputs=None, facets=None
+        self,
+        job_name: str,
+        state: EventType,
+        run_id: str,
+        inputs=None,
+        outputs=None,
+        run_facets=None,
+        job_facets=None,
     ):
         try:
+            facets = self._default_run_facets()
+            if run_facets:
+                facets.update(run_facets)
+
             event = RunEvent(
+                eventTime=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                producer=PRODUCER,
+                run=Run(runId=run_id, facets=facets),
+                job=Job(
+                    namespace=f"celine.{self.cfg.app_name}",
+                    name=job_name,
+                    facets=job_facets or {},
+                ),
                 eventType=state,
-                eventTime=datetime.datetime.utcnow().isoformat(),
-                run=Run(runId=run_id, facets=facets or {}),
-                job=Job(namespace=f"celine.{self.cfg.app_name}", name=job_name),
                 inputs=inputs or [],
                 outputs=outputs or [],
-                producer="celine-utils",
             )
             self.client.emit(event)
-            self.logger.debug(f"Emitted {state} for {job_name} ({run_id})")
-        except Exception as e:
-            self.logger.warning(f"Failed to emit {state} for {job_name}: {e}")
+            self.logger.debug(f"Emitted {state.value} for {job_name} ({run_id})")
+        except Exception:
+            self.logger.exception(f"Failed to emit {state.value} for {job_name}")
 
     def _build_engine(self) -> Engine:
         url = (
@@ -80,10 +132,11 @@ class PipelineRunner:
     # ---------- Meltano ----------
     def run_meltano(self, command: str = "run import") -> Dict[str, Any]:
         run_id = str(uuid4())
-        job_name = f"meltano:{command}"
-        self._emit_event(job_name, RunState.START, run_id)
+        base_command = command.replace("run ", "")
+        job_name = f"{self.cfg.app_name}:meltano:{base_command}"
+        self._emit_event(job_name, EventType.START, run_id)
 
-        project_root = self.cfg.meltano_project_root or self._project_path("/meltano")
+        project_root = self._project_path("/meltano")
         if not project_root:
             return self._task_result(False, command, "MELTANO_PROJECT_ROOT not set")
 
@@ -95,34 +148,38 @@ class PipelineRunner:
                 text=True,
                 cwd=project_root,
             )
-            lineage = MeltanoLineage(self.cfg)
-            inputs, outputs = lineage._collect_inputs_outputs(
-                command.replace("run ", "")
-            )
+
+            lineage = MeltanoLineage(self.cfg, project_root=project_root)
+            inputs, outputs = lineage.collect_inputs_outputs(base_command)
 
             if result.returncode == 0:
                 self._emit_event(
-                    job_name, RunState.COMPLETE, run_id, inputs=inputs, outputs=outputs
+                    job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
                 )
                 return self._task_result(True, command, result.stdout)
             else:
-                facets = {"errorMessage": {"message": result.stderr}}
+                facets = self._get_error_facet(result.stderr)
                 self._emit_event(
                     job_name,
-                    RunState.FAIL,
+                    EventType.FAIL,
                     run_id,
                     inputs=inputs,
                     outputs=outputs,
-                    facets=facets,
+                    run_facets=facets,
                 )
                 return self._task_result(False, command, result.stderr)
         except Exception as e:
             self._emit_event(
                 job_name,
-                RunState.ABORT,
+                EventType.ABORT,
                 run_id,
-                facets={"errorMessage": {"message": str(e)}},
+                run_facets={
+                    "errorMessage": ErrorMessageRunFacet(
+                        message=str(e), programmingLanguage="python", stackTrace=f"{e}"
+                    )
+                },
             )
+            self.logger.exception("run_meltano failed")
             return self._task_result(False, command, str(e))
 
     # ---------- dbt ----------
@@ -130,8 +187,8 @@ class PipelineRunner:
         run_id = str(uuid4())
         job_name = job_name or f"dbt:{tag}"
 
-        # Prefect/orchestration START event (dbt-ol will emit its own detailed events)
-        self._emit_event(job_name, RunState.START, run_id)
+        self.logger.debug(f"start dbt job {job_name}")
+        self._emit_event(job_name, EventType.START, run_id)
 
         project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
         profiles_dir = self.cfg.dbt_profiles_dir or project_dir
@@ -139,7 +196,9 @@ class PipelineRunner:
             return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
         command = (
-            ["dbt-ol", "run", "--select", tag] if tag != "test" else ["dbt-ol", "test"]
+            ["dbt-ol", "run", "--select", f"tag:{tag}"]
+            if tag != "test"
+            else ["dbt-ol", "test"]
         )
         try:
             env = {
@@ -156,11 +215,13 @@ class PipelineRunner:
                 env=env,
             )
 
-            # Only use exit code to decide success/failure
             success = result.returncode == 0
             status = TASK_RESULT_SUCCESS if success else TASK_RESULT_FAILED
 
-            # Don’t duplicate COMPLETE/FAIL events, dbt-ol already does it.
+            self.logger.debug(f"dbt result {result.returncode}")
+            self.logger.debug(f"stdout {result.stdout}\n")
+            self.logger.debug(f"stderr {result.stderr}\n")
+
             if success:
                 self.logger.info(f"dbt {tag} succeeded")
             else:
@@ -175,11 +236,17 @@ class PipelineRunner:
             )
 
         except Exception as e:
-            # Only orchestration-level ABORT
             self._emit_event(
                 job_name,
-                RunState.ABORT,
+                EventType.ABORT,
                 run_id,
-                facets={"errorMessage": {"message": str(e)}},
+                run_facets=self._get_error_facet(e),
             )
             return self._task_result(False, " ".join(command), str(e))
+
+    def _get_error_facet(self, e: Exception | str):
+        return {
+            "errorMessage": ErrorMessageRunFacet(
+                message=str(e), programmingLanguage="python", stackTrace=f"{e}"
+            )
+        }
