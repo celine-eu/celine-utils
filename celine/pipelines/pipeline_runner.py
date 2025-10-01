@@ -7,8 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from openlineage.client import OpenLineageClient
-from openlineage.client.event_v2 import RunEvent, Run, Job
-from openlineage.client.generated.base import EventType
+from openlineage.client.event_v2 import RunEvent, Run, Job, InputDataset, OutputDataset
+from openlineage.client.generated.base import EventType, RunFacet, JobFacet
 
 from openlineage.client.generated.error_message_run import ErrorMessageRunFacet
 from openlineage.client.generated.nominal_time_run import NominalTimeRunFacet
@@ -21,17 +21,16 @@ from openlineage.client.generated.processing_engine_run import ProcessingEngineR
 from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
+from celine.pipelines.lineage.dbt import DbtLineage
 
-import importlib.metadata
-
-OPENLINEAGE_CLIENT_VERSION = importlib.metadata.version("openlineage-python")
-
-
-TASK_RESULT_SUCCESS = "success"
-TASK_RESULT_FAILED = "failed"
-
-PRODUCER = "https://github.com/celine-eu/celine-utils"
-VERSION = "v1.0.0"
+from .const import (
+    get_namespace,
+    OPENLINEAGE_CLIENT_VERSION,
+    TASK_RESULT_SUCCESS,
+    TASK_RESULT_FAILED,
+    PRODUCER,
+    VERSION,
+)
 
 
 class PipelineRunner:
@@ -39,6 +38,8 @@ class PipelineRunner:
     Orchestrates Meltano + dbt tasks for a given app pipeline,
     with logging, validation, and lineage integration.
     """
+
+    _engine: Engine | None = None
 
     def __init__(self, cfg: PipelineConfig):
         self.cfg = cfg
@@ -93,11 +94,16 @@ class PipelineRunner:
         job_name: str,
         state: EventType,
         run_id: str,
-        inputs=None,
-        outputs=None,
-        run_facets=None,
-        job_facets=None,
+        inputs: list[InputDataset] | None = None,
+        outputs: list[OutputDataset] | None = None,
+        run_facets: dict[str, RunFacet] | None = None,
+        job_facets: dict[str, JobFacet] | None = None,
+        namespace: str | None = None,
     ):
+
+        if not namespace:
+            namespace = get_namespace(self.cfg.app_name)
+
         try:
             facets = self._default_run_facets()
             if run_facets:
@@ -108,7 +114,7 @@ class PipelineRunner:
                 producer=PRODUCER,
                 run=Run(runId=run_id, facets=facets),
                 job=Job(
-                    namespace=f"celine.{self.cfg.app_name}",
+                    namespace=namespace,
                     name=job_name,
                     facets=job_facets or {},
                 ),
@@ -122,12 +128,16 @@ class PipelineRunner:
             self.logger.exception(f"Failed to emit {state.value} for {job_name}")
 
     def _build_engine(self) -> Engine:
+        if self._engine:
+            return self._engine
+
         url = (
             f"postgresql+psycopg2://{self.cfg.postgres_user}:"
             f"{self.cfg.postgres_password}@{self.cfg.postgres_host}:"
             f"{self.cfg.postgres_port}/{self.cfg.postgres_db}"
         )
-        return create_engine(url, future=True)
+        self._engine = create_engine(url, future=True)
+        return self._engine
 
     # ---------- Meltano ----------
     def run_meltano(self, command: str = "run import") -> Dict[str, Any]:
@@ -182,29 +192,31 @@ class PipelineRunner:
             self.logger.exception("run_meltano failed")
             return self._task_result(False, command, str(e))
 
-    # ---------- dbt ----------
     def run_dbt(self, tag: str, job_name: str | None = None) -> Dict[str, Any]:
+
+        if not self.cfg.app_name:
+            raise Exception(f"Missing app_name {self.cfg.app_name}")
+
         run_id = str(uuid4())
-        job_name = job_name or f"dbt:{tag}"
+        job_name = job_name or f"{self.cfg.app_name}:dbt:{tag}"
 
         self.logger.debug(f"start dbt job {job_name}")
         self._emit_event(job_name, EventType.START, run_id)
 
         project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
         profiles_dir = self.cfg.dbt_profiles_dir or project_dir
+
         if not project_dir:
             return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
+        dbt_cmd = "dbt"
         command = (
-            ["dbt-ol", "run", "--select", f"tag:{tag}"]
-            if tag != "test"
-            else ["dbt-ol", "test"]
+            [dbt_cmd, "run", "--select", tag] if tag != "test" else [dbt_cmd, "test"]
         )
         try:
             env = {
                 **os.environ,
                 "DBT_PROFILES_DIR": str(profiles_dir or ""),
-                "OPENLINEAGE_NAMESPACE": f"celine.{self.cfg.app_name}",
                 "OPENLINEAGE_DBT_JOB_NAME": job_name,
             }
             result = subprocess.run(
@@ -215,18 +227,23 @@ class PipelineRunner:
                 env=env,
             )
 
+            lineage = DbtLineage(project_dir, self.cfg.app_name, self._build_engine())
+            inputs, outputs = lineage.collect_inputs_outputs(tag)
+
             success = result.returncode == 0
-            status = TASK_RESULT_SUCCESS if success else TASK_RESULT_FAILED
-
-            self.logger.debug(f"dbt result {result.returncode}")
-            self.logger.debug(f"stdout {result.stdout}\n")
-            self.logger.debug(f"stderr {result.stderr}\n")
-
             if success:
-                self.logger.info(f"dbt {tag} succeeded")
+                self._emit_event(
+                    job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
+                )
             else:
-                self.logger.error(
-                    f"dbt {tag} failed with exit code {result.returncode}"
+                facets = self._get_error_facet(result.stderr)
+                self._emit_event(
+                    job_name,
+                    EventType.FAIL,
+                    run_id,
+                    inputs=inputs,
+                    outputs=outputs,
+                    run_facets=facets,
                 )
 
             return self._task_result(
@@ -244,7 +261,7 @@ class PipelineRunner:
             )
             return self._task_result(False, " ".join(command), str(e))
 
-    def _get_error_facet(self, e: Exception | str):
+    def _get_error_facet(self, e: Exception | str) -> dict[str, RunFacet]:
         return {
             "errorMessage": ErrorMessageRunFacet(
                 message=str(e), programmingLanguage="python", stackTrace=f"{e}"

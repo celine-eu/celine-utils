@@ -2,8 +2,6 @@
 
 {{ config(
     materialized='incremental',
-    schema='silver',
-    alias='normalized_data',
     unique_key='id',
     incremental_strategy='merge',
     description="Normalized business data from staging: clean types, deduplicated, enriched"

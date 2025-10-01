@@ -2,8 +2,6 @@
 
 {{ config(
     materialized='view',
-    schema='staging',
-    alias='raw_clean',
     description="Staging view of datasets.raw exposing only the business columns"
 ) }}
 

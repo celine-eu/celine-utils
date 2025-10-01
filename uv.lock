@@ -356,7 +356,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
-    { name = "openlineage-dbt" },
     { name = "openlineage-python" },
     { name = "paho-mqtt" },
     { name = "pandas" },
@@ -383,7 +382,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.3.0" },
-    { name = "openlineage-dbt", specifier = ">=1.37.0" },
     { name = "openlineage-python", specifier = ">=1.37.0" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "pandas", specifier = ">=2.3.2" },
@@ -1681,35 +1679,6 @@ wheels = [
 ]
 
 [[package]]
-name = "openlineage-dbt"
-version = "1.37.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "dbt-core" },
-    { name = "openlineage-integration-common" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/43/7ff04bef5f727298ed63859a76abf9c1f5f1b893693a61e19a4111c25170/openlineage_dbt-1.37.0.tar.gz", hash = "sha256:d339c1ee792d70e73651d00af5849009f5d3c67aa1d86cbdf1269e90c18d125c", size = 7525, upload-time = "2025-08-11T17:06:44.633Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/c5/992a55f90ca3a1d07faff5767f802703dbb08adaa3fcfa117b79e926ecb4/openlineage_dbt-1.37.0-py3-none-any.whl", hash = "sha256:c05b25b2d5e82a8b1190b39eec3eb6ceef53e77e22850a22d44cf501a813f96e", size = 5994, upload-time = "2025-08-11T17:06:35.219Z" },
-]
-
-[[package]]
-name = "openlineage-integration-common"
-version = "1.37.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "openlineage-python" },
-    { name = "openlineage-sql" },
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/94/cbe0685fde654f69896f137912591a6ed46df1eb6e1d307ed9e9fe6ec93e/openlineage_integration_common-1.37.0.tar.gz", hash = "sha256:98079954da288119dedf50c12d420d1c443dbe1d2763e920b85b7d3e2a3796fa", size = 42110, upload-time = "2025-08-11T17:06:45.143Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/cb/9b33b68d4e9c4be922c7ee6a302375b39498c713393f916612f0fe820ad2/openlineage_integration_common-1.37.0-py3-none-any.whl", hash = "sha256:f9f9041a3ca88622a6a62b5987808f94ca5f4afbe7fbdc5d00862b972b0df74b", size = 47761, upload-time = "2025-08-11T17:06:36.457Z" },
-]
-
-[[package]]
 name = "openlineage-python"
 version = "1.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1725,17 +1694,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/74/61/24482d218d878c2363f574cb88314b3ce4fdca3f30085b9e8fb99ca5aad6/openlineage_python-1.37.0.tar.gz", hash = "sha256:1583e63a24491b29d34aabce27ebc0590274097b1c7a21ddd6ca1ea174a2cde4", size = 108305, upload-time = "2025-08-11T17:06:45.999Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/60/2138fa572374a2208f557ca581258527148e158955a5afeac84b17fdcd21/openlineage_python-1.37.0-py3-none-any.whl", hash = "sha256:ec6837a741c5d534332d431af428dc67a8d34ea2f09ef33d74b56200a28ed28d", size = 86465, upload-time = "2025-08-11T17:06:37.753Z" },
-]
-
-[[package]]
-name = "openlineage-sql"
-version = "1.37.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f0/d2/f082692ae170e44c0f5ac8f94da7c7fa50551c582c1bdc5f9b625c85c8c7/openlineage_sql-1.37.0.tar.gz", hash = "sha256:819f31bda03aada9522de1fc074de24cb8ed75236423529c71c008b363370d42", size = 39174, upload-time = "2025-08-11T17:06:46.681Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/20/5e957f190ad19d51b70c0c6f14243c1aa76c56540e7e1fb5bb46aee8acdf/openlineage_sql-1.37.0-cp39-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:8aae3c08ccc5e8b8cdad79d5ee09d722729b54e495eac23bb1c4b1fb3eb5ae5a", size = 2812731, upload-time = "2025-08-11T17:06:39.157Z" },
-    { url = "https://files.pythonhosted.org/packages/a3/a8/8aac6e04572901d974330ab104f085d0515793a1694a5d795ca521a4144c/openlineage_sql-1.37.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:75ba767344720e613a96078dcc208c42dd150301bec10c1f497e30c26b2ae1a6", size = 1395636, upload-time = "2025-08-11T17:06:40.686Z" },
-    { url = "https://files.pythonhosted.org/packages/7b/e9/40cf79d7e7d31a611fa0682c0e98ee2c446a8223db4ccf48c8a6065c86e4/openlineage_sql-1.37.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8be177da10a95ef0d1041dcaa43497ca60f00cd9cfe098714133a3f631fe05d2", size = 1538458, upload-time = "2025-08-11T17:06:41.93Z" },
 ]
 
 [[package]]
@@ -3016,18 +2974,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253, upload-time = "2020-11-01T01:40:22.204Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588, upload-time = "2020-11-01T01:40:20.672Z" },
-]
-
-[[package]]
-name = "tqdm"
-version = "4.67.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
 
 [[package]]

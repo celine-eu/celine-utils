@@ -8,6 +8,8 @@ from openlineage.client.generated.schema_dataset import (
 )
 from openlineage.client.event_v2 import InputDataset, OutputDataset
 
+from celine.pipelines.const import get_namespace
+
 
 class MeltanoLineage:
     """Helper to discover Meltano lineage (datasets in/out)."""
@@ -56,7 +58,7 @@ class MeltanoLineage:
             self.logger.warning(f"No run directory {run_root}")
             return inputs, outputs
 
-        namespace_raw = f"celine.raw.{self.cfg.app_name}"
+        namespace = get_namespace(self.cfg.app_name)
 
         for plugin in os.listdir(run_root):
             if not plugin.startswith("tap-"):
@@ -91,20 +93,41 @@ class MeltanoLineage:
                 # Input: Singer stream
                 inputs.append(
                     InputDataset(
-                        namespace=f"singer://{plugin}",
-                        name=s["tap_stream_id"],
+                        namespace=namespace,
+                        name=f"singer.{plugin}.{s['tap_stream_id']}",
                         facets={"schema": schema_facet},
                     )
                 )
 
-                # Output: raw landed table
-                outputs.append(
-                    OutputDataset(
-                        namespace=namespace_raw,
-                        name=s["stream"],
-                        facets={"schema": schema_facet},
-                    )
-                )
+                # Try to resolve outputs for all loaders
+                for loader in self.config.get("plugins", {}).get("loaders", []):
+                    loader_name = loader.get("name")
+                    cfg = loader.get("config", {}) or {}
+                    stream = s["stream"]
+
+                    if loader_name == "target-postgres":
+                        db = cfg.get("database", "postgres")
+                        schema = cfg.get("default_target_schema")
+
+                        if not schema:
+                            # Postgres fallback: schema derived from stream name
+                            schema = stream
+                            self.logger.warning(
+                                f"Loader {loader_name} has no default_target_schema; "
+                                f"using derived schema '{schema}' for stream {stream}"
+                            )
+
+                        outputs.append(
+                            OutputDataset(
+                                namespace=namespace,
+                                name=f"{db}.{schema}.{stream}",
+                                facets={"schema": schema_facet},
+                            )
+                        )
+                    else:
+                        self.logger.warning(
+                            f"Unsupported loader {loader_name} - no output lineage emitted for stream {stream}"
+                        )
 
         self.logger.debug(
             f"Collected {len(inputs)} inputs and {len(outputs)} outputs for job={job_name}"

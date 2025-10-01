@@ -2,8 +2,6 @@
 
 {{ config(
     materialized='table',
-    schema='gold',
-    alias='color_metrics',
     description="Business-ready metrics aggregated by color and date"
 ) }}
 
