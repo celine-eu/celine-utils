@@ -8,7 +8,7 @@ from openlineage.client.generated.schema_dataset import (
 )
 from openlineage.client.event_v2 import InputDataset, OutputDataset
 
-from celine.pipelines.const import get_namespace
+from celine.pipelines.utils import get_namespace, expand_envs
 
 
 class MeltanoLineage:
@@ -50,6 +50,21 @@ class MeltanoLineage:
     ) -> tuple[list[InputDataset], list[OutputDataset]]:
         """Collect dataset info from Meltano taps/loaders config."""
 
+        active_taps = []
+        active_targets = []
+
+        for job in self.config.get("jobs", []):
+            if job.get("name") != job_name:
+                continue
+
+            for task in job.get("tasks", []):
+                parts = str(task).split(" ")
+                for part in parts:
+                    if part.startswith("tap-"):
+                        active_taps.append(part)
+                    if part.startswith("target-"):
+                        active_targets.append(part)
+
         inputs: list[InputDataset] = []
         outputs: list[OutputDataset] = []
 
@@ -76,6 +91,7 @@ class MeltanoLineage:
                 continue
 
             for s in props.get("streams", []):
+
                 schema_props: dict[str, Any] = (
                     s.get("schema", {}).get("properties", {}) or {}
                 )
@@ -90,24 +106,43 @@ class MeltanoLineage:
                 ]
                 schema_facet = SchemaDatasetFacet(fields=fields)
 
-                # Input: Singer stream
-                inputs.append(
-                    InputDataset(
-                        namespace=namespace,
-                        name=f"singer.{plugin}.{s['tap_stream_id']}",
-                        facets={"schema": schema_facet},
+                tap_name = plugin
+                if tap_name in active_taps:
+                    # Input: Singer stream
+                    input_name = f"singer.{plugin}.{s['tap_stream_id']}"
+                    self.logger.debug(f"Append input {input_name}")
+                    inputs.append(
+                        InputDataset(
+                            namespace=namespace,
+                            name=input_name,
+                            facets={"schema": schema_facet},
+                        )
                     )
-                )
+                else:
+                    self.logger.debug(
+                        f"Skipping {tap_name} not part of active taps {",".join(active_taps)}"
+                    )
 
                 # Try to resolve outputs for all loaders
                 for loader in self.config.get("plugins", {}).get("loaders", []):
                     loader_name = loader.get("name")
+
+                    if loader_name not in active_targets:
+                        continue
+
+                    target_run_dir = os.path.join(run_root, f"{loader_name}")
+                    if not os.path.exists(target_run_dir):
+                        self.logger.debug(
+                            f"Skip target {loader_name}: run path does not exists at {target_run_dir}"
+                        )
+                        continue
+
                     cfg = loader.get("config", {}) or {}
                     stream = s["stream"]
 
                     if loader_name == "target-postgres":
-                        db = cfg.get("database", "postgres")
-                        schema = cfg.get("default_target_schema")
+                        db = expand_envs(cfg.get("database", "postgres"))
+                        schema = expand_envs(cfg.get("default_target_schema"))
 
                         if not schema:
                             # Postgres fallback: schema derived from stream name
@@ -117,10 +152,12 @@ class MeltanoLineage:
                                 f"using derived schema '{schema}' for stream {stream}"
                             )
 
+                        output_name = f"{db}.{schema}.{stream}"
+                        self.logger.debug(f"Append output {output_name}")
                         outputs.append(
                             OutputDataset(
                                 namespace=namespace,
-                                name=f"{db}.{schema}.{stream}",
+                                name=output_name,
                                 facets={"schema": schema_facet},
                             )
                         )

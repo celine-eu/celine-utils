@@ -4,7 +4,7 @@ from openlineage.client.generated.schema_dataset import (
     SchemaDatasetFacet,
     SchemaDatasetFacetFields,
 )
-from celine.pipelines.const import get_namespace
+from celine.pipelines.utils import get_namespace
 from celine.common.logger import get_logger
 
 from openlineage.client.generated.data_quality_assertions_dataset import (

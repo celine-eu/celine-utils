@@ -23,8 +23,8 @@ from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
 from celine.pipelines.lineage.dbt import DbtLineage
 
-from .const import (
-    get_namespace,
+from celine.pipelines.utils import get_namespace
+from celine.pipelines.const import (
     OPENLINEAGE_CLIENT_VERSION,
     TASK_RESULT_SUCCESS,
     TASK_RESULT_FAILED,

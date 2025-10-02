@@ -38,4 +38,4 @@ celine-cli = "celine.cli:__main__"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["celine*"]
+include = ["celine"]
