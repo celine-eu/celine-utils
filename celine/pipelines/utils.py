@@ -1,6 +1,8 @@
 import os
 from uuid import uuid4
 
+BASE_NAMESPACE = os.getenv("BASE_NAMESPACE", "")
+
 
 def expand_envs(value: str | None):
     if value is None:
@@ -12,4 +14,4 @@ def expand_envs(value: str | None):
 
 def get_namespace(app_name: str | None):
     app_name = app_name if app_name else str(uuid4())
-    return f"celine.{app_name}"
+    return (f"{BASE_NAMESPACE}." if BASE_NAMESPACE else "") + app_name

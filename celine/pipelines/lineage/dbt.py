@@ -39,7 +39,9 @@ class DbtLineage:
         self, schema: str, name: str
     ) -> list[SchemaDatasetFacetFields]:
         """Query warehouse for column metadata if YAML docs are missing."""
+        # self.logger.debug(f"Fetching table structure for {schema}.{name}")
         if not self.engine:
+            self.logger.warning(f"Engine not available")
             return []
         try:
             with self.engine.connect() as conn:
@@ -53,6 +55,7 @@ class DbtLineage:
                 """
                 )
                 rows = conn.execute(sql, {"schema": schema, "name": name}).fetchall()
+                # self.logger.debug(f"Columns for {schema}.{name}: {rows}")
             return [
                 SchemaDatasetFacetFields(name=row[0], type=row[1], description=None)
                 for row in rows
@@ -63,16 +66,21 @@ class DbtLineage:
 
     def _build_schema_fields(self, node: dict) -> list[SchemaDatasetFacetFields]:
         """Prefer documented columns, fall back to warehouse introspection."""
-        fields = [
-            SchemaDatasetFacetFields(
-                name=col, type="unknown", description=meta.get("description")
-            )
-            for col, meta in (node.get("columns") or {}).items()
-        ]
+        # fields = [
+        #     SchemaDatasetFacetFields(
+        #         name=col, type="unknown", description=meta.get("description")
+        #     )
+        #     for col, meta in (node.get("columns") or {}).items()
+        # ]
+
+        # schema_name = node.get("schema")
+        # table_name = node.get("alias") or node.get("name")
+        # if not fields and (schema_name and table_name):
 
         schema_name = node.get("schema")
         table_name = node.get("alias") or node.get("name")
-        if not fields and (schema_name and table_name):
+        fields: list[SchemaDatasetFacetFields] = []
+        if schema_name and table_name:
             fields = self._fetch_columns_from_db(schema_name, table_name)
         return fields
 

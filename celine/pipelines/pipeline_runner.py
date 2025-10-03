@@ -1,3 +1,5 @@
+import traceback
+import re
 import subprocess, os, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -213,6 +215,7 @@ class PipelineRunner:
         command = (
             [dbt_cmd, "run", "--select", tag] if tag != "test" else [dbt_cmd, "test"]
         )
+        command_str = " ".join(command)
         try:
             env = {
                 **os.environ,
@@ -231,12 +234,20 @@ class PipelineRunner:
             inputs, outputs = lineage.collect_inputs_outputs(tag)
 
             success = result.returncode == 0
+            cli_output = self.clean_output(
+                (result.stdout + "\n" + result.stderr).strip()
+            )
+
+            self.logger.debug(f"{command_str} exited {result.returncode}")
             if success:
                 self._emit_event(
                     job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
                 )
             else:
-                facets = self._get_error_facet(result.stderr)
+                facets = self._get_error_facet(
+                    f"Command {command_str} exit code was {result.returncode}",
+                    cli_output,
+                )
                 self._emit_event(
                     job_name,
                     EventType.FAIL,
@@ -248,22 +259,35 @@ class PipelineRunner:
 
             return self._task_result(
                 status=success,
-                command=" ".join(command),
-                details=(result.stdout + "\n" + result.stderr).strip(),
+                command=command_str,
+                details=cli_output,
             )
 
         except Exception as e:
+            self.logger.exception(f"dbt run exception")
             self._emit_event(
                 job_name,
                 EventType.ABORT,
                 run_id,
-                run_facets=self._get_error_facet(e),
+                run_facets=self._get_error_facet(e, traceback.format_exc()),
             )
-            return self._task_result(False, " ".join(command), str(e))
+            return self._task_result(False, command_str, str(e))
 
-    def _get_error_facet(self, e: Exception | str) -> dict[str, RunFacet]:
+    def _get_error_facet(
+        self, e: Exception | str, stack_trace: str | None = ""
+    ) -> dict[str, RunFacet]:
         return {
             "errorMessage": ErrorMessageRunFacet(
-                message=str(e), programmingLanguage="python", stackTrace=f"{e}"
+                message=str(e),
+                programmingLanguage="python",
+                stackTrace=f"{stack_trace if stack_trace else ""}",
             )
         }
+
+    def clean_output(self, output: str) -> str:
+        """Remove ANSI escape codes from dbt's stdout output and ensure proper newlines."""
+        ansi_escape = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+        cleaned_output = re.sub(ansi_escape, "", output)
+        return cleaned_output.replace(
+            "\r", ""
+        )  # Optional, removes any carriage return chars
