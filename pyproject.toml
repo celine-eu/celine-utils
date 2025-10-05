@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "bcrypt>=4.3.0",
+    "duckdb>=1.4.0",
     "openlineage-python>=1.37.0",
     "paho-mqtt>=2.1.0",
     "pandas>=2.3.2",
