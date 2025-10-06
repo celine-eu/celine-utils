@@ -1,0 +1,12 @@
+datasets:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: 172.17.0.1
+      user: postgres
+      password: postgres
+      port: 15432
+      dbname: datasets
+      schema: ds
+      threads: 4

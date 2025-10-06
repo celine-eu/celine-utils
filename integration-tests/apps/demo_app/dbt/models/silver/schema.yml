@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: silver_normalized
+    description: "Normalized business data from staging: clean types, deduplicated, enriched"
+    columns:
+      - name: id
+        description: "Primary key of the record"
+        tests:
+          - not_null
+          - unique
+      - name: date
+        description: "Event date (UTC, normalized to date)"
+      - name: color
+        description: "Normalized color (lowercase, trimmed)"
+      - name: value
+        description: "Numeric value rounded to 6 decimals"

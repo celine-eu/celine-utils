@@ -1,0 +1,49 @@
+version: 1
+default_environment: dev
+project_id: 01996cfd-5c1d-7bbb-ba35-f1b362df5cb0
+environments:
+  - name: dev
+  - name: staging
+  - name: prod
+plugins:
+  extractors:
+    - name: tap-test
+      inherit_from: tap-spreadsheets
+      config:
+        files:
+          - path: file://../../../data/*.csv
+            table_name: test
+            primary_keys: [id]
+            format: csv
+
+    - name: tap-spreadsheets
+      namespace: tap_spreadsheets
+      variant: celine-eu
+      pip_url: git+https://github.com/celine-eu/tap-spreadsheets.git@v1.0.0
+      capabilities:
+        - discover
+        - catalog
+        - state
+
+  loaders:
+    - name: target-postgres
+      variant: meltanolabs
+      pip_url: meltanolabs-target-postgres
+      config:
+        host: 172.17.0.1
+        port: 15432
+        user: postgres
+        password: postgres
+        database: datasets
+        default_target_schema: raw
+        # batch_size_rows: 10000
+        #flush_all_streams: true
+
+    - name: target-jsonl
+      variant: andyh1203
+      pip_url: target-jsonl
+
+jobs:
+  - name: import
+    tasks:
+      - tap-test target-postgres

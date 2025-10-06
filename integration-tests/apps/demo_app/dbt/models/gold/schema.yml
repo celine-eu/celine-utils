@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: gold_color_metrics
+    description: "Business-ready metrics aggregated by color and date"
+    columns:
+      - name: date
+        description: "The date of the metrics"
+        tests:
+          - not_null
+
+      - name: records
+        description: "Count of distinct records for this color and date"
+        tests:
+          - not_null
+
+      - name: avg_value
+        description: "Average value for this color and date"
+        tests:
+          - not_null
+
+      - name: min_value
+        description: "Minimum value for this color and date"
+        tests:
+          - not_null
+
+      - name: max_value
+        description: "Maximum value for this color and date"
+        tests:
+          - not_null
+
+    tests:
+      # Basic data quality tests
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - date
+            - color
+
+      - dbt_utils.expression_is_true:
+          expression: "date <= current_date"
+          name: date_not_in_future
+      - dbt_utils.expression_is_true:
+          expression: "date >= '2020-01-01'"
+          name: date_reasonable_minimum
