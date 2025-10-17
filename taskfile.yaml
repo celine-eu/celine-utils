@@ -41,4 +41,4 @@ tasks:
 
   release:
     cmds:
-      - uv run semantic-release -v version
+      - uv run semantic-release -v version --no-vcs-release
