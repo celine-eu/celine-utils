@@ -55,8 +55,12 @@ changelog_file = "CHANGELOG.md"
 tag_format = "v{version}"
 commit_parser = "conventional"
 
+upload_to_release = false
+upload_to_pypi = false
+
 [tool.semantic_release.commit_parser_options]
 minor_tags = ["feat"]
 patch_tags = ["fix", "perf", "up"]
 parse_squash_commits = true
 ignore_merge_commits = true
+
