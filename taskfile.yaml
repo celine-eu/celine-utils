@@ -38,3 +38,7 @@ tasks:
     desc: Run integration tests
     cmds:
       - cd integration-tests && task run
+
+  release:
+    cmds:
+      - uv run semantic-release -v version
