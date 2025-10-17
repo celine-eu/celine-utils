@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.7 (2025-10-17)
+
+### Bug Fixes
+
+- Include all subpackages
+  ([`a505b00`](https://github.com/celine-eu/celine-utils/commit/a505b005a925962d9b73c073e4a451ba5fa22a57))
+
+
 ## v1.0.6 (2025-10-17)
 
 ### Bug Fixes
