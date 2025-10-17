@@ -1,6 +1,6 @@
 [project]
 name = "celine-utils"
-version = "0.1.0"
+version = "0.0.0"
 description = "CELINE utils"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -42,6 +42,7 @@ where = ["."]
 include = ["celine"]
 
 [tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
 
 build_command = """
     uv lock --upgrade-package "$PACKAGE_NAME"
@@ -53,3 +54,9 @@ branch = "main"
 changelog_file = "CHANGELOG.md"
 tag_format = "v{version}"
 commit_parser = "conventional"
+
+[tool.semantic_release.commit_parser_options]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "up"]
+parse_squash_commits = true
+ignore_merge_commits = true
