@@ -39,7 +39,7 @@ celine-cli = "celine.cli:__main__"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["celine"]
+include = ["celine*"]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
