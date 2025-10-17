@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.4 (2025-10-17)
+
+### Bug Fixes
+
+- Review config
+  ([`a844164`](https://github.com/celine-eu/celine-utils/commit/a844164863bb9c1c3c0a15ec727fbbaa5231af33))
+
+
 ## v1.0.3 (2025-10-17)
 
 ### Bug Fixes
