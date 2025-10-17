@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.3 (2025-10-17)
+
+### Bug Fixes
+
+- Update config
+  ([`1c80f57`](https://github.com/celine-eu/celine-utils/commit/1c80f578e076d08a7ef58a110c3863452ad29bcf))
+
+
 ## v1.0.2 (2025-10-17)
 
 ### Bug Fixes
