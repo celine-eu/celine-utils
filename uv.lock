@@ -1748,7 +1748,7 @@ wheels = [
 
 [[package]]
 name = "openlineage-python"
-version = "1.37.0"
+version = "1.39.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1759,9 +1759,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/61/24482d218d878c2363f574cb88314b3ce4fdca3f30085b9e8fb99ca5aad6/openlineage_python-1.37.0.tar.gz", hash = "sha256:1583e63a24491b29d34aabce27ebc0590274097b1c7a21ddd6ca1ea174a2cde4", size = 108305, upload-time = "2025-08-11T17:06:45.999Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/29/d34591ac3a52835d7a11ef69bdf77555e5d5bcbc802f08e77b048c6f5a6d/openlineage_python-1.39.0.tar.gz", hash = "sha256:1a32c349f60c3588d35bed03e7afddd907a434f31771d7b047b194e8e5edab09", size = 122704, upload-time = "2025-10-07T16:21:54.49Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/60/2138fa572374a2208f557ca581258527148e158955a5afeac84b17fdcd21/openlineage_python-1.37.0-py3-none-any.whl", hash = "sha256:ec6837a741c5d534332d431af428dc67a8d34ea2f09ef33d74b56200a28ed28d", size = 86465, upload-time = "2025-08-11T17:06:37.753Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/d3/2875803a3533fee842e74265cdaf6df92cb4f1c8496ceb8494eec3bcedf3/openlineage_python-1.39.0-py3-none-any.whl", hash = "sha256:c4bca4328e750b7f3f21931104d859b8799ec119bbd611ce01374079f30db394", size = 97891, upload-time = "2025-10-07T16:21:45.993Z" },
 ]
 
 [[package]]
