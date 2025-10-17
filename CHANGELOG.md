@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.6 (2025-10-17)
+
+### Bug Fixes
+
+- Review release task
+  ([`43fd4d8`](https://github.com/celine-eu/celine-utils/commit/43fd4d86a15316f68b9366900321f74b9d64f213))
+
+
 ## v1.0.5 (2025-10-17)
 
 ### Bug Fixes
