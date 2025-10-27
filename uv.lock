@@ -368,7 +368,7 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.0.7"
+version = "1.0.8"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
@@ -2032,7 +2032,7 @@ wheels = [
 
 [[package]]
 name = "prefect"
-version = "3.4.24"
+version = "3.4.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosqlite" },
@@ -2090,9 +2090,9 @@ dependencies = [
     { name = "websockets" },
     { name = "whenever", marker = "python_full_version >= '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a1/d5/70a657ee286bc8950053a2f8cfd328bb727894dc19d2f8d50007894d9051/prefect-3.4.24.tar.gz", hash = "sha256:8c10c7806359465d67af9aa98ffe6be7e0fba35b241453dc77ac937bad2e3251", size = 5633843, upload-time = "2025-10-16T18:55:44.861Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/96/f7d0d331e73b521ba0900ff70c4586edcc0a207608041a29d1cd86f94427/prefect-3.4.25.tar.gz", hash = "sha256:c12943e75f2dc3f06b5d1f4bd4fabf7cd10ffeca35d56a15ad7cff4890067f5a", size = 5638467, upload-time = "2025-10-23T20:47:48.118Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/64/ccb47cfbbbc74e0e0b8fb3216f7b3af6e2125cd9de26baff452f26177041/prefect-3.4.24-py3-none-any.whl", hash = "sha256:e9aa51b356f57daa2f6163344e0576201f9606a058c66c5c98752d4f16f135eb", size = 6156923, upload-time = "2025-10-16T18:55:41.986Z" },
+    { url = "https://files.pythonhosted.org/packages/33/1e/cd07ee424b1835d8443d5cd26b680f08dada9d670e2d2f360679cf582c15/prefect-3.4.25-py3-none-any.whl", hash = "sha256:9dc8b443b354a06446d5e0b153584defb4da0d2882f7c96a1dd78cfa657a94ea", size = 6163543, upload-time = "2025-10-23T20:47:45.371Z" },
 ]
 
 [[package]]
@@ -2289,7 +2289,7 @@ wheels = [
 
 [[package]]
 name = "pydantic"
-version = "2.12.2"
+version = "2.12.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-types" },
@@ -2297,9 +2297,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/35/d319ed522433215526689bad428a94058b6dd12190ce7ddd78618ac14b28/pydantic-2.12.2.tar.gz", hash = "sha256:7b8fa15b831a4bbde9d5b84028641ac3080a4ca2cbd4a621a661687e741624fd", size = 816358, upload-time = "2025-10-14T15:02:21.842Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/1e/4f0a3233767010308f2fd6bd0814597e3f63f1dc98304a9112b8759df4ff/pydantic-2.12.3.tar.gz", hash = "sha256:1da1c82b0fc140bb0103bc1441ffe062154c8d38491189751ee00fd8ca65ce74", size = 819383, upload-time = "2025-10-17T15:04:21.222Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/98/468cb649f208a6f1279448e6e5247b37ae79cf5e4041186f1e2ef3d16345/pydantic-2.12.2-py3-none-any.whl", hash = "sha256:25ff718ee909acd82f1ff9b1a4acfd781bb23ab3739adaa7144f19a6a4e231ae", size = 460628, upload-time = "2025-10-14T15:02:19.623Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/6b/83661fa77dcefa195ad5f8cd9af3d1a7450fd57cc883ad04d65446ac2029/pydantic-2.12.3-py3-none-any.whl", hash = "sha256:6986454a854bc3bc6e5443e1369e06a3a456af9d339eda45510f517d9ea5c6bf", size = 462431, upload-time = "2025-10-17T15:04:19.346Z" },
 ]
 
 [[package]]
