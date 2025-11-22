@@ -149,6 +149,9 @@ class PipelineRunner:
         self._emit_event(job_name, EventType.START, run_id)
 
         project_root = self._project_path("/meltano")
+
+        self.logger.debug(f"run_meltano: dir {project_root}")
+
         if not project_root:
             return self._task_result(False, command, "MELTANO_PROJECT_ROOT not set")
 
@@ -160,6 +163,10 @@ class PipelineRunner:
                 text=True,
                 cwd=project_root,
             )
+
+            self.logger.debug(f"run_meltano: meltano {command}")
+            self.logger.debug("run_meltano: result")
+            self.logger.debug(result)
 
             lineage = MeltanoLineage(self.cfg, project_root=project_root)
             inputs, outputs = lineage.collect_inputs_outputs(base_command)
@@ -229,6 +236,10 @@ class PipelineRunner:
                 cwd=project_dir,
                 env=env,
             )
+
+            self.logger.debug(f"run_dbt: {command}")
+            self.logger.debug(f"run_dbt: results")
+            self.logger.debug(result)
 
             lineage = DbtLineage(project_dir, self.cfg.app_name, self._build_engine())
             inputs, outputs = lineage.collect_inputs_outputs(tag)
