@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.9 (2025-11-22)
+
+### Bug Fixes
+
+- More logging
+  ([`47b1484`](https://github.com/celine-eu/celine-utils/commit/47b148451b68472ec333c682abd0ec58d241ec3b))
+
+
 ## v1.0.7 (2025-10-17)
 
 ### Bug Fixes
