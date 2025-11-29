@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.1.0 (2025-11-29)
+
+### Chores
+
+- Add meltano fail test
+  ([`33c36fd`](https://github.com/celine-eu/celine-utils/commit/33c36fde8b64e5a70676dbba57709fd7d3431857))
+
+### Features
+
+- Add run_dbt_operation.
+  ([`8792fdb`](https://github.com/celine-eu/celine-utils/commit/8792fdbee3ba158b7a6ead2bcfad34b3e7c7855b))
+
+
 ## v1.0.9 (2025-11-22)
 
 ### Bug Fixes
