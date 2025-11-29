@@ -45,7 +45,7 @@ class PipelineRunner:
 
     def __init__(self, cfg: PipelineConfig):
         self.cfg = cfg
-        self.logger = get_logger(cfg.app_name or "Pipeline")
+        self.logger = get_logger("celine.pipeline." + (cfg.app_name or "Pipeline"))
         self.client = OpenLineageClient()
 
     # ---------- Helpers ----------
@@ -284,6 +284,88 @@ class PipelineRunner:
             )
             return self._task_result(False, command_str, str(e))
 
+    def run_dbt_operation(
+        self, macro: str, args: dict | None = None, job_name: str | None = None
+    ) -> Dict[str, Any]:
+
+        if not self.cfg.app_name:
+            raise Exception(f"Missing app_name {self.cfg.app_name}")
+
+        run_id = str(uuid4())
+        job_name = job_name or f"{self.cfg.app_name}:dbt:run-operation:{macro}"
+
+        # Emit START event
+        self._emit_event(job_name, EventType.START, run_id)
+
+        project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
+        profiles_dir = self.cfg.dbt_profiles_dir or project_dir
+
+        if not project_dir:
+            return self._task_result(False, macro, "DBT_PROJECT_DIR not set")
+
+        dbt_cmd = "dbt"
+
+        # Build the command (macro + optional args)
+        command = [dbt_cmd, "run-operation", macro]
+        if args:
+            import json
+
+            command.extend(["--args", json.dumps(args)])
+
+        command_str = " ".join(command)
+
+        try:
+            env = {
+                **os.environ,
+                "DBT_PROFILES_DIR": str(profiles_dir or ""),
+                "OPENLINEAGE_DBT_JOB_NAME": job_name,
+            }
+
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                cwd=project_dir,
+                env=env,
+            )
+
+            cli_output = self.clean_output(
+                (result.stdout + "\n" + result.stderr).strip()
+            )
+
+            success = result.returncode == 0
+
+            # Note: run-operation normally has *no model lineage*, so emit empty lists
+            if success:
+                self._emit_event(job_name, EventType.COMPLETE, run_id)
+            else:
+                facets = self._get_error_facet(
+                    f"Command {command_str} exit code was {result.returncode}",
+                    cli_output,
+                )
+                self._emit_event(
+                    job_name,
+                    EventType.FAIL,
+                    run_id,
+                    run_facets=facets,
+                )
+
+            return self._task_result(
+                status=success,
+                command=command_str,
+                details=cli_output,
+            )
+
+        except Exception as e:
+            self.logger.exception(f"dbt run-operation exception")
+            self._emit_event(
+                job_name,
+                EventType.ABORT,
+                run_id,
+                run_facets=self._get_error_facet(e, traceback.format_exc()),
+            )
+            return self._task_result(False, command_str, str(e))
+
     def _get_error_facet(
         self, e: Exception | str, stack_trace: str | None = ""
     ) -> dict[str, RunFacet]:
@@ -291,7 +373,7 @@ class PipelineRunner:
             "errorMessage": ErrorMessageRunFacet(
                 message=str(e),
                 programmingLanguage="python",
-                stackTrace=f"{stack_trace if stack_trace else ""}",
+                stackTrace=stack_trace if stack_trace else "",
             )
         }
 

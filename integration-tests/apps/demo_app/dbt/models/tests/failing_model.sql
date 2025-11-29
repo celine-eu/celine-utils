@@ -1,0 +1,1 @@
+{% do exceptions.raise_compiler_error("Forced failure for testing") %}

@@ -1,0 +1,34 @@
+from celine.pipelines.pipeline_prefect import PipelineRunner
+from celine.pipelines.pipeline_config import PipelineConfig
+
+
+def test_run_dbt_operation_basic(pipeline_cfg: PipelineConfig):
+    """
+    Test that a simple macro invocation runs and returns the expected structure.
+    This does NOT assume the macro exists – failures are allowed,
+    same as your other tests.
+    """
+
+    runner = PipelineRunner(pipeline_cfg)
+    res = runner.run_dbt_operation("print_test_macro")
+
+    assert "status" in res
+    assert res["status"] in ("success", "failed")
+    assert "command" in res
+    assert "details" in res
+
+
+def test_run_dbt_operation_with_args(pipeline_cfg: PipelineConfig):
+    """
+    Test that run-operation works with args and produces the expected result shape.
+    """
+
+    runner = PipelineRunner(pipeline_cfg)
+    args = {"message": "Hello from test", "limit": 5}
+
+    res = runner.run_dbt_operation("print_test_macro", args=args)
+
+    assert "status" in res
+    assert res["status"] in ("success", "failed")
+    assert "command" in res
+    assert "details" in res

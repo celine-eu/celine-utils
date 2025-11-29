@@ -1,4 +1,4 @@
-from pipelines.pipeline_prefect import PipelineRunner
+from celine.pipelines.pipeline_prefect import PipelineRunner
 from celine.pipelines.pipeline_config import PipelineConfig
 
 
