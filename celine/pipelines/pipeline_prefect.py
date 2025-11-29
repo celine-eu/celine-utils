@@ -25,6 +25,16 @@ def dbt_run(tag: str, cfg: dict | PipelineConfig = {}) -> Dict[str, Any]:
     return runner.run_dbt(tag)
 
 
+def dbt_run_operation(
+    macro: str, args: Dict[Any, Any] = {}, cfg: dict | PipelineConfig = {}
+) -> Dict[str, Any]:
+    """
+    Prefect task wrapper for PipelineRunner.run_dbt.
+    """
+    runner = PipelineRunner(_get_config(cfg))
+    return runner.run_dbt_operation(macro, args)
+
+
 def meltano_run_import(cfg: dict | PipelineConfig = {}) -> Dict[str, Any]:
     return meltano_run("run import", cfg)
 
