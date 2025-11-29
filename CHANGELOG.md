@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2025-11-29)
+
+### Bug Fixes
+
+- Expose function
+  ([`70830fb`](https://github.com/celine-eu/celine-utils/commit/70830fb38810203e320f6523e4c0822ef3b96250))
+
+
 ## v1.1.0 (2025-11-29)
 
 ### Chores
