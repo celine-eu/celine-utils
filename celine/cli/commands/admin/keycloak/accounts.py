@@ -1,25 +1,17 @@
+# celine/cli/commands/admin/keycloak/accounts.py
+import typer
 from celine.admin.clients import import_accounts
 from celine.cli.utils import load_json_config
 
-
-def command_admin_import_accounts(args):
-    client_dict = load_json_config(args.accounts_json)
-    import_accounts(
-        client_dict,
-        recreate=args.force,
-    )
+accounts_app = typer.Typer(help="Keycloak accounts (roles/groups/users)")
 
 
-def add_commands(subparsers):
-    # Import accounts
-    parser_accounts = subparsers.add_parser(
-        "import-accounts", help="Import accounts from JSON"
-    )
-    parser_accounts.add_argument(
-        "accounts_json",
-        help="File path. Use - to use stdin",
-    )
-    parser_accounts.add_argument(
-        "-f", "--force", action="store_true", help="Force recreation", default=True
-    )
-    parser_accounts.set_defaults(func=command_admin_import_accounts)
+@accounts_app.command("import")
+def cli_import_accounts(
+    accounts_json: str,
+    force: bool = typer.Option(False, "--force", "-f"),
+):
+    """Import accounts (roles, groups, users) from JSON"""
+    cfg = load_json_config(accounts_json)
+    import_accounts(cfg, recreate=force)
+    typer.echo("Accounts imported")

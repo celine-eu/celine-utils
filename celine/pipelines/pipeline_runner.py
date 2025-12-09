@@ -25,6 +25,10 @@ from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
 from celine.pipelines.lineage.dbt import DbtLineage
 
+from celine.pipelines.lineage.meltano import MeltanoLineage
+from celine.pipelines.lineage.dbt import DbtLineage
+from celine.pipelines.governance import GovernanceResolver
+
 from celine.pipelines.utils import get_namespace
 from celine.pipelines.const import (
     OPENLINEAGE_CLIENT_VERSION,
@@ -168,7 +172,15 @@ class PipelineRunner:
             self.logger.debug("run_meltano: result")
             self.logger.debug(result)
 
-            lineage = MeltanoLineage(self.cfg, project_root=project_root)
+            gov_resolver = GovernanceResolver.auto_discover(
+                app_name=self.cfg.app_name,
+                project_dir=project_root,
+            )
+            lineage = MeltanoLineage(
+                self.cfg,
+                project_root=project_root,
+                governance_resolver=gov_resolver,
+            )
             inputs, outputs = lineage.collect_inputs_outputs(base_command)
 
             if result.returncode == 0:
@@ -241,7 +253,16 @@ class PipelineRunner:
             self.logger.debug(f"run_dbt: results")
             self.logger.debug(result)
 
-            lineage = DbtLineage(project_dir, self.cfg.app_name, self._build_engine())
+            gov_resolver = GovernanceResolver.auto_discover(
+                app_name=self.cfg.app_name,
+                project_dir=project_dir,
+            )
+            lineage = DbtLineage(
+                project_dir,
+                self.cfg.app_name,
+                self._build_engine(),
+                governance_resolver=gov_resolver,
+            )
             inputs, outputs = lineage.collect_inputs_outputs(tag)
 
             success = result.returncode == 0

@@ -1,11 +1,12 @@
+# celine/cli/commands/admin/setup.py
+import typer
 from celine.admin.setup import run_setup
 
+setup_app = typer.Typer(help="Setup operations")
 
-def command_admin_setup(args):
+
+@setup_app.command("run")
+def setup_run():
+    """Run entire admin setup (keycloak, superset...)"""
     run_setup()
-
-
-def add_commands(subparsers):
-    # Setup command
-    parser_setup = subparsers.add_parser("setup", help="Run setup process")
-    parser_setup.set_defaults(func=command_admin_setup)
+    typer.echo("Setup completed")

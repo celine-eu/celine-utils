@@ -1,19 +1,24 @@
+# celine/pipelines/lineage/dbt.py
 import json, os
+import typing as t
+
+from sqlalchemy.engine import Engine
+from sqlalchemy import text
+
 from openlineage.client.event_v2 import InputDataset, OutputDataset
 from openlineage.client.generated.schema_dataset import (
     SchemaDatasetFacet,
     SchemaDatasetFacetFields,
 )
-from celine.pipelines.utils import get_namespace
-from celine.common.logger import get_logger
-
 from openlineage.client.generated.data_quality_assertions_dataset import (
     DataQualityAssertionsDatasetFacet,
+    Assertion as DqAssertion,
 )
 
-from sqlalchemy.engine import Engine
-from sqlalchemy import text
-import typing as t
+from celine.pipelines.utils import get_namespace
+from celine.common.logger import get_logger
+from celine.pipelines.governance import GovernanceResolver
+from celine.pipelines.lineage.facets.governance import GovernanceDatasetFacet
 
 from openlineage.client.generated.data_quality_assertions_dataset import (
     DataQualityAssertionsDatasetFacet,
@@ -22,11 +27,24 @@ from openlineage.client.generated.data_quality_assertions_dataset import (
 
 
 class DbtLineage:
-    def __init__(self, project_dir: str, app_name: str, engine: Engine | None = None):
+    def __init__(
+        self,
+        project_dir: str,
+        app_name: str,
+        engine: Engine | None = None,
+        governance_resolver: GovernanceResolver | None = None,
+    ):
         self.project_dir = project_dir
         self.app_name = app_name
         self.logger = get_logger(__name__)
         self.engine = engine  # optional, to fetch schema metadata
+        self.governance_resolver = (
+            governance_resolver
+            or GovernanceResolver.auto_discover(
+                app_name=app_name,
+                project_dir=project_dir,
+            )
+        )
 
     # ---------------- Helpers ----------------
     def _dataset_key(self, node: dict) -> str:
@@ -39,14 +57,13 @@ class DbtLineage:
         self, schema: str, name: str
     ) -> list[SchemaDatasetFacetFields]:
         """Query warehouse for column metadata if YAML docs are missing."""
-        # self.logger.debug(f"Fetching table structure for {schema}.{name}")
         if not self.engine:
             self.logger.warning(f"Engine not available")
             return []
         try:
             with self.engine.connect() as conn:
                 sql = text(
-                    f"""
+                    """
                     select column_name, data_type
                     from information_schema.columns
                     where table_schema = :schema
@@ -55,7 +72,6 @@ class DbtLineage:
                 """
                 )
                 rows = conn.execute(sql, {"schema": schema, "name": name}).fetchall()
-                # self.logger.debug(f"Columns for {schema}.{name}: {rows}")
             return [
                 SchemaDatasetFacetFields(name=row[0], type=row[1], description=None)
                 for row in rows
@@ -65,24 +81,92 @@ class DbtLineage:
             return []
 
     def _build_schema_fields(self, node: dict) -> list[SchemaDatasetFacetFields]:
-        """Prefer documented columns, fall back to warehouse introspection."""
-        # fields = [
-        #     SchemaDatasetFacetFields(
-        #         name=col, type="unknown", description=meta.get("description")
-        #     )
-        #     for col, meta in (node.get("columns") or {}).items()
-        # ]
-
-        # schema_name = node.get("schema")
-        # table_name = node.get("alias") or node.get("name")
-        # if not fields and (schema_name and table_name):
-
+        """Prefer warehouse introspection; can be extended to use dbt docs."""
         schema_name = node.get("schema")
         table_name = node.get("alias") or node.get("name")
         fields: list[SchemaDatasetFacetFields] = []
         if schema_name and table_name:
             fields = self._fetch_columns_from_db(schema_name, table_name)
         return fields
+
+    def _build_governance_facet(
+        self, key: str, node: dict | None = None
+    ) -> GovernanceDatasetFacet | None:
+        """
+        Compose governance from resolver (governance.yaml) and optional dbt meta.governance override.
+        """
+        if not self.governance_resolver:
+            base_rule = None
+        else:
+            base_rule = self.governance_resolver.resolve(key)
+
+        # dbt meta override
+        meta_rule = None
+        if node:
+            meta = node.get("meta") or {}
+            g = meta.get("governance") or {}
+            if g:
+                from celine.pipelines.governance import GovernanceRule, GovernanceOwner
+
+                owners_raw = g.get("ownership") or []
+                owners = [
+                    (
+                        GovernanceOwner(**o)
+                        if isinstance(o, dict)
+                        else GovernanceOwner(name=str(o))
+                    )
+                    for o in owners_raw
+                ]
+                meta_rule = GovernanceRule(
+                    license=g.get("license"),
+                    ownership=owners,
+                    access_level=g.get("access_level"),
+                    access_rights=g.get("access_rights"),
+                    classification=g.get("classification"),
+                    tags=g.get("tags") or [],
+                    retention_days=g.get("retention_days"),
+                    documentation_url=g.get("documentation_url"),
+                    source_system=g.get("source_system"),
+                    extra={},
+                )
+
+        from celine.pipelines.governance import GovernanceResolver as _GR
+
+        if base_rule and meta_rule:
+            rule = _GR._merge(base_rule, meta_rule)  # reuse merge logic
+        else:
+            rule = meta_rule or base_rule
+
+        if not rule:
+            return None
+
+        owners = [o.name for o in rule.ownership] if rule.ownership else None
+        tags = rule.tags or None
+
+        if (
+            not rule.license
+            and not owners
+            and not rule.access_level
+            and not rule.access_rights
+            and not rule.classification
+            and not tags
+            and rule.retention_days is None
+            and not rule.documentation_url
+            and not rule.source_system
+        ):
+            return None
+
+        return GovernanceDatasetFacet(
+            license=rule.license,
+            owners=owners,
+            accessLevel=rule.access_level,
+            accessRights=rule.access_rights,
+            classification=rule.classification,
+            tags=tags,
+            retentionDays=rule.retention_days,
+            documentationUrl=rule.documentation_url,
+            sourceSystem=rule.source_system,
+        )
 
     def _build_assertion(self, test_node: dict, result: dict) -> DqAssertion:
         tm = test_node.get("test_metadata") or {}
@@ -153,6 +237,10 @@ class DbtLineage:
             fields = self._build_schema_fields(node)
 
             facets: dict[str, t.Any] = {"schema": SchemaDatasetFacet(fields=fields)}
+            gov_facet = self._build_governance_facet(key, node)
+            if gov_facet:
+                facets["governance"] = gov_facet
+
             if key in tests_by_dataset:
                 facets["dataQualityAssertions"] = DataQualityAssertionsDatasetFacet(
                     assertions=tests_by_dataset[key]
@@ -160,6 +248,7 @@ class DbtLineage:
 
             outputs.append(OutputDataset(namespace=namespace, name=key, facets=facets))
 
+            # Inputs: upstream deps
             for dep in node.get("depends_on", {}).get("nodes", []):
                 dep_node = manifest["nodes"].get(dep) or manifest.get(
                     "sources", {}
@@ -167,14 +256,23 @@ class DbtLineage:
                 if not dep_node:
                     continue
                 dep_key = self._dataset_key(dep_node)
-                inputs.append(InputDataset(namespace=namespace, name=dep_key))
+                in_facets: dict[str, t.Any] = {}
+                gov_in = self._build_governance_facet(dep_key, dep_node)
+                if gov_in:
+                    in_facets["governance"] = gov_in
+                inputs.append(
+                    InputDataset(
+                        namespace=namespace,
+                        name=dep_key,
+                        facets=in_facets,
+                    )
+                )
 
         if tag == "test":
             existing_keys = {d.name for d in outputs}
             for key, assertions in tests_by_dataset.items():
                 if key in existing_keys:
                     continue
-                # build schema only once with helper
                 db, sch, name = key.split(".", 2)
                 fields = self._fetch_columns_from_db(sch, name)
                 facets: dict[str, t.Any] = {
@@ -183,6 +281,9 @@ class DbtLineage:
                         assertions=assertions
                     ),
                 }
+                gov_facet = self._build_governance_facet(key)
+                if gov_facet:
+                    facets["governance"] = gov_facet
                 outputs.append(
                     OutputDataset(namespace=namespace, name=key, facets=facets)
                 )

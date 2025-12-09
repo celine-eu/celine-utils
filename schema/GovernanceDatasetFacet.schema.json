@@ -1,0 +1,55 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GovernanceDatasetFacet",
+    "type": "object",
+    "required": [
+        "_producer",
+        "_schemaURL"
+    ],
+    "properties": {
+        "_producer": {
+            "type": "string",
+            "format": "uri"
+        },
+        "_schemaURL": {
+            "type": "string",
+            "format": "uri"
+        },
+        "accessLevel": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "accessRights": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "classification": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "retentionDays": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "license": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "sourceSystem": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    }
+}

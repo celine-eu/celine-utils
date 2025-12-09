@@ -1,14 +1,18 @@
+# celine/pipelines/lineage/meltano.py
 import os, json, yaml
 from typing import Any
-from celine.common.logger import get_logger
-from celine.pipelines.pipeline_config import PipelineConfig
+
+from openlineage.client.event_v2 import InputDataset, OutputDataset
 from openlineage.client.generated.schema_dataset import (
     SchemaDatasetFacet,
     SchemaDatasetFacetFields,
 )
-from openlineage.client.event_v2 import InputDataset, OutputDataset
 
+from celine.common.logger import get_logger
+from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.utils import get_namespace, expand_envs
+from celine.pipelines.governance import GovernanceResolver
+from celine.pipelines.lineage.facets.governance import GovernanceDatasetFacet
 
 
 class MeltanoLineage:
@@ -20,6 +24,7 @@ class MeltanoLineage:
         project_root: str | None = None,
         config_path: str = "meltano.yml",
         run_dir: str = ".meltano/run",
+        governance_resolver: GovernanceResolver | None = None,
     ):
         self.logger = get_logger(__name__)
         self.cfg = cfg
@@ -27,6 +32,14 @@ class MeltanoLineage:
         self.config_path = config_path
         self.run_dir = run_dir
         self.config = self._load_meltano_config()
+        # NEW: governance resolver
+        self.governance_resolver = (
+            governance_resolver
+            or GovernanceResolver.auto_discover(
+                app_name=self.cfg.app_name,
+                project_dir=self.project_root,
+            )
+        )
 
     # ---------- Helpers ----------
     def _load_meltano_config(self) -> dict[str, Any]:
@@ -44,6 +57,52 @@ class MeltanoLineage:
         except Exception as e:
             self.logger.error(f"Failed to load Meltano config at {path}: {e}")
             return {}
+
+    def _build_schema_facet(self, s: dict) -> SchemaDatasetFacet:
+        schema_props: dict[str, Any] = s.get("schema", {}).get("properties", {}) or {}
+        fields = [
+            SchemaDatasetFacetFields(
+                name=col,
+                type=str(info.get("type", "unknown")),
+                description=None,
+            )
+            for col, info in schema_props.items()
+        ]
+        return SchemaDatasetFacet(fields=fields)
+
+    def _build_governance_facet(
+        self, dataset_name: str
+    ) -> GovernanceDatasetFacet | None:
+        if not self.governance_resolver:
+            return None
+        rule = self.governance_resolver.resolve(dataset_name)
+        owners = [o.name for o in rule.ownership] if rule.ownership else None
+        tags = rule.tags or None
+
+        if (
+            not rule.license
+            and not owners
+            and not rule.access_level
+            and not rule.access_rights
+            and not rule.classification
+            and not tags
+            and rule.retention_days is None
+            and not rule.documentation_url
+            and not rule.source_system
+        ):
+            return None
+
+        return GovernanceDatasetFacet(
+            license=rule.license,
+            owners=owners,
+            accessLevel=rule.access_level,
+            accessRights=rule.access_rights,
+            classification=rule.classification,
+            tags=tags,
+            retentionDays=rule.retention_days,
+            documentationUrl=rule.documentation_url,
+            sourceSystem=rule.source_system,
+        )
 
     def collect_inputs_outputs(
         self, job_name: str
@@ -92,35 +151,30 @@ class MeltanoLineage:
 
             for s in props.get("streams", []):
 
-                schema_props: dict[str, Any] = (
-                    s.get("schema", {}).get("properties", {}) or {}
-                )
+                schema_facet = self._build_schema_facet(s)
 
-                fields = [
-                    SchemaDatasetFacetFields(
-                        name=col,
-                        type=str(info.get("type", "unknown")),
-                        description=None,
-                    )
-                    for col, info in schema_props.items()
-                ]
-                schema_facet = SchemaDatasetFacet(fields=fields)
-
+                # Input dataset name (Singer convention)
                 tap_name = plugin
+                stream = s["stream"]
+                input_name = f"singer.{plugin}.{s['tap_stream_id']}"
+
+                facets_in: dict[str, Any] = {"schema": schema_facet}
+                gov_in = self._build_governance_facet(input_name)
+                if gov_in:
+                    facets_in["governance"] = gov_in
+
                 if tap_name in active_taps:
-                    # Input: Singer stream
-                    input_name = f"singer.{plugin}.{s['tap_stream_id']}"
                     self.logger.debug(f"Append input {input_name}")
                     inputs.append(
                         InputDataset(
                             namespace=namespace,
                             name=input_name,
-                            facets={"schema": schema_facet},
+                            facets=facets_in,
                         )
                     )
                 else:
                     self.logger.debug(
-                        f"Skipping {tap_name} not part of active taps {",".join(active_taps)}"
+                        f"Skipping {tap_name} not part of active taps {','.join(active_taps)}"
                     )
 
                 # Try to resolve outputs for all loaders
@@ -138,14 +192,12 @@ class MeltanoLineage:
                         continue
 
                     cfg = loader.get("config", {}) or {}
-                    stream = s["stream"]
 
                     if loader_name == "target-postgres":
                         db = expand_envs(cfg.get("database", "postgres"))
                         schema = expand_envs(cfg.get("default_target_schema"))
 
                         if not schema:
-                            # Postgres fallback: schema derived from stream name
                             schema = stream
                             self.logger.warning(
                                 f"Loader {loader_name} has no default_target_schema; "
@@ -154,11 +206,17 @@ class MeltanoLineage:
 
                         output_name = f"{db}.{schema}.{stream}"
                         self.logger.debug(f"Append output {output_name}")
+
+                        facets_out: dict[str, Any] = {"schema": schema_facet}
+                        gov_out = self._build_governance_facet(output_name)
+                        if gov_out:
+                            facets_out["governance"] = gov_out
+
                         outputs.append(
                             OutputDataset(
                                 namespace=namespace,
                                 name=output_name,
-                                facets={"schema": schema_facet},
+                                facets=facets_out,
                             )
                         )
                     else:

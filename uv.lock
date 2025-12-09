@@ -383,6 +383,7 @@ dependencies = [
     { name = "python-keycloak" },
     { name = "requests" },
     { name = "sqlalchemy" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -410,6 +411,7 @@ requires-dist = [
     { name = "python-keycloak", specifier = ">=5.8.1" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
+    { name = "typer", specifier = ">=0.16.1" },
 ]
 
 [package.metadata.requires-dev]

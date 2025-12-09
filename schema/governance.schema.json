@@ -1,0 +1,150 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CELINE Governance Configuration",
+    "type": "object",
+    "required": [
+        "defaults",
+        "sources"
+    ],
+    "properties": {
+        "defaults": {
+            "type": "object",
+            "description": "Default governance applied to all datasets unless overridden",
+            "properties": {
+                "license": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "ownership": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "type"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "access_level": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "classification": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "retention_days": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ]
+                },
+                "documentation_url": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "uri"
+                },
+                "source_system": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
+            }
+        },
+        "sources": {
+            "description": "Map of dataset name patterns → governance rules",
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "object",
+                    "properties": {
+                        "license": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "ownership": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": [
+                                    "name",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "access_level": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "classification": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "retention_days": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "documentation_url": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "uri"
+                        },
+                        "source_system": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
