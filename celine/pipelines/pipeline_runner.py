@@ -2,7 +2,7 @@ import traceback
 import re
 import subprocess, os, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from sqlalchemy import create_engine
@@ -24,6 +24,7 @@ from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
 from celine.pipelines.lineage.meltano import MeltanoLineage
 from celine.pipelines.lineage.dbt import DbtLineage
+from celine.pipelines.pipeline_result import PipelineTaskResult, PipelineTaskStatus
 
 from celine.pipelines.lineage.meltano import MeltanoLineage
 from celine.pipelines.lineage.dbt import DbtLineage
@@ -32,10 +33,12 @@ from celine.pipelines.governance import GovernanceResolver
 from celine.pipelines.utils import get_namespace
 from celine.pipelines.const import (
     OPENLINEAGE_CLIENT_VERSION,
-    TASK_RESULT_SUCCESS,
-    TASK_RESULT_FAILED,
     PRODUCER,
     VERSION,
+)
+
+MELTANO_LINE_RE = re.compile(
+    r"^\s*\d{4}-\d{2}-\d{2}T[\d:\.]+Z\s*\[(?P<level>[a-zA-Z\s]+)\]\s*(?P<msg>.*)$"
 )
 
 
@@ -60,19 +63,19 @@ class PipelineRunner:
         return None
 
     def _task_result(
-        self, status: bool | str, command: str, details: Any = None
-    ) -> Dict[str, Any]:
-        result = {
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "command": command,
-            "status": (
-                TASK_RESULT_SUCCESS
+        self, status: bool | PipelineTaskStatus, command: str, details: Any = None
+    ) -> PipelineTaskResult:
+
+        result = PipelineTaskResult(
+            command=command,
+            status=(
+                "success"
                 if status is True
-                else (TASK_RESULT_FAILED if status is False else status)
+                else ("failed" if status is False else status)
             ),
-        }
-        if details is not None:
-            result["details"] = details
+            details=details or "",
+        )
+
         return result
 
     def _default_run_facets(self) -> dict:
@@ -145,8 +148,28 @@ class PipelineRunner:
         self._engine = create_engine(url, future=True)
         return self._engine
 
+    def _relay_meltano_log(self, line: str):
+        match = MELTANO_LINE_RE.match(line)
+        if not match:
+            self.logger.debug(line)
+            return
+
+        level = match.group("level").strip().lower()
+        msg = match.group("msg").strip()
+
+        if level.startswith("debug"):
+            self.logger.debug(msg)
+        elif level.startswith("info"):
+            self.logger.info(msg)
+        elif level.startswith("warn"):
+            self.logger.warning(msg)
+        elif level.startswith("error"):
+            self.logger.error(msg)
+        else:
+            self.logger.debug(msg)
+
     # ---------- Meltano ----------
-    def run_meltano(self, command: str = "run import") -> Dict[str, Any]:
+    def run_meltano(self, command: str = "run import") -> PipelineTaskResult:
         run_id = str(uuid4())
         base_command = command.replace("run ", "")
         job_name = f"{self.cfg.app_name}:meltano:{base_command}"
@@ -156,21 +179,31 @@ class PipelineRunner:
 
         self.logger.debug(f"run_meltano: dir {project_root}")
 
+        full_command = f"meltano {command}"
+
         if not project_root:
-            return self._task_result(False, command, "MELTANO_PROJECT_ROOT not set")
+            return self._task_result(
+                False, full_command, "MELTANO_PROJECT_ROOT not set"
+            )
 
         try:
+            cmd = full_command.split()
             result = subprocess.run(
-                f"meltano {command}",
-                shell=True,
+                cmd,
                 capture_output=True,
                 text=True,
                 cwd=project_root,
+                env={**os.environ, "NO_COLOR": "1"},
             )
 
-            self.logger.debug(f"run_meltano: meltano {command}")
-            self.logger.debug("run_meltano: result")
-            self.logger.debug(result)
+            self.logger.debug(f"run_meltano: meltano {full_command}")
+            for line in (result.stdout or "").splitlines():
+                if line.strip():
+                    self._relay_meltano_log(line)
+
+            for line in (result.stderr or "").splitlines():
+                if line.strip():
+                    self._relay_meltano_log(line)
 
             gov_resolver = GovernanceResolver.auto_discover(
                 app_name=self.cfg.app_name,
@@ -187,7 +220,7 @@ class PipelineRunner:
                 self._emit_event(
                     job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
                 )
-                return self._task_result(True, command, result.stdout)
+                return self._task_result(True, full_command, result.stdout)
             else:
                 facets = self._get_error_facet(result.stderr)
                 self._emit_event(
@@ -198,7 +231,7 @@ class PipelineRunner:
                     outputs=outputs,
                     run_facets=facets,
                 )
-                return self._task_result(False, command, result.stderr)
+                return self._task_result(False, full_command, result.stderr)
         except Exception as e:
             self._emit_event(
                 job_name,
@@ -211,9 +244,9 @@ class PipelineRunner:
                 },
             )
             self.logger.exception("run_meltano failed")
-            return self._task_result(False, command, str(e))
+            return self._task_result(False, full_command, str(e))
 
-    def run_dbt(self, tag: str, job_name: str | None = None) -> Dict[str, Any]:
+    def run_dbt(self, tag: str, job_name: str | None = None) -> PipelineTaskResult:
 
         if not self.cfg.app_name:
             raise Exception(f"Missing app_name {self.cfg.app_name}")
@@ -307,7 +340,7 @@ class PipelineRunner:
 
     def run_dbt_operation(
         self, macro: str, args: dict | None = None, job_name: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> PipelineTaskResult:
 
         if not self.cfg.app_name:
             raise Exception(f"Missing app_name {self.cfg.app_name}")

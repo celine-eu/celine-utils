@@ -6,11 +6,11 @@ import importlib.util
 import inspect
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import typer
-from rich import print
 from dotenv import load_dotenv
+from rich import print
 
 from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
@@ -22,184 +22,181 @@ pipeline_run_app = typer.Typer(help="Execute complete or partial pipelines")
 
 
 # =============================================================================
-# Environment & project discovery
+#  Discovery helpers
 # =============================================================================
 
 
-def _discover_pipelines_root() -> Path:
+def _discover_app_root() -> Path:
     """
-    Discover PIPELINES_ROOT.
-    Priority:
-      1. env PIPELINES_ROOT
-      2. CWD if it contains meltano/dbt/flows
-      3. parent folders up to 3 levels
-    """
-    env_root = os.getenv("PIPELINES_ROOT")
-    if env_root:
-        root = Path(env_root).resolve()
-        if root.exists():
-            logger.debug(f"Using PIPELINES_ROOT from env: {root}")
-            return root
+    Discover the root folder of the CELINE app.
+    A valid app folder contains at least one of:
+        meltano/, dbt/, flows/
 
-    cwd = Path.cwd()
-    for candidate in [cwd, cwd.parent, cwd.parent.parent]:
-        if (candidate / "meltano").exists() or (candidate / "dbt").exists():
-            logger.debug(f"Auto-discovered PIPELINES_ROOT at: {candidate}")
-            return candidate.resolve()
+    Walk upward from CWD until found.
+    """
+    cwd = Path.cwd().resolve()
+
+    def is_app_folder(p: Path) -> bool:
+        return any((p / sub).exists() for sub in ("meltano", "dbt", "flows"))
+
+    # CWD is an app folder
+    if is_app_folder(cwd):
+        logger.debug(f"Discovered app root at CWD: {cwd}")
+        return cwd
+
+    # Walk upward
+    for parent in cwd.parents:
+        if is_app_folder(parent):
+            logger.debug(f"Discovered app root at parent: {parent}")
+            return parent
 
     raise RuntimeError(
-        "Cannot determine PIPELINES_ROOT. "
-        "Set PIPELINES_ROOT or run inside a project folder."
+        "Unable to determine app folder.\n"
+        "No meltano/, dbt/, or flows/ found in current or parent directories.\n"
+        "Run inside a CELINE application folder."
     )
 
 
-def _discover_app_name(root: Path) -> str:
+def _discover_app_name(app_root: Path) -> str:
     """
-    Discover APP_NAME.
-    Priority:
-      1. env APP_NAME
-      2. detect current directory name inside apps/<app>
+    Determine APP_NAME:
+      1. Use env APP_NAME if set
+      2. Otherwise use name of app_root folder
     """
     env_app = os.getenv("APP_NAME")
     if env_app:
-        logger.debug(f"Using APP_NAME from env: {env_app}")
+        logger.debug(f"Using APP_NAME from environment: {env_app}")
         return env_app
 
-    # detect based on directory name
-    if root.name != "apps" and (root.parent / "apps").exists():
-        # If we are inside apps/<app>
-        if (root / "meltano").exists() or (root / "dbt").exists():
-            logger.debug(f"Detected APP_NAME from folder: {root.name}")
-            return root.name
-
-    raise RuntimeError(
-        "APP_NAME is not set and cannot be auto-discovered. "
-        "Set APP_NAME or run inside apps/<app> directory."
-    )
+    logger.debug(f"Inferring APP_NAME from folder name: {app_root.name}")
+    return app_root.name
 
 
-def _load_env_files(root: Path, app_name: str) -> None:
+def _discover_pipelines_root(app_root: Path, app_name: str) -> Path:
     """
-    Load environment files in a priority order.
-    Rule:
-        For ROOT:
-            load the first existing file in: .env, .env.local, .env.test
-        Then for APP:
-            load the first existing file in: apps/<app>/.env, .env.local, .env.test
+    PIPELINES_ROOT is optional.
+    If env PIPELINES_ROOT exists, use it.
 
-    App environment ALWAYS overrides root environment.
+    Otherwise:
+      - If monorepo layout detected (…/apps/<app>), pipelines root = parent.parent
+      - Else standalone app → pipelines_root = app_root
     """
-    candidates_global = [
-        root / ".env",
-        root / ".env.local",
-    ]
+    env_root = os.getenv("PIPELINES_ROOT")
+    if env_root:
+        pr = Path(env_root).resolve()
+        logger.debug(f"Using PIPELINES_ROOT from env: {pr}")
+        return pr
 
-    candidates_app = [
-        root / "apps" / app_name / ".env",
-        root / "apps" / app_name / ".env.local",
-    ]
+    # monorepo style apps/<app>
+    if app_root.parent.name == "apps" and app_root.parent.parent.exists():
+        root = app_root.parent.parent
+        logger.debug(f"Detected monorepo pipelines root: {root}")
+        return root
 
-    def load_first_existing(candidates: list[Path], override: bool) -> Optional[Path]:
+    logger.debug("PIPELINES_ROOT not set; using app root as project root")
+    return app_root
+
+
+def _load_env_files(pipelines_root: Path, app_root: Path, app_name: str) -> None:
+    """
+    Environment resolution rules:
+
+    If PIPELINES_ROOT was set explicitly:
+        1. Load first existing file from pipelines root:
+              .env, .env.local
+        2. Load first existing file from pipelines root/apps/<app>/
+              .env, .env.local
+
+    If PIPELINES_ROOT was NOT set:
+        Load first existing file from APP_ROOT:
+              .env, .env.local
+    """
+
+    env_files = [".env", ".env.local"]
+
+    def load_first(candidates: list[Path], override: bool):
         for file in candidates:
             if file.exists():
-                logger.debug(f"Loading env file: {file}")
+                logger.debug(f"Loading environment file: {file}")
                 load_dotenv(file, override=override)
-                return file
-        logger.debug(f"No .env file found in set: {[str(p) for p in candidates]}")
-        return None
+                return
 
-    # 1) Load ROOT env (override=False)
-    load_first_existing(candidates_global, override=False)
+    pipelines_root_from_env = os.getenv("PIPELINES_ROOT") is not None
 
-    # 2) Load APP env (override=True)
-    load_first_existing(candidates_app, override=True)
+    # Global env only applies if pipelines_root was explicitly given
+    if pipelines_root_from_env:
+        root_candidates = [pipelines_root / f for f in env_files]
+        load_first(root_candidates, override=False)
 
+        app_candidates = [pipelines_root / "apps" / app_name / f for f in env_files]
+        load_first(app_candidates, override=True)
 
-def _discover_paths(root: Path, app_name: str) -> dict[str, Optional[str]]:
-    """
-    Infer MELTANO_PROJECT_ROOT, DBT_PROJECT_DIR, DBT_PROFILES_DIR, FLOWS_DIR.
-    """
-    app_root = root / "apps" / app_name
-
-    meltano_root = os.getenv("MELTANO_PROJECT_ROOT")
-    dbt_dir = os.getenv("DBT_PROJECT_DIR")
-    dbt_prof = os.getenv("DBT_PROFILES_DIR")
-
-    if not meltano_root:
-        if (app_root / "meltano").exists():
-            meltano_root = str(app_root / "meltano")
-
-    if not dbt_dir:
-        if (app_root / "dbt").exists():
-            dbt_dir = str(app_root / "dbt")
-
-    if not dbt_prof:
-        dbt_prof = dbt_dir
-
-    flows_dir = app_root / "flows"
-
-    if not meltano_root:
-        raise RuntimeError("Unable to infer MELTANO_PROJECT_ROOT")
-    if not dbt_dir:
-        raise RuntimeError("Unable to infer DBT_PROJECT_DIR")
-
-    return {
-        "meltano_root": meltano_root,
-        "dbt_dir": dbt_dir,
-        "dbt_profiles": dbt_prof,
-        "flows_dir": str(flows_dir) if flows_dir.exists() else None,
-    }
+    else:
+        # standalone / CWD-only mode
+        app_candidates = [app_root / f for f in env_files]
+        load_first(app_candidates, override=True)
 
 
 # =============================================================================
-# Runner builder
+#  Runner factory
 # =============================================================================
 
 
 def _build_runner() -> PipelineRunner:
     """
-    Build PipelineRunner with inferred envs if missing.
+    Build PipelineRunner with automatic discovery of:
+      - app root
+      - app name
+      - pipelines root (optional)
+      - environment files
+      - dynamic env vars for PipelineConfig
     """
     try:
-        root = _discover_pipelines_root()
-        app_name = _discover_app_name(root)
-        _load_env_files(root, app_name)
-        paths = _discover_paths(root, app_name)
+        app_root = _discover_app_root()
+        app_name = _discover_app_name(app_root)
+        pipelines_root = _discover_pipelines_root(app_root, app_name)
 
-        # Export inferred paths so PipelineConfig picks them up
+        # Export discovered values for PipelineConfig
         os.environ.setdefault("APP_NAME", app_name)
-        os.environ.setdefault("PIPELINES_ROOT", str(root))
-        os.environ.setdefault("MELTANO_PROJECT_ROOT", paths["meltano_root"] or "")
-        os.environ.setdefault("DBT_PROJECT_DIR", paths["dbt_dir"] or "")
-        os.environ.setdefault("DBT_PROFILES_DIR", paths["dbt_profiles"] or "")
+        os.environ.setdefault("PIPELINES_ROOT", str(pipelines_root))
 
-        cfg = PipelineConfig()  # fully env-driven
+        # Try to auto-assign project paths if not set
+        meltano_path = app_root / "meltano"
+        dbt_path = app_root / "dbt"
+
+        if (not os.getenv("MELTANO_PROJECT_ROOT")) and meltano_path.exists():
+            os.environ["MELTANO_PROJECT_ROOT"] = str(meltano_path)
+
+        if (not os.getenv("DBT_PROJECT_DIR")) and dbt_path.exists():
+            os.environ["DBT_PROJECT_DIR"] = str(dbt_path)
+
+        if not os.getenv("DBT_PROFILES_DIR"):
+            # Usually same as dbt project
+            os.environ["DBT_PROFILES_DIR"] = str(dbt_path)
+
+        # Load .env files
+        _load_env_files(pipelines_root, app_root, app_name)
+
+        cfg = PipelineConfig()
         return PipelineRunner(cfg)
 
     except Exception as e:
-        logger.exception("Failed to build PipelineRunner")
+        logger.exception("Failed to build pipeline context")
         print(f"[red]Failed to build pipeline context:[/red] {e}")
         raise typer.Exit(1)
 
 
 # =============================================================================
-# Flow loader
+#  Flow importer
 # =============================================================================
 
 
 def _load_flow_module(flow_name: str) -> Any:
     """
-    Load module from <PIPELINES_ROOT>/apps/<APP>/flows/<flow_name>.py
+    Load module from <app_root>/flows/<flow_name>.py
     """
-    try:
-        root = Path(os.environ["PIPELINES_ROOT"]).resolve()
-        app_name = os.environ["APP_NAME"]
-    except KeyError:
-        raise RuntimeError(
-            "Pipeline context not initialized — call _build_runner() first"
-        )
-
-    flow_file = root / "apps" / app_name / "flows" / f"{flow_name}.py"
+    app_root = _discover_app_root()
+    flow_file = app_root / "flows" / f"{flow_name}.py"
 
     if not flow_file.exists():
         raise FileNotFoundError(f"Flow '{flow_name}' not found at {flow_file}")
@@ -214,24 +211,24 @@ def _load_flow_module(flow_name: str) -> Any:
 
 
 def _run_func(func: Any) -> Any:
-    """Run sync or async function."""
+    """Execute sync or async functions."""
     if inspect.iscoroutinefunction(func):
         return asyncio.run(func())
     return func()
 
 
 # =============================================================================
-# Meltano
+#  CLI Commands
 # =============================================================================
 
 
 @pipeline_run_app.command("meltano")
 def run_meltano(
     command: str = typer.Argument(
-        "run import", help="Meltano command, default 'run import'"
+        "run import", help="Meltano command (default: run import)"
     )
 ):
-    """Execute Meltano through PipelineRunner."""
+    """Run Meltano via PipelineRunner."""
     runner = _build_runner()
     try:
         res = runner.run_meltano(command)
@@ -243,18 +240,13 @@ def run_meltano(
         raise typer.Exit(1)
 
 
-# =============================================================================
-# dbt
-# =============================================================================
-
-
 @pipeline_run_app.command("dbt")
 def run_dbt(
     tag: str = typer.Argument(
-        ..., help="dbt selector/tag (e.g. 'staging', 'silver', 'gold', 'test')"
+        ..., help="dbt selector/tag (e.g. staging, silver, gold, test)"
     )
 ):
-    """Execute dbt run/test through PipelineRunner."""
+    """Run dbt via PipelineRunner."""
     runner = _build_runner()
     try:
         res = runner.run_dbt(tag)
@@ -266,11 +258,6 @@ def run_dbt(
         raise typer.Exit(1)
 
 
-# =============================================================================
-# Prefect — Local flow execution
-# =============================================================================
-
-
 @pipeline_run_app.command("prefect")
 def run_prefect(
     flow: str = typer.Option(..., "--flow", "-f", help="Name of flows/<flow>.py"),
@@ -279,13 +266,12 @@ def run_prefect(
     ),
 ):
     """
-    Load flows/<flow>.py and execute the given function.
-    Supports async and sync functions.
+    Run a local Prefect flow implementation (pure Python execution).
 
     Example:
         celine pipeline run prefect --flow sync_users --function main
     """
-    _build_runner()  # sets envs + context
+    _build_runner()
 
     try:
         module = _load_flow_module(flow)
@@ -299,7 +285,8 @@ def run_prefect(
         raise typer.Exit(1)
 
     func = getattr(module, function)
-    print(f"[bold blue]Executing {flow}.{function}()[/bold blue]")
+
+    print(f"[bold blue]Executing flow function:[/bold blue] {flow}.{function}()")
 
     try:
         result = _run_func(func)
