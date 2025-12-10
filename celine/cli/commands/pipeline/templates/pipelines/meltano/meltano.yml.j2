@@ -1,0 +1,51 @@
+version: 1
+default_environment: dev
+
+# Stable project ID (Meltano requires one). OK to keep template constant.
+project_id: "00000000-0000-0000-0000-000000000000"
+
+environments:
+  - name: dev
+  - name: staging
+  - name: prod
+
+plugins:
+  extractors:
+    # A demo extractor using the built-in tap-spreadsheets (no-op sample)
+    - name: tap-test
+      inherit_from: tap-spreadsheets
+      config:
+        files:
+          - path: file://../../../data/*.csv
+            table_name: test
+            primary_keys: [id]
+            format: csv
+
+    - name: tap-spreadsheets
+      namespace: tap_spreadsheets
+      variant: celine-eu
+      pip_url: tap-spreadsheets
+      capabilities:
+        - discover
+        - catalog
+        - state
+
+  loaders:
+    - name: target-postgres
+      variant: meltanolabs
+      pip_url: meltanolabs-target-postgres
+      config:
+        host: ${POSTGRES_HOST}
+        port: ${POSTGRES_PORT}
+        user: ${POSTGRES_USER}
+        password: ${POSTGRES_PASSWORD}
+        database: ${POSTGRES_DB}
+        default_target_schema: ${DBT_SCHEMA}
+        # Optional:
+        #batch_size_rows: 10000
+        #flush_all_streams: true
+
+jobs:
+  - name: import
+    tasks:
+      - tap-test target-postgres

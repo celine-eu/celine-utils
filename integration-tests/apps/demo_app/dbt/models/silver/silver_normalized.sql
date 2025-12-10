@@ -1,6 +1,7 @@
 -- models/silver/silver_normalized.sql
 
 {{ config(
+    tags=["silver"],
     materialized='incremental',
     unique_key='id',
     incremental_strategy='merge',

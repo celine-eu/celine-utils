@@ -232,7 +232,8 @@ def run_meltano(
     runner = _build_runner()
     try:
         res = runner.run_meltano(command)
-        print(res)
+        if res.status == "failed":
+            raise typer.Exit(1)
         return res
     except Exception as e:
         logger.exception("Meltano run failed")
@@ -250,7 +251,8 @@ def run_dbt(
     runner = _build_runner()
     try:
         res = runner.run_dbt(tag)
-        print(res)
+        if res.status == "failed":
+            raise typer.Exit(1)
         return res
     except Exception as e:
         logger.exception("dbt run failed")

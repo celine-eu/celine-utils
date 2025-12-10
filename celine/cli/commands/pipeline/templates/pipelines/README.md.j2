@@ -1,0 +1,80 @@
+# {{ app_name }}
+
+A CELINE pipeline application.
+
+This project contains:
+
+- **meltano/** — EL pipelines, extractors, loaders
+- **dbt/** — transformation models (staging, silver, gold)
+- **flows/** — Python pipeline flows (scheduled or ad-hoc)
+- **.env** — environment configuration for local development
+
+---
+
+## 📦 Project Structure
+
+```
+{{ app_name }}/
+  meltano/         # Meltano EL pipeline
+  dbt/             # dbt models and project configuration
+  flows/           # Python flow definitions
+  .env             # Local environment variables
+```
+
+---
+
+## 🚀 Running Pipelines
+
+### Meltano
+
+```
+celine pipeline run meltano
+```
+
+### dbt
+
+Run a specific tier:
+
+```
+celine pipeline run dbt silver
+```
+
+Run tests:
+
+```
+celine pipeline run dbt test
+```
+
+### Prefect / Python Flows
+
+```
+celine pipeline run prefect --flow pipeline --function main
+```
+
+---
+
+## 🛠 Configuring the Environment
+
+Edit `.env` to define database credentials, app name, and project paths.
+
+Example:
+
+```
+APP_NAME={{ app_name }}
+POSTGRES_HOST=localhost
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB={{ app_name }}
+```
+
+---
+
+## 📚 Documentation
+
+See the CELINE documentation for more details.
+
+---
+
+## 🤝 Contributing
+
+Feel free to customize this template for your application.

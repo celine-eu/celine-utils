@@ -1,6 +1,7 @@
 -- models/gold/gold_color_metrics.sql
 
 {{ config(
+    tags=["gold"],
     materialized='table',
     description="Business-ready metrics aggregated by color and date"
 ) }}

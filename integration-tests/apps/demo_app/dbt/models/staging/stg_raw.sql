@@ -1,6 +1,7 @@
 -- models/staging/stg_raw.sql
 
 {{ config(
+    tags=["staging"],
     materialized='view',
     description="Staging view of datasets.raw exposing only the business columns"
 ) }}

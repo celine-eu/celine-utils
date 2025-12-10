@@ -2,7 +2,7 @@ import traceback
 import re
 import subprocess, os, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 from uuid import uuid4
 
 from sqlalchemy import create_engine
@@ -39,6 +39,10 @@ from celine.pipelines.const import (
 
 MELTANO_LINE_RE = re.compile(
     r"^\s*\d{4}-\d{2}-\d{2}T[\d:\.]+Z\s*\[(?P<level>[a-zA-Z\s]+)\]\s*(?P<msg>.*)$"
+)
+DBT_ERROR_HEADER = re.compile(
+    r".*\b(Failure|Database Error)\b in model (?P<name>[\w_]+) \((?P<path>.+?)\)",
+    re.IGNORECASE,
 )
 
 
@@ -148,25 +152,15 @@ class PipelineRunner:
         self._engine = create_engine(url, future=True)
         return self._engine
 
-    def _relay_meltano_log(self, line: str):
+    def _parse_meltano_log(self, line: str) -> Tuple[str, str | None]:
         match = MELTANO_LINE_RE.match(line)
         if not match:
-            self.logger.debug(line)
-            return
+            return line, None
 
         level = match.group("level").strip().lower()
         msg = match.group("msg").strip()
 
-        if level.startswith("debug"):
-            self.logger.debug(msg)
-        elif level.startswith("info"):
-            self.logger.info(msg)
-        elif level.startswith("warn"):
-            self.logger.warning(msg)
-        elif level.startswith("error"):
-            self.logger.error(msg)
-        else:
-            self.logger.debug(msg)
+        return msg, level
 
     # ---------- Meltano ----------
     def run_meltano(self, command: str = "run import") -> PipelineTaskResult:
@@ -196,14 +190,25 @@ class PipelineRunner:
                 env={**os.environ, "NO_COLOR": "1"},
             )
 
-            self.logger.debug(f"run_meltano: meltano {full_command}")
-            for line in (result.stdout or "").splitlines():
-                if line.strip():
-                    self._relay_meltano_log(line)
+            success = result.returncode == 0
+            error_logs: list[str] = []
 
-            for line in (result.stderr or "").splitlines():
-                if line.strip():
-                    self._relay_meltano_log(line)
+            self.logger.debug("")
+            self.logger.debug(f"run_meltano: meltano {full_command}")
+
+            def log_results(std_result):
+                logger_fn = self.logger.debug if success else self.logger.error
+                for line in (std_result or "").splitlines():
+                    if line.strip():
+                        msg, level = self._parse_meltano_log(line)
+                        logger_fn(f"\t {msg}")
+                        if not success and level in ["error", "warning"]:
+                            error_logs.append(f"{level.upper()} {msg}")
+
+            if result.stdout:
+                log_results(result.stdout or "")
+            if result.stderr:
+                log_results(result.stderr or "")
 
             gov_resolver = GovernanceResolver.auto_discover(
                 app_name=self.cfg.app_name,
@@ -216,13 +221,14 @@ class PipelineRunner:
             )
             inputs, outputs = lineage.collect_inputs_outputs(base_command)
 
-            if result.returncode == 0:
+            if success:
                 self._emit_event(
                     job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
                 )
-                return self._task_result(True, full_command, result.stdout)
+                return self._task_result(True, full_command)
             else:
-                facets = self._get_error_facet(result.stderr)
+                error_msg = "\n".join(error_logs)
+                facets = self._get_error_facet(error_msg)
                 self._emit_event(
                     job_name,
                     EventType.FAIL,
@@ -231,7 +237,7 @@ class PipelineRunner:
                     outputs=outputs,
                     run_facets=facets,
                 )
-                return self._task_result(False, full_command, result.stderr)
+                return self._task_result(False, full_command, error_msg)
         except Exception as e:
             self._emit_event(
                 job_name,
@@ -246,34 +252,137 @@ class PipelineRunner:
             self.logger.exception("run_meltano failed")
             return self._task_result(False, full_command, str(e))
 
-    def run_dbt(self, tag: str, job_name: str | None = None) -> PipelineTaskResult:
+    def _extract_dbt_error_block(self, output: str) -> list[str]:
+        """
+        Given full dbt output (stdout/stderr), extract only the relevant
+        error message block(s) to display in our logs.
+        """
+        lines = output.splitlines()
+        extracted: list[str] = []
+        in_error_block = False
 
+        for line in lines:
+            # Strip timestamp if present
+            cleaned = self._strip_timestamp(line)
+
+            # Start of error block
+            if DBT_ERROR_HEADER.match(cleaned):
+                in_error_block = True
+                extracted.append(cleaned)
+                continue
+
+            # If inside an error block, include indented or meaningful lines
+            if in_error_block:
+                if cleaned.strip() == "":
+                    # blank line ends error block
+                    in_error_block = False
+                    continue
+
+                # stop if we reach compiled file path (too verbose)
+                if cleaned.strip().startswith("compiled code at "):
+                    continue
+
+                extracted.append(cleaned)
+
+        return extracted
+
+    def _strip_timestamp(self, line: str) -> str:
+        """
+        Remove leading `HH:MM:SS` timestamps used in dbt logs.
+        """
+        return re.sub(r"^\s*\d{2}:\d{2}:\d{2}\s+", "", line)
+
+    def run_dbt(self, tag: str, job_name: str | None = None) -> PipelineTaskResult:
         if not self.cfg.app_name:
             raise Exception(f"Missing app_name {self.cfg.app_name}")
 
-        run_id = str(uuid4())
         job_name = job_name or f"{self.cfg.app_name}:dbt:{tag}"
-
-        self.logger.debug(f"start dbt job {job_name}")
-        self._emit_event(job_name, EventType.START, run_id)
-
         project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
         profiles_dir = self.cfg.dbt_profiles_dir or project_dir
 
         if not project_dir:
             return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
-        dbt_cmd = "dbt"
         command = (
-            [dbt_cmd, "run", "--select", tag] if tag != "test" else [dbt_cmd, "test"]
+            ["dbt", "--no-use-colors", "run", "--select", tag]
+            if tag != "test"
+            else ["dbt", "test"]
         )
+
+        return self._run_dbt(
+            job_name=job_name,
+            command=command,
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+            lineage_tag=tag,
+            collect_lineage=True,
+        )
+
+    def run_dbt_operation(
+        self, macro: str, args: dict | None = None, job_name: str | None = None
+    ) -> PipelineTaskResult:
+
+        if not self.cfg.app_name:
+            raise Exception(f"Missing app_name {self.cfg.app_name}")
+
+        job_name = job_name or f"{self.cfg.app_name}:dbt:run-operation:{macro}"
+
+        project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
+        profiles_dir = self.cfg.dbt_profiles_dir or project_dir
+
+        if not project_dir:
+            return self._task_result(False, macro, "DBT_PROJECT_DIR not set")
+
+        command = ["dbt", "run-operation", macro]
+
+        if args:
+            import json
+
+            command.extend(["--args", json.dumps(args)])
+
+        return self._run_dbt(
+            job_name=job_name,
+            command=command,
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+            lineage_tag=None,
+            collect_lineage=False,
+        )
+
+    def _run_dbt(
+        self,
+        job_name: str,
+        command: list[str],
+        project_dir: str,
+        profiles_dir: str | None,
+        lineage_tag: str | None,
+        collect_lineage: bool,
+    ) -> PipelineTaskResult:
+        """
+        Core dbt execution function used by both run_dbt and run_dbt_operation.
+
+        Parameters:
+        job_name       - Full OpenLineage job name
+        command        - Full dbt command array (dbt ... ...)
+        project_dir    - dbt project directory
+        profiles_dir   - dbt profiles directory
+        lineage_tag    - The tag passed to run_dbt(), or None for operations
+        collect_lineage - Whether to collect lineage inputs/outputs
+        """
+
+        run_id = str(uuid4())
         command_str = " ".join(command)
+
+        # Emit START event
+        self._emit_event(job_name, EventType.START, run_id)
+
         try:
             env = {
                 **os.environ,
                 "DBT_PROFILES_DIR": str(profiles_dir or ""),
                 "OPENLINEAGE_DBT_JOB_NAME": job_name,
             }
+
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -282,36 +391,46 @@ class PipelineRunner:
                 env=env,
             )
 
-            self.logger.debug(f"run_dbt: {command}")
-            self.logger.debug(f"run_dbt: results")
-            self.logger.debug(result)
-
-            gov_resolver = GovernanceResolver.auto_discover(
-                app_name=self.cfg.app_name,
-                project_dir=project_dir,
-            )
-            lineage = DbtLineage(
-                project_dir,
-                self.cfg.app_name,
-                self._build_engine(),
-                governance_resolver=gov_resolver,
-            )
-            inputs, outputs = lineage.collect_inputs_outputs(tag)
-
             success = result.returncode == 0
+
+            # Logging output
+            logging_fn = self.logger.debug if success else self.logger.error
+
+            self.logger.debug(f"\ndbt_run: {command_str}\n")
+
+            for line in (result.stdout or "").splitlines():
+                if line.strip():
+                    logging_fn("\t" + line)
+            for line in (result.stderr or "").splitlines():
+                if line.strip():
+                    logging_fn("\t" + line)
+
+            # Collect lineage only for actual model runs
+            inputs, outputs = ([], [])
+            if collect_lineage and lineage_tag is not None:
+                gov_resolver = GovernanceResolver.auto_discover(
+                    app_name=self.cfg.app_name,
+                    project_dir=project_dir,
+                )
+                lineage = DbtLineage(
+                    project_dir,
+                    str(self.cfg.app_name),
+                    self._build_engine(),
+                    governance_resolver=gov_resolver,
+                )
+                inputs, outputs = lineage.collect_inputs_outputs(lineage_tag)
+
+            # Error extraction
             cli_output = self.clean_output(
                 (result.stdout + "\n" + result.stderr).strip()
             )
 
-            self.logger.debug(f"{command_str} exited {result.returncode}")
-            if success:
-                self._emit_event(
-                    job_name, EventType.COMPLETE, run_id, inputs=inputs, outputs=outputs
-                )
-            else:
+            error_msg = ""
+            if not success:
+                error_msg = "\n".join(self._extract_dbt_error_block(cli_output))
                 facets = self._get_error_facet(
-                    f"Command {command_str} exit code was {result.returncode}",
-                    cli_output,
+                    f"Command {command_str} exited with code {result.returncode}",
+                    error_msg,
                 )
                 self._emit_event(
                     job_name,
@@ -321,97 +440,24 @@ class PipelineRunner:
                     outputs=outputs,
                     run_facets=facets,
                 )
-
-            return self._task_result(
-                status=success,
-                command=command_str,
-                details=cli_output,
-            )
-
-        except Exception as e:
-            self.logger.exception(f"dbt run exception")
-            self._emit_event(
-                job_name,
-                EventType.ABORT,
-                run_id,
-                run_facets=self._get_error_facet(e, traceback.format_exc()),
-            )
-            return self._task_result(False, command_str, str(e))
-
-    def run_dbt_operation(
-        self, macro: str, args: dict | None = None, job_name: str | None = None
-    ) -> PipelineTaskResult:
-
-        if not self.cfg.app_name:
-            raise Exception(f"Missing app_name {self.cfg.app_name}")
-
-        run_id = str(uuid4())
-        job_name = job_name or f"{self.cfg.app_name}:dbt:run-operation:{macro}"
-
-        # Emit START event
-        self._emit_event(job_name, EventType.START, run_id)
-
-        project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
-        profiles_dir = self.cfg.dbt_profiles_dir or project_dir
-
-        if not project_dir:
-            return self._task_result(False, macro, "DBT_PROJECT_DIR not set")
-
-        dbt_cmd = "dbt"
-
-        # Build the command (macro + optional args)
-        command = [dbt_cmd, "run-operation", macro]
-        if args:
-            import json
-
-            command.extend(["--args", json.dumps(args)])
-
-        command_str = " ".join(command)
-
-        try:
-            env = {
-                **os.environ,
-                "DBT_PROFILES_DIR": str(profiles_dir or ""),
-                "OPENLINEAGE_DBT_JOB_NAME": job_name,
-            }
-
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                cwd=project_dir,
-                env=env,
-            )
-
-            cli_output = self.clean_output(
-                (result.stdout + "\n" + result.stderr).strip()
-            )
-
-            success = result.returncode == 0
-
-            # Note: run-operation normally has *no model lineage*, so emit empty lists
-            if success:
-                self._emit_event(job_name, EventType.COMPLETE, run_id)
             else:
-                facets = self._get_error_facet(
-                    f"Command {command_str} exit code was {result.returncode}",
-                    cli_output,
-                )
                 self._emit_event(
                     job_name,
-                    EventType.FAIL,
+                    EventType.COMPLETE,
                     run_id,
-                    run_facets=facets,
+                    inputs=inputs,
+                    outputs=outputs,
                 )
 
             return self._task_result(
                 status=success,
                 command=command_str,
-                details=cli_output,
+                details=error_msg if not success else None,
             )
 
         except Exception as e:
-            self.logger.exception(f"dbt run-operation exception")
+            # Unexpected failure → ABORT
+            self.logger.exception("dbt execution error")
             self._emit_event(
                 job_name,
                 EventType.ABORT,
