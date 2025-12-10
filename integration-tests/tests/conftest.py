@@ -7,6 +7,11 @@ from celine.pipelines.pipeline_config import PipelineConfig
 ROOT = Path(__file__).parent
 
 
+@pytest.fixture(scope="session")
+def celine_cli():
+    return ["python", "-m", "celine.cli.main"]
+
+
 @pytest.fixture(scope="session", autouse=True)
 def set_envs():
     """

@@ -8,6 +8,7 @@ OUTFILE = Path(__file__).resolve().parent.parent / "data/source.py.txt"
 DIRS = [
     Path(__file__).resolve().parent.parent / "celine",
     Path(__file__).resolve().parent.parent / "tests",
+    Path(__file__).resolve().parent.parent / "integration-tests/tests",
 ]
 
 README = Path(__file__).resolve().parent.parent / "README.md"

@@ -29,11 +29,6 @@ tasks:
     cmds:
       - find . -type d -name "__pycache__" -exec rm -r {} +
 
-  test:
-    desc: Run unit tests
-    cmds:
-      - uv run python3 -m unittest discover -v .
-
   integration-tests:
     desc: Run integration tests
     cmds:

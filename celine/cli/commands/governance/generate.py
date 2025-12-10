@@ -199,9 +199,9 @@ def _interactive_build(datasets: list[str]) -> dict:
             "access_level": access_val,
             "classification": class_val,
             "tags": tags,
-            "retention_days": None,
-            "documentation_url": None,
-            "source_system": None,
+            # "retention_days": None,
+            # "documentation_url": None,
+            # "source_system": None,
         }
 
     return yaml_doc
