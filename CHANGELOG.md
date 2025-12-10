@@ -2,6 +2,26 @@
 
 <!-- version list -->
 
+## v1.2.0 (2025-12-10)
+
+### Features
+
+- Add celine cli create pipeline
+  ([`cbc5e75`](https://github.com/celine-eu/celine-utils/commit/cbc5e7524ffa02f385147a07b11642fa546446d1))
+
+- Add cli generae tests
+  ([`7db3f84`](https://github.com/celine-eu/celine-utils/commit/7db3f84e581944a9c46aa35d9dddeadf86da6884))
+
+- Add governance features
+  ([`7f40e44`](https://github.com/celine-eu/celine-utils/commit/7f40e4407b55930cc10b82caa92ea46a63eba866))
+
+- Improve logging, improve pipeline runner output
+  ([`5827d02`](https://github.com/celine-eu/celine-utils/commit/5827d021abfd941ad5f4c98a9b8e28dcc26b88f2))
+
+- Pipeline CLI
+  ([`d6c82aa`](https://github.com/celine-eu/celine-utils/commit/d6c82aa0c38fbac99709677d8be08537e1e7065f))
+
+
 ## v1.1.1 (2025-11-29)
 
 ### Bug Fixes
