@@ -1,13 +1,15 @@
 # celine-tools
 
-celine-tools is a collection of utilities used across the CELINE data platform.
-It provides command-line tools, runtime helpers, and integration layers for Keycloak, Superset, data governance, dataset introspection, and pipeline lineage (dbt, Meltano, OpenLineage).
+`celine-tools` is a collection of utilities used across the CELINE data platform.  
+It provides command-line tooling, runtime helpers, data governance resolution, dataset introspection, and pipeline lineage instrumentation for `dbt`, `Meltano`, and `OpenLineage`.
 
-This repository is intended to be reused across applications deployed within CELINE pipelines and orchestrated by Prefect, Meltano, and dbt.
+This repository is intended to be embedded within applications deployed inside CELINE pipelines and orchestrated via Prefect, Meltano, and dbt.
 
-## Features
+---
 
-### 1. Command Line Interface
+# 🚀 Features Overview
+
+## 1. Command Line Interface (CLI)
 
 A unified CLI implemented with Typer:
 
@@ -16,63 +18,154 @@ celine
  ├── admin
  │    ├── keycloak
  │    └── setup
- └── governance
-      └── generate
+ ├── governance
+ │    └── generate
+ └── pipeline
+      ├── run
+      └── init
 ```
 
-Includes admin and [governance](docs/governance.md) commands.  
+Key features include:
 
-### 2. Keycloak Integration Layer
+- Administrative helpers (Keycloak, Superset)
+- Governance spec generation (docs/governance.md)
+- Dataset metadata and querying tools
+- Pipeline execution utilities for Meltano/dbt
+- Pipeline application scaffolding (`celine pipeline init app`)
 
-Typed wrappers for KeycloakAdmin and KeycloakOpenID providing realm, client, group, and user management.
+---
 
-### 3. Superset Integration
+## 2. Keycloak Integration Layer
 
-SupersetClient handles authentication, listing databases, and registering connections.
+Typed wrappers for `KeycloakAdmin` and `KeycloakOpenID`, providing:
 
-### 4. Dataset Introspection and Querying
+- realm and user administration  
+- client secret resolution  
+- automatic token handling  
 
-DatasetClient allows discovering schemas, fetching structures, querying tables, and exporting results to pandas.
+---
 
-### 5. Governance Framework
+## 3. Superset Integration
 
-Pattern-based governance.yaml specification and resolver.  
-See docs/governance.md.
+`SupersetClient` provides authenticated access to:
 
-### 6. Lineage Extraction (dbt & Meltano)
+- list and create connections  
+- manage datasets  
+- integrate metadata into lineage and governance flows  
 
-Automatic lineage extraction enriched with schema and governance facets and dbt test assertions.
+---
 
-### 7. Pipeline Runner
+## 4. Dataset Introspection and Querying
 
-Orchestrates Meltano and dbt execution, emits OpenLineage events, and integrates governance rules.
+`DatasetClient` supports:
 
-### 8. Configuration System
+- schema introspection  
+- querying datasets  
+- injection‑safe filtering  
+- export to pandas  
 
-Environment-based typed settings via pydantic-settings.
+---
 
-### 9. MQTT Utility
+## 5. Governance Framework
 
-Reusable MQTT client wrapper with reconnects and simple publish/subscribe API.
+Pattern-based `governance.yaml` specification and resolver:
+- governance rules via pattern matching  
+- OpenLineage facet enrichment  
+- dbt assertion propagation  
 
-## Folder Structure
+---
+
+## 6. Lineage Extraction (dbt & Meltano)
+
+Automatic lineage extraction enriched with:
+- schema metadata  
+- governance patterns  
+- dbt test results  
+
+---
+
+## 7. Pipeline Runner
+
+The `PipelineRunner` orchestrates:
+
+- `meltano run`
+- `dbt run`, `dbt test`, `dbt run-operation`
+- streaming logs  
+- OpenLineage emission  
+- governance enforcement  
+
+---
+
+## 8. Pipeline Application Scaffolding
+
+`celine pipeline init app <name>` generates a fully structured pipeline application:
+
+```
+<app_name>/
+  meltano/
+    meltano.yml        # env-based config (${POSTGRES_HOST}, etc.)
+  dbt/
+    dbt_project.yml
+    profiles.yml       # uses env_var('VAR') for dynamic config
+    models/
+    tests/
+    macros/
+  flows/
+    pipeline.py
+  .env
+  README.md
+```
+
+A non-interactive, templated setup for:
+- Meltano  
+- dbt  
+- Python orchestration flows  
+
+---
+
+## 9. Configuration System
+
+Based on `pydantic-settings`:
+
+- environment variable driven  
+- `.env` / `.env.local` resolution  
+- container-friendly defaults  
+
+---
+
+## 10. MQTT Utility
+
+Simple MQTT client wrapper:
+- safe reconnects  
+- pub/sub helpers  
+- structured logging  
+
+---
+
+# 📁 Folder Structure
 
 ```
 celine/
   admin/
   cli/
+    commands/
   common/
   datasets/
   pipelines/
-  tests/
   docs/
 ```
 
-## Installation
+---
 
-`pip install celine-utils`
+# 📦 Installation
 
-## License
+```
+pip install celine-utils
+```
+
+---
+
+# 📝 License
 
 Copyright >=2025 Spindox Labs
 

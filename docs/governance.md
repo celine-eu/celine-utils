@@ -1,109 +1,62 @@
-# CELINE Governance Metadata — Specification and Workflow
+# Governance Configuration
 
-## Overview
+This document describes how **dataset governance** is defined, configured, and applied in CELINE pipelines using the `governance.yaml` file and the CELINE CLI.
 
-The governance layer in CELINE enriches lineage and datasets with formal metadata describing:
-
-- Ownership
-- Licensing
-- Access level and sensitivity
-- Data classification
-- Tags and retention policies
-- Documentation URLs
-- Source system and provenance
-
-This metadata:
-
-1. Lives in version-controlled YAML alongside the pipelines.
-2. Is injected into OpenLineage events generated during Meltano and dbt pipelines via celine-utils.
-3. Is exported and consumed by the Dataset API.
-4. Is visible to end users and curators in Dataset API views.
-
-Governance is intended to be declarative, fully reproducible, pipeline-driven, and integrated with lineage.
+Governance metadata is used to enrich **OpenLineage events**, enforce consistency, and provide a single source of truth for ownership, licensing, access control, and classification.
 
 ---
 
-## 1. Governance in Pipelines
+## What Is `governance.yaml`
 
-Governance is defined per application in:
+`governance.yaml` is a **declarative configuration file** that defines governance rules for datasets produced or consumed by a pipeline.
+
+It allows you to specify, per dataset or dataset pattern:
+
+- License
+- Ownership
+- Access level
+- Classification / sensitivity
+- Tags
+- Retention policy
+- Documentation and source system
+
+These rules are resolved at runtime and injected into lineage events as **custom OpenLineage facets**.
+
+---
+
+## Where the File Lives
+
+For a pipeline application named `<app_name>`, the expected location is:
 
 ```
 PIPELINES_ROOT/
-  apps/
-    <app-name>/
-      governance.yaml
+└── apps/
+    └── <app_name>/
+        └── governance.yaml
 ```
 
-`celine-utils` loads this file at runtime inside:
+The file is automatically discovered by CELINE tooling at runtime.
 
-- Meltano orchestrations
-- dbt transformations
-- Prefect tasks that emit OpenLineage
-
-### Processing Steps
-
-1. The governance resolver locates `governance.yaml`.
-2. It loads global defaults and pattern-based dataset rules.
-3. For each dataset produced or consumed during the pipeline, the resolver selects:
-   - exact match
-   - schema wildcard
-   - namespace or prefix wildcard
-   - or defaults if nothing matches
-4. Governance metadata is attached to each OpenLineage dataset event as a custom dataset facet.
-
-### OpenLineage Facet Example
+You can override discovery using:
 
 ```
-{
-  "governance": {
-    "license": "ODbL-1.0",
-    "ownership": [{"name": "GIS Team", "type": "DATA_OWNER"}],
-    "access_level": "internal",
-    "classification": "green",
-    "tags": ["osm", "geodata"],
-    "retention_days": 365,
-    "documentation_url": "https://docs.example",
-    "source_system": "openstreetmap"
-  }
-}
+GOVERNANCE_CONFIG_PATH=/absolute/path/to/governance.yaml
 ```
-
-This uses a custom OpenLineage Dataset Facet, which is valid under OpenLineage specifications.
 
 ---
 
-## 2. Governance CLI Generator
+## File Structure
 
-The CLI tool generates or bootstraps `governance.yaml` for a given application based on datasets registered in Marquez.
+A `governance.yaml` file has two top-level sections:
 
-Command:
+- `defaults`: applied to all datasets unless overridden
+- `sources`: dataset-specific or pattern-based rules
 
-```
-celine governance generate marquez --app <app>
-```
+---
 
-Environment variables:
+## Example `governance.yaml`
 
-| Variable | Description |
-|---------|-------------|
-| OPENLINEAGE_URL | Marquez API base URL |
-| OPENLINEAGE_NAMESPACE | Lineage namespace |
-| PIPELINES_ROOT | Determines default output path |
-
-### Non-interactive Mode
-
-```
-celine governance generate marquez --app osm --yes
-```
-
-Generates:
-
-- Defaults section populated
-- One empty `sources:` entry per dataset
-
-Example output:
-
-```
+```yaml
 defaults:
   license: null
   ownership: []
@@ -111,166 +64,187 @@ defaults:
   classification: green
   tags: []
   retention_days: 365
-  documentation_url: null
-  source_system: null
+  documentation_url: https://example.com/dataset-test/docs
+  source_system: "integration-tests"
 
 sources:
-  datasets.ds_dev_raw.openstreetmap_fi_lapperanta: {}
-  datasets.ds_dev_silver.openstreetmap_it_alpecimbra_base: {}
-```
-
-### Interactive Mode
-
-```
-celine governance generate marquez --app osm
-```
-
-For each dataset the wizard prompts for:
-
-- Matching rule (exact, schema wildcard, prefix wildcard)
-- License (common presets or custom)
-- Access level
-- Classification
-- Owner
-- Tags
-
-Example generated entry:
-
-```
-sources:
-  datasets.ds_dev_raw.*:
-    license: ODbL-1.0
+  datasets.ds.gold_color_metrics:
+    license: CC0-1.0
     ownership:
-      - name: GIS Team
+      - name: owner1
         type: DATA_OWNER
     access_level: internal
     classification: green
-    tags: ["osm", "raw"]
-```
-
----
-
-## 3. governance.yaml Format and Schema
-
-Each file contains two top-level sections:
-
-```
-defaults:
-sources:
-```
-
-### Defaults Section
-
-Applies to any dataset without a matching rule.
-
-```
-defaults:
-  license: null
-  ownership: []
-  access_level: internal
-  classification: green
-  tags: []
-  retention_days: 365
-  documentation_url: null
-  source_system: null
-```
-
-### Sources Section
-
-Pattern-to-metadata mapping.
-
-```
-sources:
-  <pattern>:
-    license: <string>
-    ownership:
-      - name: <string>
-        type: DATA_OWNER | STEWARD | PRODUCER
-    access_level: internal | public | restricted | secret
-    classification: green | yellow | red
     tags:
-      - <string>
-    retention_days: <int>
-    documentation_url: <URL or null>
-    source_system: <string>
-```
+      - gold
+      - test
 
-Supported patterns:
+  datasets.ds.silver_normalized:
+    license: ODbL-1.0
+    ownership:
+      - name: owner1
+        type: DATA_OWNER
+    access_level: internal
+    classification: yellow
+    tags:
+      - silver
+      - test
 
-| Type | Example | Meaning |
-|------|----------|---------|
-| exact | datasets.ds_dev_raw.table1 | Matches only this table |
-| schema wildcard | datasets.ds_dev_raw.* | All tables in schema |
-| prefix wildcard | datasets.* | All datasets under prefix |
+  datasets.ds.stg_raw:
+    license: proprietary
+    ownership:
+      - name: company ltd
+        type: DATA_OWNER
+    access_level: restricted
+    classification: red
+    tags:
+      - raw
+      - test
+      - secret_sauce
 
-Matching priority:
+  datasets.raw.test:
+    license: proprietary
+    ownership:
+      - name: company foo
+        type: DATA_OWNER
+    access_level: secret
+    classification: red
+    tags:
+      - foo
+      - test
+      - raw
 
-1. Exact
-2. Schema wildcard
-3. Prefix wildcard
-4. Defaults
-
----
-
-## 4. Dataset API Consumption
-
-The Dataset API:
-
-1. Exports lineage and datasets from Marquez.
-2. Loads governance metadata.
-3. Stores enriched metadata in catalog tables.
-4. Exposes governance in dataset detail and list views.
-
-Used for:
-
-- Documentation
-- Compliance and classification
-- Access control logic (future)
-- Ownership visibility
-- User-interface labels and metadata badges
-
-Governance travels end-to-end:
-
-```
-governance.yaml
-→ celine-utils OpenLineage emission
-→ Marquez lineage storage
-→ dataset-export CLI
-→ Dataset API catalog
-→ UI and consumer APIs
+  singer.tap-test.test:
+    license: proprietary
+    ownership: []
+    access_level: secret
+    classification: red
+    tags: []
 ```
 
 ---
 
-## 5. Schemas and Validation
+## Defaults Section
 
-Governance fields follow this structure:
+The `defaults` block defines baseline governance applied to **all datasets** unless overridden.
 
-```
-license: string|null
-ownership: list[{name: string, type: string}]
-access_level: string|null
-classification: string|null
-tags: list[string]
-retention_days: int|null
-documentation_url: string|null
-source_system: string|null
-```
+Typical use cases:
+- Global access level
+- Retention policy
+- Shared documentation URL
+- Default classification
 
-Values may be arbitrary unless restricted by internal policies.
+Fields set to `null` are omitted unless overridden.
 
 ---
 
-## 6. Test Coverage
+## Sources Section
 
-Tests validate:
+The `sources` section defines governance rules for specific datasets or **patterns**.
 
-- URL and namespace resolution
-- Non-interactive generation
-- Output path override
-- Marquez API failure behavior
-- Empty dataset namespace handling
+### Dataset Keys
+
+Keys correspond to **OpenLineage dataset names**, for example:
+
+- `database.schema.table`
+- `datasets.ds.gold_color_metrics`
+- `singer.tap-test.test`
+
+### Pattern Matching
+
+Wildcard rules are supported using glob semantics:
+
+```yaml
+sources:
+  datasets.ds.*:
+    access_level: internal
+
+  datasets.raw.*:
+    classification: red
+```
+
+Resolution precedence:
+1. Exact match
+2. Longest matching wildcard
+3. Defaults
 
 ---
 
-This document defines how governance metadata flows through CELINE pipelines, lineage, and API layers, and how governance.yaml is created and interpreted.
+## Governance Fields
+
+| Field | Description |
+|------|-------------|
+| `license` | Dataset license identifier |
+| `ownership` | List of owners (`name`, `type`) |
+| `access_level` | `open`, `internal`, `restricted`, `secret` |
+| `classification` | Sensitivity class (e.g. `green`, `yellow`, `red`) |
+| `tags` | Free-form tags |
+| `retention_days` | Retention period in days |
+| `documentation_url` | Link to documentation |
+| `source_system` | Origin system or domain |
+
+---
+
+## How Governance Is Applied
+
+During pipeline execution:
+
+- Dataset lineage is collected
+- Dataset names are resolved against `governance.yaml`
+- Defaults and overrides are merged
+- Governance is emitted as a custom OpenLineage dataset facet
+
+This applies to:
+- Inputs
+- Outputs
+- dbt test datasets
+
+---
+
+## Interactive CLI Usage
+
+CELINE provides an interactive CLI to generate governance files.
+
+### Command
+
+```bash
+celine governance generate marquez --app <app_name>
+```
+
+The CLI will:
+1. Discover datasets from Marquez
+2. Prompt for governance metadata per dataset
+3. Allow pattern-based scoping
+4. Write `governance.yaml` to the pipeline folder
+
+### Non-Interactive Mode
+
+For automation:
+
+```bash
+celine governance generate marquez --app <app_name> --yes
+```
+
+This generates a skeleton file using defaults.
+
+---
+
+## Best Practices
+
+- Use defaults to minimize repetition
+- Prefer wildcard rules for schema-level governance
+- Keep dataset names stable
+- Version governance files with code
+- Treat governance as configuration, not logic
+
+---
+
+## Summary
+
+`governance.yaml` provides a single, declarative mechanism for defining dataset governance in CELINE pipelines.
+
+It is:
+- Pattern-based
+- Automatically applied
+- Integrated with lineage
+- CLI-assisted

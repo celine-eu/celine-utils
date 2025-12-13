@@ -5,7 +5,7 @@ datasets:
       type: postgres
       host: 172.17.0.1
       user: postgres
-      password: postgres
+      password: securepassword123
       port: 15432
       dbname: datasets
       schema: ds

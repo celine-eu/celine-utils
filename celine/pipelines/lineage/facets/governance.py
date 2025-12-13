@@ -3,9 +3,14 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+import attr
+from typing import Optional, List
 from openlineage.client.facet import BaseFacet
 
+SCHEMA_URL = "https://raw.githubusercontent.com/celine-eu/celine-utils/main/schemas/GovernanceDatasetFacet.json"
 
+
+@attr.s(auto_attribs=True)
 class GovernanceDatasetFacet(BaseFacet):
     """
     Custom dataset facet that encodes governance metadata.
@@ -16,37 +21,10 @@ class GovernanceDatasetFacet(BaseFacet):
       - includes _producer and _schemaURL when serialized via BaseFacet
     """
 
-    _namespace = "celine"
-    _schemaURL = "https://raw.githubusercontent.com/celine-eu/celine-utils/refs/heads/main/schemas/GovernanceDatasetFacet.json"
+    @staticmethod
+    def _get_schema():
+        return SCHEMA_URL
 
-    def __init__(
-        self,
-        license: Optional[str] = None,
-        owners: Optional[List[str]] = None,
-        accessLevel: Optional[str] = None,
-        accessRights: Optional[str] = None,
-        classification: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        retentionDays: Optional[int] = None,
-        documentationUrl: Optional[str] = None,
-        sourceSystem: Optional[str] = None,
-        **kwargs,
-    ):
-        # BaseFacet sets _producer + _schemaURL automatically
-        super().__init__(**kwargs)
-
-        # Fields must be instance attributes
-        self.license = license
-        self.owners = owners
-        self.accessLevel = accessLevel
-        self.accessRights = accessRights
-        self.classification = classification
-        self.tags = tags
-        self.retentionDays = retentionDays
-        self.documentationUrl = documentationUrl
-        self.sourceSystem = sourceSystem
-
-    # Note: field names are camelCase to follow OpenLineage JSON conventions.
     license: Optional[str] = None
     owners: Optional[List[str]] = None
     accessLevel: Optional[str] = None  # open / internal / restricted / secret
