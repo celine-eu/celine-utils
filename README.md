@@ -1,19 +1,32 @@
-# celine-tools
+# CELINE Utils
 
-`celine-tools` is a collection of utilities used across the CELINE data platform.  
-It provides command-line tooling, runtime helpers, data governance resolution, dataset introspection, and pipeline lineage instrumentation for `dbt`, `Meltano`, and `OpenLineage`.
+**CELINE Utils** is a collection of shared utilities, libraries, and command-line tools that form the technical backbone of the **CELINE data platform**.
 
-This repository is intended to be embedded within applications deployed inside CELINE pipelines and orchestrated via Prefect, Meltano, and dbt.
+It provides reusable building blocks for data pipelines, governance, lineage, metadata management, and platform integrations. The repository is designed to be embedded into CELINE applications and executed within orchestrated environments using Meltano, dbt, Prefect, and OpenLineage.
 
 ---
 
-# 🚀 Features Overview
+## Scope and Goals
 
-## 1. Command Line Interface (CLI)
+The goals of this repository are to:
 
-A unified CLI implemented with Typer:
+- Centralize **cross-cutting platform logic** used by multiple CELINE projects
+- Provide **opinionated but extensible** tooling for data pipelines
+- Enforce **consistent governance and lineage semantics**
+- Reduce duplication across pipeline applications
+- Act as a stable foundation for CELINE-compatible services and workflows
 
-```
+This is not an end-user application; it is a **platform utility layer**.
+
+---
+
+## Key Capabilities
+
+### Command Line Interface (CLI)
+
+A unified CLI built with Typer exposes administrative, governance, and pipeline utilities:
+
+```text
 celine
  ├── admin
  │    ├── keycloak
@@ -21,160 +34,118 @@ celine
  ├── governance
  │    └── generate
  └── pipeline
-      ├── run
-      └── init
+      ├── init
+      └── run
 ```
 
-Key features include:
+---
 
-- Administrative helpers (Keycloak, Superset)
-- Governance spec generation (docs/governance.md)
-- Dataset metadata and querying tools
-- Pipeline execution utilities for Meltano/dbt
-- Pipeline application scaffolding (`celine pipeline init app`)
+### Pipeline Orchestration
+
+CELINE Utils provides a structured execution layer for:
+
+- **Meltano** ingestion pipelines
+- **dbt** transformations and tests
+- **Prefect**-based Python flows
+
+The `PipelineRunner` coordinates execution, logging, error handling, and lineage emission in a consistent way across tools.
 
 ---
 
-## 2. Keycloak Integration Layer
+### OpenLineage Integration
 
-Typed wrappers for `KeycloakAdmin` and `KeycloakOpenID`, providing:
+First-class OpenLineage support includes:
 
-- realm and user administration  
-- client secret resolution  
-- automatic token handling  
-
----
-
-## 3. Superset Integration
-
-`SupersetClient` provides authenticated access to:
-
-- list and create connections  
-- manage datasets  
-- integrate metadata into lineage and governance flows  
+- Automatic emission of START, COMPLETE, FAIL, and ABORT events
+- Dataset-level schema facets
+- Data quality assertions from dbt tests
+- Custom CELINE governance facets
 
 ---
 
-## 4. Dataset Introspection and Querying
+### Governance Framework
 
-`DatasetClient` supports:
+A declarative `governance.yaml` specification allows you to define:
 
-- schema introspection  
-- querying datasets  
-- injection‑safe filtering  
-- export to pandas  
+- Dataset ownership
+- License and access level
+- Classification and retention
+- Tags and documentation links
 
----
-
-## 5. Governance Framework
-
-Pattern-based `governance.yaml` specification and resolver:
-- governance rules via pattern matching  
-- OpenLineage facet enrichment  
-- dbt assertion propagation  
+Governance rules are resolved using pattern matching and injected into lineage events.
 
 ---
 
-## 6. Lineage Extraction (dbt & Meltano)
+### Dataset Tooling
 
-Automatic lineage extraction enriched with:
-- schema metadata  
-- governance patterns  
-- dbt test results  
+The `DatasetClient` enables:
 
----
-
-## 7. Pipeline Runner
-
-The `PipelineRunner` orchestrates:
-
-- `meltano run`
-- `dbt run`, `dbt test`, `dbt run-operation`
-- streaming logs  
-- OpenLineage emission  
-- governance enforcement  
+- Schema and table introspection
+- Column metadata inspection
+- Safe query construction
+- Export to Pandas
 
 ---
 
-## 8. Pipeline Application Scaffolding
+### Platform Integrations
 
-`celine pipeline init app <name>` generates a fully structured pipeline application:
+Built-in integrations include:
 
-```
-<app_name>/
-  meltano/
-    meltano.yml        # env-based config (${POSTGRES_HOST}, etc.)
-  dbt/
-    dbt_project.yml
-    profiles.yml       # uses env_var('VAR') for dynamic config
-    models/
-    tests/
-    macros/
-  flows/
-    pipeline.py
-  .env
-  README.md
-```
-
-A non-interactive, templated setup for:
-- Meltano  
-- dbt  
-- Python orchestration flows  
+- **Keycloak** for identity and access management
+- **Apache Superset** for analytics platform integration
+- **MQTT** for lightweight messaging
 
 ---
 
-## 9. Configuration System
+## Repository Structure
 
-Based on `pydantic-settings`:
-
-- environment variable driven  
-- `.env` / `.env.local` resolution  
-- container-friendly defaults  
-
----
-
-## 10. MQTT Utility
-
-Simple MQTT client wrapper:
-- safe reconnects  
-- pub/sub helpers  
-- structured logging  
-
----
-
-# 📁 Folder Structure
-
-```
+```text
 celine/
   admin/
   cli/
-    commands/
   common/
   datasets/
   pipelines/
-  docs/
+schemas/
+tests/
 ```
 
 ---
 
-# 📦 Installation
+## Configuration
 
-```
+Configuration is environment-driven using `pydantic-settings`:
+
+- Environment variables first
+- Optional `.env` files
+- Typed validation
+- Container-friendly defaults
+
+---
+
+## Installation
+
+```bash
 pip install celine-utils
 ```
 
 ---
 
-# 📝 License
+## Intended Audience
 
-Copyright >=2025 Spindox Labs
+CELINE Utils is intended for:
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+- Data engineers
+- Platform engineers
+- CELINE application developers
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+It is not a general-purpose data tooling library.
+
+---
+
+## License
+
+Copyright © 2025  
+Spindox Labs
+
+Licensed under the Apache License, Version 2.0.
