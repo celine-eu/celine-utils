@@ -1,0 +1,9 @@
+contents:
+  - celine
+  - integration-tests/tests
+  - schema
+  - docs
+  - README.md
+  - pyproject.toml
+
+output: data/sources.txt
