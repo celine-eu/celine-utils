@@ -7,7 +7,7 @@ import attr
 from typing import Optional, List
 from openlineage.client.facet import BaseFacet
 
-SCHEMA_URL = "https://raw.githubusercontent.com/celine-eu/celine-utils/main/schemas/GovernanceDatasetFacet.json"
+SCHEMA_URL = "https://celine-eu.github.io/schema/GovernanceDatasetFacet.schema.json"
 
 
 @attr.s(auto_attribs=True)
