@@ -28,9 +28,6 @@ A unified CLI built with Typer exposes administrative, governance, and pipeline 
 
 ```text
 celine
- ├── admin
- │    ├── keycloak
- │    └── setup
  ├── governance
  │    └── generate
  └── pipeline
@@ -49,6 +46,8 @@ CELINE Utils provides a structured execution layer for:
 - **Prefect**-based Python flows
 
 The `PipelineRunner` coordinates execution, logging, error handling, and lineage emission in a consistent way across tools.
+
+See the [pipeline tutorial](docs/pipeline-tutorial.md) to discover how to setup and deploy a new pipeline.
 
 ---
 
