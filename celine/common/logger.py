@@ -17,6 +17,7 @@ def configure_logging():
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
+    logging.getLogger("openlineage").setLevel(logging.INFO)
 
     # Suppress only the single warning from urllib3
     warnings.filterwarnings("ignore", category=InsecureRequestWarning)
@@ -41,10 +42,11 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
     logger.setLevel(getattr(logging, log_level, logging.INFO))
 
-    handler = logging.StreamHandler()
+    stdout_pipe = sys.stdout
+    handler = logging.StreamHandler(stdout_pipe)
 
     # Enable color only for CLI
-    use_color = sys.stdout.isatty()
+    use_color = stdout_pipe.isatty()
 
     if use_color:
         fmt = "%(levelname)s | %(message)s"

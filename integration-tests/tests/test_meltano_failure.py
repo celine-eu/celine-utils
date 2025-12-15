@@ -6,5 +6,5 @@ def test_meltano_failure(pipeline_cfg: PipelineConfig):
 
     runner = PipelineRunner(pipeline_cfg)
     res = runner.run_meltano("run foo_bar")
-    assert res["status"] in ("failed")
-    assert "command" in res
+    assert res.status in ("failed")
+    assert res.command

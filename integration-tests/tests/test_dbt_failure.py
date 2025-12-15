@@ -11,16 +11,8 @@ def test_dbt_model_failure(pipeline_cfg: PipelineConfig):
     runner = PipelineRunner(pipeline_cfg)
     res = runner.run_dbt("failing_model")
 
-    assert "status" in res
-    assert res["status"] == "failed", "failing model should cause dbt run to fail"
-
-    # command + details always included
-    assert "command" in res
-    assert "details" in res
+    assert res.status == "failed"
 
     # Ensure the error is propagated into the result text
-    assert (
-        "division" in res["details"].lower()
-        or "zero" in res["details"].lower()
-        or "error" in res["details"].lower()
-    )
+    details = str(res.details)
+    assert "failure in model failing_model" in details.lower()

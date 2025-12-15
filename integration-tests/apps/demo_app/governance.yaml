@@ -5,54 +5,12 @@ defaults:
   classification: green
   tags: []
   retention_days: 365
-  documentation_url: https://example.com/dataset-test/docs
-  source_system: "integration-tests"
+  documentation_url: null
+  source_system: null
 sources:
-  datasets.ds.gold_color_metrics:
-    license: CC0-1.0
-    ownership:
-      - name: owner1
-        type: DATA_OWNER
-    access_level: internal
-    classification: green
-    tags:
-      - gold
-      - test
-  datasets.ds.silver_normalized:
-    license: ODbL-1.0
-    ownership:
-      - name: owner1
-        type: DATA_OWNER
-    access_level: internal
-    classification: yellow
-    tags:
-      - silver
-      - test
-  datasets.ds.stg_raw:
-    license: proprietary
-    ownership:
-      - name: company ltd
-        type: DATA_OWNER
-    access_level: restricted
-    classification: red
-    tags:
-      - raw
-      - test
-      - secret_sauce
-  datasets.raw.test:
-    license: proprietary
-    ownership:
-      - name: company foo
-        type: DATA_OWNER
-    access_level: secret
-    classification: red
-    tags:
-      - foo
-      - test
-      - raw
-  singer.tap-test.test:
-    license: proprietary
-    ownership: []
-    access_level: secret
-    classification: red
-    tags: []
+  datasets.ds.failing_model: {}
+  datasets.ds.gold_color_metrics: {}
+  datasets.ds.silver_normalized: {}
+  datasets.ds.stg_raw: {}
+  datasets.raw.test: {}
+  singer.tap-test.test: {}

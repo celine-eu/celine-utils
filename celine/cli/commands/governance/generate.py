@@ -4,9 +4,6 @@ import yaml
 from pathlib import Path
 from typing import Optional
 import os
-from rich import print
-from rich.prompt import Confirm, Prompt
-from rich.table import Table
 
 from celine.common.logger import get_logger
 from celine.pipelines.utils import get_namespace
@@ -14,7 +11,6 @@ from celine.pipelines.utils import get_namespace
 logger = get_logger(__name__)
 
 generate_app = typer.Typer(help="Generate governance.yaml from Marquez datasets")
-
 
 # =============================================================================
 # Internal helpers
@@ -74,36 +70,36 @@ def _fetch_marquez_datasets(marquez_url: str, namespace: str) -> list[str]:
 
 
 # =============================================================================
-# Interactive input helpers
+# Interactive input helpers (Typer-native)
 # =============================================================================
 
 
 def _choose_with_custom(prompt: str, choices: list[str], default=None):
-    """
-    Offer a list of choices, with an option for custom free-text input.
-    """
-    print(f"[bold]{prompt}[/bold]")
+    typer.echo(prompt)
     for i, c in enumerate(choices, start=1):
-        print(f"  {i}) {c}")
-    print("  c) Custom value")
-    value = Prompt.ask("Choose", default=str(default) if default else "1")
+        typer.echo(f"  {i}) {c}")
+    typer.echo("  c) Custom value")
+
+    value = typer.prompt("Choose", default=str(default) if default else "1")
 
     if value == "c":
-        return Prompt.ask("Enter custom value")
+        return typer.prompt("Enter custom value")
+
     try:
         idx = int(value)
         if 1 <= idx <= len(choices):
             return choices[idx - 1]
     except ValueError:
         pass
-    print("[yellow]Invalid choice, using default[/yellow]")
+
+    typer.echo("Invalid choice, using default")
     return default
 
 
 def _ask_tags():
     tags = []
     while True:
-        tag = Prompt.ask("Add a tag (leave blank to stop)", default="")
+        tag = typer.prompt("Add a tag (leave blank to stop)", default="")
         if not tag:
             break
         tags.append(tag)
@@ -125,10 +121,7 @@ def _pattern_suggestion(fullname: str) -> tuple[str, str, str]:
 
 
 def _interactive_build(datasets: list[str]) -> dict:
-    """
-    Build governance.yaml interactively.
-    """
-    print("[bold green]Interactive governance.yaml builder[/bold green]\n")
+    typer.echo("Interactive governance.yaml builder\n")
 
     yaml_doc = {
         "defaults": {
@@ -144,31 +137,27 @@ def _interactive_build(datasets: list[str]) -> dict:
         "sources": {},
     }
 
-    # Show dataset table
-    print("[bold]Datasets discovered:[/bold]")
-    table = Table(show_header=True, header_style="bold")
-    table.add_column("Dataset")
+    typer.echo("Datasets discovered:")
     for d in datasets:
-        table.add_row(d)
-    print(table)
+        typer.echo(f" - {d}")
 
-    print("\nStarting metadata collection...\n")
+    typer.echo("\nStarting metadata collection...\n")
 
     for d in datasets:
-        print(f"\n[bold blue]Dataset: {d}[/bold blue]")
+        typer.echo(f"\nDataset: {d}")
 
-        if not Confirm.ask("Configure this dataset?", default=True):
-            print("[yellow]Skipping…[/yellow]")
+        if not typer.confirm("Configure this dataset?", default=True):
+            typer.echo("Skipping")
             continue
 
         exact, schema_wildcard, prefix_wildcard = _pattern_suggestion(d)
 
-        print("\nChoose pattern scope:")
-        print(f"  1) exact match:      {exact}")
-        print(f"  2) schema wildcard:  {schema_wildcard}")
-        print(f"  3) prefix wildcard:  {prefix_wildcard}")
+        typer.echo("Choose pattern scope:")
+        typer.echo(f"  1) exact match:      {exact}")
+        typer.echo(f"  2) schema wildcard:  {schema_wildcard}")
+        typer.echo(f"  3) prefix wildcard:  {prefix_wildcard}")
 
-        choice = Prompt.ask("Pattern choice", default="1")
+        choice = typer.prompt("Pattern choice", default="1")
         if choice == "1":
             pattern = exact
         elif choice == "2":
@@ -188,7 +177,7 @@ def _interactive_build(datasets: list[str]) -> dict:
             "Classification:", COMMON_CLASSIFICATION, default="green"
         )
 
-        owner = Prompt.ask("Owner (leave empty to skip)", default="")
+        owner = typer.prompt("Owner (leave empty to skip)", default="")
         ownership = [{"name": owner, "type": "DATA_OWNER"}] if owner else []
 
         tags = _ask_tags()
@@ -199,9 +188,6 @@ def _interactive_build(datasets: list[str]) -> dict:
             "access_level": access_val,
             "classification": class_val,
             "tags": tags,
-            # "retention_days": None,
-            # "documentation_url": None,
-            # "source_system": None,
         }
 
     return yaml_doc
@@ -233,23 +219,18 @@ def generate_governance_from_marquez(
         False, "--yes", "-y", help="Non-interactive mode (use defaults)"
     ),
 ):
-    """
-    Auto-generate governance.yaml from datasets registered in Marquez.
-    Supports interactive collection of governance metadata.
-    """
-
     mz_url = _resolve_marquez_url(marquez_url)
-    print(f"[green]Using Marquez URL:[/green] {mz_url}")
+    typer.echo(f"Using Marquez URL: {mz_url}")
 
     ns = _resolve_namespace(app_name, namespace)
-    print(f"[green]Using OpenLineage namespace:[/green] {ns}")
+    typer.echo(f"Using OpenLineage namespace: {ns}")
 
     datasets = _fetch_marquez_datasets(mz_url, ns)
     if not datasets:
-        print(f"[red]No datasets found in namespace '{ns}'[/red]")
+        typer.echo(f"No datasets found in namespace '{ns}'")
         raise typer.Exit(1)
 
-    print(f"[green]Discovered {len(datasets)} datasets[/green]\n")
+    typer.echo(f"Discovered {len(datasets)} datasets\n")
 
     if yes:
         yaml_doc = {
@@ -268,11 +249,10 @@ def generate_governance_from_marquez(
     else:
         yaml_doc = _interactive_build(datasets)
 
-    # Determine output path
     if output_path:
         target = Path(output_path)
     else:
-        pipeline_root = os.environ.get("PIPELINES_ROOT", None)
+        pipeline_root = os.environ.get("PIPELINES_ROOT")
         if pipeline_root:
             target = Path(pipeline_root) / "apps" / app_name / "governance.yaml"
         else:
@@ -283,4 +263,4 @@ def generate_governance_from_marquez(
     with target.open("w") as f:
         yaml.safe_dump(yaml_doc, f, sort_keys=False)
 
-    print(f"\n[bold green]Generated governance.yaml → {target}[/bold green]")
+    typer.echo(f"Generated governance.yaml -> {target}")

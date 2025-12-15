@@ -12,10 +12,7 @@ def test_run_dbt_operation_basic(pipeline_cfg: PipelineConfig):
     runner = PipelineRunner(pipeline_cfg)
     res = runner.run_dbt_operation("print_test_macro")
 
-    assert "status" in res
-    assert res["status"] in ("success", "failed")
-    assert "command" in res
-    assert "details" in res
+    assert res.status in ("success", "failed")
 
 
 def test_run_dbt_operation_with_args(pipeline_cfg: PipelineConfig):
@@ -28,7 +25,4 @@ def test_run_dbt_operation_with_args(pipeline_cfg: PipelineConfig):
 
     res = runner.run_dbt_operation("print_test_macro", args=args)
 
-    assert "status" in res
-    assert res["status"] in ("success", "failed")
-    assert "command" in res
-    assert "details" in res
+    assert res.status in ("success", "failed")

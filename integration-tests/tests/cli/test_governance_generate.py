@@ -90,14 +90,14 @@ def test_generate_governance_yes_mode(mock_get, tmp_path, monkeypatch):
         generate_app,
         [
             "--app",
-            "osm",
+            "demo_app",
             "--yes",
         ],
     )
 
     assert result.exit_code == 0, result.stdout
 
-    out_path = tmp_path / "apps" / "osm" / "governance.yaml"
+    out_path = tmp_path / "apps" / "demo_app" / "governance.yaml"
     assert out_path.exists()
 
     data = yaml.safe_load(out_path.read_text())
@@ -127,7 +127,7 @@ def test_generate_governance_output_override(mock_get, tmp_path):
         generate_app,
         [
             "--app",
-            "osm",
+            "demo_app",
             "--yes",
             "--output",
             str(output),
@@ -160,7 +160,7 @@ def test_generate_no_datasets(mock_get, tmp_path, monkeypatch):
         generate_app,
         [
             "--app",
-            "osm",
+            "foobaz",
             "--yes",
         ],
     )

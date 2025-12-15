@@ -10,7 +10,6 @@ from typing import Any
 
 import typer
 from dotenv import load_dotenv
-from rich import print
 
 from celine.common.logger import get_logger
 from celine.pipelines.pipeline_config import PipelineConfig
@@ -22,7 +21,7 @@ pipeline_run_app = typer.Typer(help="Execute complete or partial pipelines")
 
 
 # =============================================================================
-#  Discovery helpers
+# Discovery helpers
 # =============================================================================
 
 
@@ -39,12 +38,10 @@ def _discover_app_root() -> Path:
     def is_app_folder(p: Path) -> bool:
         return any((p / sub).exists() for sub in ("meltano", "dbt", "flows"))
 
-    # CWD is an app folder
     if is_app_folder(cwd):
         logger.debug(f"Discovered app root at CWD: {cwd}")
         return cwd
 
-    # Walk upward
     for parent in cwd.parents:
         if is_app_folder(parent):
             logger.debug(f"Discovered app root at parent: {parent}")
@@ -58,11 +55,6 @@ def _discover_app_root() -> Path:
 
 
 def _discover_app_name(app_root: Path) -> str:
-    """
-    Determine APP_NAME:
-      1. Use env APP_NAME if set
-      2. Otherwise use name of app_root folder
-    """
     env_app = os.getenv("APP_NAME")
     if env_app:
         logger.debug(f"Using APP_NAME from environment: {env_app}")
@@ -73,21 +65,12 @@ def _discover_app_name(app_root: Path) -> str:
 
 
 def _discover_pipelines_root(app_root: Path, app_name: str) -> Path:
-    """
-    PIPELINES_ROOT is optional.
-    If env PIPELINES_ROOT exists, use it.
-
-    Otherwise:
-      - If monorepo layout detected (…/apps/<app>), pipelines root = parent.parent
-      - Else standalone app → pipelines_root = app_root
-    """
     env_root = os.getenv("PIPELINES_ROOT")
     if env_root:
         pr = Path(env_root).resolve()
         logger.debug(f"Using PIPELINES_ROOT from env: {pr}")
         return pr
 
-    # monorepo style apps/<app>
     if app_root.parent.name == "apps" and app_root.parent.parent.exists():
         root = app_root.parent.parent
         logger.debug(f"Detected monorepo pipelines root: {root}")
@@ -98,20 +81,6 @@ def _discover_pipelines_root(app_root: Path, app_name: str) -> Path:
 
 
 def _load_env_files(pipelines_root: Path, app_root: Path, app_name: str) -> None:
-    """
-    Environment resolution rules:
-
-    If PIPELINES_ROOT was set explicitly:
-        1. Load first existing file from pipelines root:
-              .env, .env.local
-        2. Load first existing file from pipelines root/apps/<app>/
-              .env, .env.local
-
-    If PIPELINES_ROOT was NOT set:
-        Load first existing file from APP_ROOT:
-              .env, .env.local
-    """
-
     env_files = [".env", ".env.local"]
 
     def load_first(candidates: list[Path], override: bool):
@@ -123,58 +92,42 @@ def _load_env_files(pipelines_root: Path, app_root: Path, app_name: str) -> None
 
     pipelines_root_from_env = os.getenv("PIPELINES_ROOT") is not None
 
-    # Global env only applies if pipelines_root was explicitly given
     if pipelines_root_from_env:
-        root_candidates = [pipelines_root / f for f in env_files]
-        load_first(root_candidates, override=False)
-
-        app_candidates = [pipelines_root / "apps" / app_name / f for f in env_files]
-        load_first(app_candidates, override=True)
-
+        load_first([pipelines_root / f for f in env_files], override=False)
+        load_first(
+            [pipelines_root / "apps" / app_name / f for f in env_files],
+            override=True,
+        )
     else:
-        # standalone / CWD-only mode
-        app_candidates = [app_root / f for f in env_files]
-        load_first(app_candidates, override=True)
+        load_first([app_root / f for f in env_files], override=True)
 
 
 # =============================================================================
-#  Runner factory
+# Runner factory
 # =============================================================================
 
 
 def _build_runner() -> PipelineRunner:
-    """
-    Build PipelineRunner with automatic discovery of:
-      - app root
-      - app name
-      - pipelines root (optional)
-      - environment files
-      - dynamic env vars for PipelineConfig
-    """
     try:
         app_root = _discover_app_root()
         app_name = _discover_app_name(app_root)
         pipelines_root = _discover_pipelines_root(app_root, app_name)
 
-        # Export discovered values for PipelineConfig
         os.environ.setdefault("APP_NAME", app_name)
         os.environ.setdefault("PIPELINES_ROOT", str(pipelines_root))
 
-        # Try to auto-assign project paths if not set
         meltano_path = app_root / "meltano"
         dbt_path = app_root / "dbt"
 
-        if (not os.getenv("MELTANO_PROJECT_ROOT")) and meltano_path.exists():
+        if not os.getenv("MELTANO_PROJECT_ROOT") and meltano_path.exists():
             os.environ["MELTANO_PROJECT_ROOT"] = str(meltano_path)
 
-        if (not os.getenv("DBT_PROJECT_DIR")) and dbt_path.exists():
+        if not os.getenv("DBT_PROJECT_DIR") and dbt_path.exists():
             os.environ["DBT_PROJECT_DIR"] = str(dbt_path)
 
         if not os.getenv("DBT_PROFILES_DIR"):
-            # Usually same as dbt project
             os.environ["DBT_PROFILES_DIR"] = str(dbt_path)
 
-        # Load .env files
         _load_env_files(pipelines_root, app_root, app_name)
 
         cfg = PipelineConfig()
@@ -182,19 +135,16 @@ def _build_runner() -> PipelineRunner:
 
     except Exception as e:
         logger.exception("Failed to build pipeline context")
-        print(f"[red]Failed to build pipeline context:[/red] {e}")
+        typer.echo(f"Failed to build pipeline context: {e}")
         raise typer.Exit(1)
 
 
 # =============================================================================
-#  Flow importer
+# Flow importer
 # =============================================================================
 
 
 def _load_flow_module(flow_name: str) -> Any:
-    """
-    Load module from <app_root>/flows/<flow_name>.py
-    """
     app_root = _discover_app_root()
     flow_file = app_root / "flows" / f"{flow_name}.py"
 
@@ -211,14 +161,13 @@ def _load_flow_module(flow_name: str) -> Any:
 
 
 def _run_func(func: Any) -> Any:
-    """Execute sync or async functions."""
     if inspect.iscoroutinefunction(func):
         return asyncio.run(func())
     return func()
 
 
 # =============================================================================
-#  CLI Commands
+# CLI Commands
 # =============================================================================
 
 
@@ -228,7 +177,6 @@ def run_meltano(
         "run import", help="Meltano command (default: run import)"
     )
 ):
-    """Run Meltano via PipelineRunner."""
     runner = _build_runner()
     try:
         res = runner.run_meltano(command)
@@ -237,7 +185,7 @@ def run_meltano(
         return res
     except Exception as e:
         logger.exception("Meltano run failed")
-        print(f"[red]Meltano execution failed:[/red] {e}")
+        typer.echo(f"Meltano execution failed: {e}")
         raise typer.Exit(1)
 
 
@@ -247,7 +195,6 @@ def run_dbt(
         ..., help="dbt selector/tag (e.g. staging, silver, gold, test)"
     )
 ):
-    """Run dbt via PipelineRunner."""
     runner = _build_runner()
     try:
         res = runner.run_dbt(tag)
@@ -256,7 +203,7 @@ def run_dbt(
         return res
     except Exception as e:
         logger.exception("dbt run failed")
-        print(f"[red]dbt execution failed:[/red] {e}")
+        typer.echo(f"dbt execution failed: {e}")
         raise typer.Exit(1)
 
 
@@ -267,35 +214,29 @@ def run_prefect(
         ..., "--function", "-x", help="Function inside the flow module"
     ),
 ):
-    """
-    Run a local Prefect flow implementation (pure Python execution).
-
-    Example:
-        celine pipeline run prefect --flow sync_users --function main
-    """
     _build_runner()
 
     try:
         module = _load_flow_module(flow)
     except Exception as e:
         logger.exception("Flow loading failed")
-        print(f"[red]Failed loading flow:[/red] {e}")
+        typer.echo(f"Failed loading flow: {e}")
         raise typer.Exit(1)
 
     if not hasattr(module, function):
-        print(f"[red]Function '{function}' not found in flow '{flow}'.[/red]")
+        typer.echo(f"Function '{function}' not found in flow '{flow}'.")
         raise typer.Exit(1)
 
     func = getattr(module, function)
 
-    print(f"[bold blue]Executing flow function:[/bold blue] {flow}.{function}()")
+    typer.echo(f"Executing flow function: {flow}.{function}()")
 
     try:
         result = _run_func(func)
-        print("[green]Execution completed[/green]")
-        print(result)
+        typer.echo("Execution completed")
+        typer.echo(str(result))
         return result
     except Exception as e:
         logger.exception("Flow function execution failed")
-        print(f"[red]Flow execution failed:[/red] {e}")
+        typer.echo(f"Flow execution failed: {e}")
         raise typer.Exit(1)

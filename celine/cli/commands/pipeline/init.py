@@ -7,10 +7,8 @@ import subprocess
 from pathlib import Path
 
 import typer
-from rich import print
 
 from celine.common.logger import get_logger
-
 
 pipeline_init_app = typer.Typer(help="Initialize a new pipeline application")
 logger = get_logger("celine.cli.pipeline.init")
@@ -44,15 +42,13 @@ def stream_subprocess(
         bufsize=1,
     )
 
-    # Print stdout as it arrives
     assert process.stdout is not None
     for line in process.stdout:
-        print(line.rstrip())
+        typer.echo(line.rstrip())
 
-    # Print stderr as it arrives
     assert process.stderr is not None
     for line in process.stderr:
-        print(line.rstrip())
+        typer.echo(line.rstrip())
 
     process.wait()
     return process.returncode
@@ -86,8 +82,8 @@ def init_app(
     Create a new pipeline application folder containing:
 
       <app_name>/
-        meltano/         # via meltano init
-        dbt/             # via dbt init
+        meltano/
+        dbt/
         flows/pipeline.py
         .env
         README.md
@@ -98,148 +94,101 @@ def init_app(
     root = Path.cwd()
     app_root = root / app_name
 
-    # Abort if folder exists and looks like an app
     if app_root.exists():
         if _looks_like_pipeline_app(app_root):
             if not force:
-                print(
-                    f"[red]❌ Folder '{app_name}' looks like an existing pipeline app. "
-                    "Use --force to remove it.[/red]"
+                typer.echo(
+                    f"Folder '{app_name}' looks like an existing pipeline app. "
+                    "Use --force to remove it."
                 )
                 raise typer.Exit(1)
 
-            # force allowed → delete and recreate
-            print(f"[yellow]⚠ Removing existing app folder '{app_name}'[/yellow]")
+            typer.echo(f"Removing existing app folder '{app_name}'")
             shutil.rmtree(app_root)
 
-    # Create new folder
     app_root.mkdir(parents=True)
 
-    print(f"[green]Creating pipeline application: {app_name}[/green]")
-
-    # ----------------------------------------------------------------------
-    # Template root
-    # ----------------------------------------------------------------------
-    # Use project-level templates: ./templates/pipelines
+    typer.echo(f"Creating pipeline application: {app_name}")
 
     if not TEMPLATE_ROOT.exists():
-        print(f"[red]❌ Missing templates in {TEMPLATE_ROOT}[/red]")
+        typer.echo(f"Missing templates in {TEMPLATE_ROOT}")
         raise typer.Exit(1)
 
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 1) Meltano project
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     meltano_dir = app_root / "meltano"
     meltano_dir.mkdir()
 
     try:
-        print("[blue]Initializing Meltano project...[/blue]")
+        typer.echo("Initializing Meltano project...")
         rc = stream_subprocess(
             ["meltano", "init", "."],
             cwd=meltano_dir,
             env={**os.environ, "NO_COLOR": "1"},
         )
         if rc == 0:
-            print("  ✔ meltano init")
+            typer.echo("  meltano init completed")
         else:
-            print(
-                f"[yellow]  ⚠ meltano init exited with code {rc} (continuing)[/yellow]"
-            )
+            typer.echo(f"  meltano init exited with code {rc} (continuing)")
     except Exception as e:
-        print(f"[yellow]  ⚠ meltano init failed: {e} (continuing)[/yellow]")
+        typer.echo(f"  meltano init failed: {e} (continuing)")
 
-    # ----------------------------------------------------------------------
-    # Meltano config from template
-    # ----------------------------------------------------------------------
     meltano_templates = TEMPLATE_ROOT / "meltano"
     src_meltano = meltano_templates / "meltano.yml.j2"
     dst_meltano = meltano_dir / "meltano.yml"
 
-    _copy_template(
-        src_meltano,
-        dst_meltano,
-        {
-            "app_name": app_name,
-        },
-    )
+    _copy_template(src_meltano, dst_meltano, {"app_name": app_name})
+    typer.echo("  created meltano.yml")
 
-    print("  ✔ meltano.yml")
-
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # 2) dbt project
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
     dbt_dir = app_root / "dbt"
-
-    print("[blue]Initializing dbt project...[/blue]")
+    typer.echo("Initializing dbt project...")
     dbt_dir.mkdir()
 
-    dbt_subfolders = [
-        "models",
-        "tests",
-        "macros",
-        "seeds",
-        "snapshots",
-        "analyses",
-    ]
-    for sub in dbt_subfolders:
+    for sub in ["models", "tests", "macros", "seeds", "snapshots", "analyses"]:
         folder = dbt_dir / sub
         folder.mkdir()
-        # add .gitkeep so empty folders persist in git
         (folder / ".gitkeep").write_text("")
 
-    print("  ✔ dbt directory structure created")
+    typer.echo("  dbt directory structure created")
 
-    # ----------------------------------------------------------------------
-    # 2b) Copy templated dbt_project.yml & profiles.yml
-    # ----------------------------------------------------------------------
     dbt_templates = TEMPLATE_ROOT / "dbt"
-
-    dbt_project_tpl = dbt_templates / "dbt_project.yml.j2"
-    dst_dbt_project = dbt_dir / "dbt_project.yml"
-
-    profiles_tpl = dbt_templates / "profiles.yml.j2"
-    dst_profiles = dbt_dir / "profiles.yml"
-
-    print("[blue]Creating templated dbt_project.yml and profiles.yml...[/blue]")
-
     _copy_template(
-        dbt_project_tpl,
-        dst_dbt_project,
-        {
-            "app_name": app_name,
-        },
+        dbt_templates / "dbt_project.yml.j2",
+        dbt_dir / "dbt_project.yml",
+        {"app_name": app_name},
+    )
+    _copy_template(
+        dbt_templates / "profiles.yml.j2",
+        dbt_dir / "profiles.yml",
+        {"app_name": app_name},
     )
 
-    _copy_template(
-        profiles_tpl,
-        dst_profiles,
-        {
-            "app_name": app_name,
-        },
-    )
+    typer.echo("  created dbt_project.yml")
+    typer.echo("  created profiles.yml")
 
-    print("  ✔ dbt_project.yml")
-    print("  ✔ profiles.yml")
-
-    # ----------------------------------------------------------------------
-    # 3) flows/pipeline.py example
-    # ----------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 3) flows/pipeline.py
+    # ------------------------------------------------------------------
     flows_dir = app_root / "flows"
     flows_dir.mkdir()
 
-    src_pipeline = TEMPLATE_ROOT / "flows" / "pipeline.py.j2"
-    dst_pipeline = flows_dir / "pipeline.py"
-    _copy_template(src_pipeline, dst_pipeline, {"app_name": app_name})
-    print("  ✔ created flows/pipeline.py")
-
-    # ----------------------------------------------------------------------
-    # 4) .env file
-    # ----------------------------------------------------------------------
-    env_tpl = TEMPLATE_ROOT / ".env.j2"
-    dst_env = app_root / ".env"
     _copy_template(
-        env_tpl,
-        dst_env,
+        TEMPLATE_ROOT / "flows" / "pipeline.py.j2",
+        flows_dir / "pipeline.py",
+        {"app_name": app_name},
+    )
+    typer.echo("  created flows/pipeline.py")
+
+    # ------------------------------------------------------------------
+    # 4) .env
+    # ------------------------------------------------------------------
+    _copy_template(
+        TEMPLATE_ROOT / ".env.j2",
+        app_root / ".env",
         {
             "app_name": app_name,
             "postgres_host": os.getenv("POSTGRES_HOST", "localhost"),
@@ -250,14 +199,16 @@ def init_app(
             "schema": os.getenv("DBT_SCHEMA", "public"),
         },
     )
-    print("  ✔ created .env")
+    typer.echo("  created .env")
 
-    # ----------------------------------------------------------------------
-    # 5) README.md
-    # ----------------------------------------------------------------------
-    readme_tpl = TEMPLATE_ROOT / "README.md.j2"
-    dst_readme = app_root / "README.md"
-    _copy_template(readme_tpl, dst_readme, {"app_name": app_name})
-    print("  ✔ created README.md")
+    # ------------------------------------------------------------------
+    # 5) README
+    # ------------------------------------------------------------------
+    _copy_template(
+        TEMPLATE_ROOT / "README.md.j2",
+        app_root / "README.md",
+        {"app_name": app_name},
+    )
+    typer.echo("  created README.md")
 
-    print(f"[green]🎉 Pipeline application '{app_name}' created successfully![/green]")
+    typer.echo(f"Pipeline application '{app_name}' created successfully")

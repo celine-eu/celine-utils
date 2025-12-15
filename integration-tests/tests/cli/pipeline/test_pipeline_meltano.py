@@ -31,4 +31,4 @@ def test_meltano_cli_invocation(monkeypatch, temp_project, celine_cli):
 
     # Even if meltano is not installed → our CLI should not crash
     assert proc.returncode in (0, 1)
-    assert "meltano" in proc.stdout or "command" in proc.stdout
+    assert "dev" in proc.stdout

@@ -32,7 +32,7 @@ tasks:
   integration-tests:
     desc: Run integration tests
     cmds:
-      - cd integration-tests && task run
+      - cd integration-tests && task run -- {{.CLI_ARGS}}
 
   release:
     cmds:

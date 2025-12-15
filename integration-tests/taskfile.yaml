@@ -16,4 +16,4 @@ tasks:
   run:
     desc: Run integration tests
     cmds:
-      - uv run pytest -vv -o log_cli=true --log-cli-level=DEBUG
+      - uv run pytest -vv -- {{.CLI_ARGS}}
