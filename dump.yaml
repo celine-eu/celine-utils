@@ -1,6 +1,7 @@
 contents:
   - celine
   - integration-tests/tests
+  - integration-tests/apps
   - schema
   - docs
   - README.md
