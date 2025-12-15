@@ -29,3 +29,8 @@ class PipelineConfig(AppBaseSettings):
         default="http://marquez-api:5000", alias="OPENLINEAGE_URL"
     )
     openlineage_api_key: str | None = Field(default=None, alias="OPENLINEAGE_API_KEY")
+    openlineage_enabled: bool = Field(
+        default=True,
+        alias="OPENLINEAGE_ENABLED",
+        description="Enable OpenLineage integration",
+    )

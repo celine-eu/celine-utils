@@ -57,7 +57,12 @@ class PipelineRunner:
     def __init__(self, cfg: PipelineConfig):
         self.cfg = cfg
         self.logger = get_logger("celine.pipeline." + (cfg.app_name or "Pipeline"))
-        self.client = OpenLineageClient()
+
+        if cfg.openlineage_enabled:
+            self.client = OpenLineageClient()
+        else:
+            self.client = None
+            self.logger.info("OpenLineage disabled (OPENLINEAGE_ENABLED=false)")
 
     # ---------- Helpers ----------
     def _project_path(self, suffix: str = "") -> Optional[str]:
@@ -113,6 +118,9 @@ class PipelineRunner:
         job_facets: dict[str, JobFacet] | None = None,
         namespace: str | None = None,
     ):
+
+        if not self.cfg.openlineage_enabled or self.client is None:
+            return
 
         if not namespace:
             namespace = get_namespace(self.cfg.app_name)
