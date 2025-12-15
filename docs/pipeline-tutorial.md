@@ -3,9 +3,8 @@
 This document provides a **complete, end-to-end guide** to setting up, running, and deploying a **CELINE pipeline application**.
 It consolidates all prior sections into a **single reference file**.
 
----
 
-## 1. Overview
+## Overview
 
 A CELINE pipeline is a **self-contained application** that combines:
 
@@ -13,7 +12,7 @@ A CELINE pipeline is a **self-contained application** that combines:
 - dbt (staging, silver, gold)
 - Optional Python / Prefect flows
 - Governance configuration
-- OpenLineage emission
+- OpenLineage emission (optional)
 - Container-first execution
 
 Pipelines are designed to run **identically** in:
@@ -21,11 +20,32 @@ Pipelines are designed to run **identically** in:
 - CI
 - Kubernetes
 
----
 
-## 2. Canonical Repository Layout
+## Creating a New Pipeline Application
 
-A typical pipelines repository (or monorepo) looks like:
+CELINE provides a CLI command to **scaffold a complete pipeline application** with sane defaults.
+
+From the root of your pipelines repository:
+
+```bash
+celine-cli pipeline init app demo_app
+```
+
+This command creates a fully functional example pipeline with:
+
+- Meltano project
+- dbt project structure
+- Example Prefect-compatible flow
+- Governance configuration
+- `.env` file
+- README
+
+You can safely use the generated structure as-is and evolve it incrementally.
+
+
+## Canonical Repository Layout
+
+After initialization, your repository will look like:
 
 ```
 pipelines/
@@ -39,11 +59,10 @@ pipelines/
         └── README.md
 ```
 
-Each folder under `apps/` is a **deployable pipeline application**.
+Each folder under `apps/` represents a **deployable pipeline application**.
 
----
 
-## 3. Baseline Docker Image (Required)
+## Baseline Docker Image (Required)
 
 All CELINE pipelines **must** be built on top of the official pipeline image:
 
@@ -53,15 +72,14 @@ ghcr.io/celine-eu/pipeline
 
 This image already contains:
 - Python + uv
-- celine-cli
+- `celine-cli`
 - Meltano
 - dbt
 - Prefect
 - OpenLineage client
 
----
 
-## 4. Canonical Dockerfile (Per App)
+## Canonical Dockerfile (Per App)
 
 Example Dockerfile for the `demo_app` pipeline:
 
@@ -72,6 +90,10 @@ FROM ghcr.io/celine-eu/pipeline:${BASE_TAG}
 ARG APP_NAME
 
 ENV APP_NAME=${APP_NAME}
+
+# Enable / disable OpenLineage support
+ENV OPENLINEAGE_ENABLED=false
+ENV OPENLINEAGE_URL=http://marquez-api:5001
 ENV OPENLINEAGE_NAMESPACE=${APP_NAME}
 
 ENV PIPELINES_ROOT=${PIPELINES_ROOT:-/pipelines}
@@ -88,21 +110,11 @@ COPY ./apps/${APP_NAME} /pipelines/apps/${APP_NAME}
 
 RUN uv sync
 
-RUN if [ -f "${APP_PATH}/requirements.txt" ]; then \
-      uv add --requirements "${APP_PATH}/requirements.txt"; \
-    fi
+RUN if [ -f "${APP_PATH}/requirements.txt" ]; then       uv add --requirements "${APP_PATH}/requirements.txt";     fi
 
-RUN if [ -d "${MELTANO_PROJECT_ROOT}" ]; then \
-      cd "${MELTANO_PROJECT_ROOT}" && \
-      rm -rf .meltano && \
-      MELTANO_PROJECT_ROOT=$(pwd) meltano install ; \
-    fi
+RUN if [ -d "${MELTANO_PROJECT_ROOT}" ]; then       cd "${MELTANO_PROJECT_ROOT}" &&       rm -rf .meltano &&       MELTANO_PROJECT_ROOT=$(pwd) meltano install ;     fi
 
-RUN if [ -d "${DBT_PROJECT_DIR}" ]; then \
-      cd "${DBT_PROJECT_DIR}" && \
-      rm -rf target dbt_packages .dbt && \
-      DBT_PROFILES_DIR=$(pwd) dbt deps ; \
-    fi
+RUN if [ -d "${DBT_PROJECT_DIR}" ]; then       cd "${DBT_PROJECT_DIR}" &&       rm -rf target dbt_packages .dbt &&       DBT_PROFILES_DIR=$(pwd) dbt deps ;     fi
 
 WORKDIR ${APP_PATH}
 ```
@@ -110,15 +122,11 @@ WORKDIR ${APP_PATH}
 ### Build Example
 
 ```bash
-docker build \
-  --build-arg APP_NAME=demo_app \
-  -t demo-app-pipeline:latest \
-  .
+docker build   --build-arg APP_NAME=demo_app   -t demo-app-pipeline:latest   .
 ```
 
----
 
-## 5. Environment Configuration
+## Environment Configuration
 
 CELINE uses **environment-driven configuration**.
 
@@ -137,13 +145,12 @@ OPENLINEAGE_URL=http://marquez-api:5000
 ```
 
 Resolution order:
-1. Environment variables
-2. `.env` files
-3. Defaults
+- Environment variables
+- `.env` files
+- Defaults
 
----
 
-## 6. Meltano (Ingestion / Bronze)
+## Meltano (Ingestion / Bronze)
 
 Configure ingestion in `meltano/meltano.yml`.
 
@@ -165,30 +172,29 @@ celine-cli pipeline run meltano "run import"
 CELINE automatically:
 - Executes Meltano
 - Discovers datasets
-- Emits OpenLineage events
+- Emits lineage events (if enabled)
 - Applies governance metadata
 
----
 
-## 7. dbt (Staging / Silver / Gold)
+## dbt (Staging / Silver / Gold)
 
 CELINE follows a medallion-style convention:
 
-| Layer | Command |
-|----|------|
+| Layer   | Command |
+|-------|---------|
 | Staging | `celine-cli pipeline run dbt staging` |
-| Silver | `celine-cli pipeline run dbt silver` |
-| Gold | `celine-cli pipeline run dbt gold` |
-| Tests | `celine-cli pipeline run dbt test` |
+| Silver  | `celine-cli pipeline run dbt silver` |
+| Gold    | `celine-cli pipeline run dbt gold` |
+| Tests   | `celine-cli pipeline run dbt test` |
 
 During execution, CELINE:
+
 - Collects schema metadata
 - Captures dbt test results
 - Emits dataset-level lineage
 
----
 
-## 8. Governance Configuration
+## Governance Configuration
 
 Each pipeline includes a `governance.yaml`.
 
@@ -210,6 +216,7 @@ sources:
 ```
 
 Governance is:
+
 - Pattern-based
 - Automatically resolved
 - Emitted as a custom OpenLineage facet
@@ -220,9 +227,9 @@ Generate interactively:
 celine-cli governance generate marquez --app demo_app
 ```
 
----
+**Note** Since governance are openlineage facets, disabling openlineage using `OPENLINEAGE_ENABLED=false` will exclude the governance tracking capabilities.
 
-## 9. Python / Prefect Flows
+## Python / Prefect Flows
 
 Example `flows/pipeline.py`:
 
@@ -243,9 +250,8 @@ def medallion_flow():
     dbt_run_gold()
 ```
 
----
 
-## 10. Local Prefect Setup
+## Local Prefect Setup
 
 Start a local Prefect server:
 
@@ -259,9 +265,8 @@ Set API URL:
 export PREFECT_API_URL=http://127.0.0.1:4200/api
 ```
 
----
 
-## 11. Example prefect.yaml (Local)
+## Example `prefect.yaml` (Local)
 
 ```yaml
 name: demo-app
@@ -295,17 +300,15 @@ Run it:
 prefect deployment run demo-app/demo-app-flow
 ```
 
----
 
-## 12. Kubernetes & Production Deployment
+## Kubernetes & Production Deployment
 
 In Kubernetes, Prefect deployments are **registered once** and executed later by workers.
 
-CELINE provides a reference infrastructure repository:
-
-👉 https://github.com/celine-eu/infra
+CELINE provides a reference infrastructure repository at https://github.com/celine-eu/infra 
 
 It includes:
+
 - Prefect Server
 - Prefect Workers
 - Marquez / OpenLineage
@@ -313,6 +316,7 @@ It includes:
 - Keycloak
 - Helm charts
 - Minikube-based local setup
+- Other CELINE specific services, that can be omitted customizing the helmfiles
 
 ### Local Kubernetes (Minikube)
 
@@ -323,31 +327,29 @@ kubectl create namespace celine
 
 Follow the infra repository README to deploy the full stack.
 
----
 
-## 13. Recommended Workflow
+## Recommended Workflow
 
 | Stage | Tool |
-|----|----|
-| Local dev | Prefect local server |
-| Image build | ghcr.io/celine-eu/pipeline |
-| Flow authoring | flows/*.py |
-| Deployment config | prefect.yaml |
-| Local execution | local-process work pool |
+|-----|------|
+| Local development | Prefect local server |
+| Image build | `ghcr.io/celine-eu/pipeline` |
+| Flow authoring | `flows/*.py` |
+| Deployment config | `prefect.yaml` |
+| Local execution | `local-process` work pool |
 | Production | CELINE infra Helm charts |
 
----
 
-## 14. Key Takeaways
+## Key Takeaways
 
+- Use `celine-cli pipeline init` to bootstrap pipelines
 - One Docker image per pipeline app
 - Always use `ghcr.io/celine-eu/pipeline`
 - Governance is declarative and automatic
 - Prefect deployments are configuration, not code
 - Use CELINE infra for production
 
----
 
-## 15. Need help ?
+## Need help?
 
-Open a new issue or provide a PR to propose a fix or improvement. We are also available for commercial support.
+Open an issue or submit a pull request to propose improvements. Commercial support is also available.

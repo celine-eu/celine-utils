@@ -222,12 +222,17 @@ class PipelineRunner:
                 app_name=self.cfg.app_name,
                 project_dir=project_root,
             )
-            lineage = MeltanoLineage(
-                self.cfg,
-                project_root=project_root,
-                governance_resolver=gov_resolver,
-            )
-            inputs, outputs = lineage.collect_inputs_outputs(base_command)
+
+            if self.cfg.openlineage_enabled:
+                lineage = MeltanoLineage(
+                    self.cfg,
+                    project_root=project_root,
+                    governance_resolver=gov_resolver,
+                )
+                inputs, outputs = lineage.collect_inputs_outputs(base_command)
+            else:
+                lineage = None
+                inputs, outputs = [], []
 
             if success:
                 self._emit_event(
@@ -420,13 +425,18 @@ class PipelineRunner:
                     app_name=self.cfg.app_name,
                     project_dir=project_dir,
                 )
-                lineage = DbtLineage(
-                    project_dir,
-                    str(self.cfg.app_name),
-                    self._build_engine(),
-                    governance_resolver=gov_resolver,
-                )
-                inputs, outputs = lineage.collect_inputs_outputs(lineage_tag)
+
+                if self.cfg.openlineage_enabled:
+                    lineage = DbtLineage(
+                        project_dir,
+                        str(self.cfg.app_name),
+                        self._build_engine(),
+                        governance_resolver=gov_resolver,
+                    )
+                    inputs, outputs = lineage.collect_inputs_outputs(lineage_tag)
+                else:
+                    lineage = None
+                    inputs, outputs = [], []
 
             # Error extraction
             cli_output = self.clean_output(
