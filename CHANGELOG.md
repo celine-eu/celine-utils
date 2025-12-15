@@ -2,6 +2,58 @@
 
 <!-- version list -->
 
+## v1.3.0 (2025-12-15)
+
+### Bug Fixes
+
+- Review and fix tests
+  ([`342e8b1`](https://github.com/celine-eu/celine-utils/commit/342e8b1f10e89b9e071c8df02bf4f5e26108c9ff))
+
+- Skip lineage lookup if disable. update docs
+  ([`3a23f1b`](https://github.com/celine-eu/celine-utils/commit/3a23f1bdc4d1636a1ce02bc343959ab073b2cbce))
+
+- Update schema uris
+  ([`85c6a4a`](https://github.com/celine-eu/celine-utils/commit/85c6a4a59a02bbaea84626e298c73253e9f428b5))
+
+### Chores
+
+- Add update docs
+  ([`ed1b5e8`](https://github.com/celine-eu/celine-utils/commit/ed1b5e8d788a6415536012bf01c3ee8b109ea2bf))
+
+- Dump source respecting .gitignore
+  ([`6b1acf9`](https://github.com/celine-eu/celine-utils/commit/6b1acf9701e277ea8d438632038e0be05a675d93))
+
+- Fix cmd ref
+  ([`8e3967a`](https://github.com/celine-eu/celine-utils/commit/8e3967a57547b5ad9de00483786fae71c5ddbc7b))
+
+- Update readme
+  ([`4ec9ea7`](https://github.com/celine-eu/celine-utils/commit/4ec9ea7aa8a2328f202dda43e208f1605fc7e256))
+
+- **deps**: Bump the runtime-dependencies group across 1 directory with 3 updates
+  ([`a45ea5d`](https://github.com/celine-eu/celine-utils/commit/a45ea5d3bf8fd656f99b7da212d6927b92697f2d))
+
+- **deps-dev**: Bump the development-dependencies group with 5 updates
+  ([`fd48ba8`](https://github.com/celine-eu/celine-utils/commit/fd48ba8324961552bc159c27139393f0cb194e73))
+
+### Continuous Integration
+
+- Bump the actions group across 1 directory with 3 updates
+  ([`85cf91a`](https://github.com/celine-eu/celine-utils/commit/85cf91a8bb2f6eb45b0c4e5bb77a427f65379dba))
+
+### Documentation
+
+- Add governance
+  ([`da543f1`](https://github.com/celine-eu/celine-utils/commit/da543f1c820eed651c9502f6ca45515fa7fcf7b1))
+
+- Add pipeline tutorial
+  ([`ca989b0`](https://github.com/celine-eu/celine-utils/commit/ca989b081f99213126cf179672b589185a40c1fc))
+
+### Features
+
+- Allow to disable openlineage
+  ([`24c5e99`](https://github.com/celine-eu/celine-utils/commit/24c5e999f6072bb3c7a0c30748c2690fcd34b19b))
+
+
 ## v1.2.0 (2025-12-10)
 
 ### Features
