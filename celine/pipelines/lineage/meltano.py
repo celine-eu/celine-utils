@@ -83,7 +83,7 @@ class MeltanoLineage:
             not rule.license
             and not owners
             and not rule.access_level
-            and not rule.access_rights
+            and not rule.access_requirements
             and not rule.classification
             and not tags
             and rule.retention_days is None
@@ -94,9 +94,10 @@ class MeltanoLineage:
 
         return GovernanceDatasetFacet(
             license=rule.license,
+            attribution=rule.attribution,
             owners=owners,
             accessLevel=rule.access_level,
-            accessRights=rule.access_rights,
+            accessRequirements=rule.access_requirements,
             classification=rule.classification,
             tags=tags,
             retentionDays=rule.retention_days,

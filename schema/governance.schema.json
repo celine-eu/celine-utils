@@ -35,6 +35,13 @@
                         }
                     }
                 },
+                "attribution": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Required attribution text for dataset usage and redistribution"
+                },
                 "access_level": {
                     "type": [
                         "string",
@@ -71,6 +78,18 @@
                         "string",
                         "null"
                     ]
+                },
+                "access_requirements": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "all",
+                        "partner",
+                        "contract"
+                    ],
+                    "description": "Preconditions required to access this dataset"
                 }
             }
         },
@@ -86,6 +105,25 @@
                                 "string",
                                 "null"
                             ]
+                        },
+                        "access_requirements": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "all",
+                                "partner",
+                                "contract"
+                            ],
+                            "description": "Preconditions required to access this dataset"
+                        },
+                        "attribution": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Required attribution text for dataset usage and redistribution"
                         },
                         "ownership": {
                             "type": "array",
@@ -109,12 +147,23 @@
                             "type": [
                                 "string",
                                 "null"
+                            ],
+                            "enum": [
+                                "open",
+                                "internal",
+                                "restricted"
                             ]
                         },
                         "classification": {
                             "type": [
                                 "string",
                                 "null"
+                            ],
+                            "enum": [
+                                "pii",
+                                "red",
+                                "yellow",
+                                "green"
                             ]
                         },
                         "tags": {

@@ -21,9 +21,10 @@ class GovernanceOwner(BaseModel):
 
 class GovernanceRule(BaseModel):
     license: Optional[str] = None
+    attribution: Optional[str] = None
     ownership: List[GovernanceOwner] = Field(default_factory=list)
     access_level: Optional[str] = None  # open / internal / restricted / secret
-    access_rights: Optional[str] = None  # free-form (e.g. "public", "internal")
+    access_requirements: Optional[str] = None  # free-form (e.g. "public", "internal")
     classification: Optional[str] = None  # your color / risk class
     tags: List[str] = Field(default_factory=list)
     retention_days: Optional[int] = None
@@ -77,7 +78,7 @@ class GovernanceResolver:
                 license=block.get("license"),
                 ownership=owners,
                 access_level=block.get("access_level"),
-                access_rights=block.get("access_rights"),
+                access_requirements=block.get("access_requirements"),
                 classification=block.get("classification"),
                 tags=block.get("tags") or [],
                 retention_days=block.get("retention_days"),
@@ -91,7 +92,7 @@ class GovernanceResolver:
                         "license",
                         "ownership",
                         "access_level",
-                        "access_rights",
+                        "access_requirements",
                         "classification",
                         "tags",
                         "retention_days",
@@ -195,7 +196,9 @@ class GovernanceResolver:
             license=pick(base.license, override.license),
             ownership=owners,
             access_level=pick(base.access_level, override.access_level),
-            access_rights=pick(base.access_rights, override.access_rights),
+            access_requirements=pick(
+                base.access_requirements, override.access_requirements
+            ),
             classification=pick(base.classification, override.classification),
             tags=tags,
             retention_days=pick(base.retention_days, override.retention_days),

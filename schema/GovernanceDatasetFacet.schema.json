@@ -19,18 +19,42 @@
             "type": [
                 "string",
                 "null"
+            ],
+            "enum": [
+                "open",
+                "internal",
+                "restricted"
             ]
         },
-        "accessRights": {
+        "attribution": {
             "type": [
                 "string",
                 "null"
-            ]
+            ],
+            "description": "Mandatory attribution text required by data license"
+        },
+        "access_requirements": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "all",
+                "partner",
+                "contract"
+            ],
+            "description": "Preconditions required to access this dataset"
         },
         "classification": {
             "type": [
                 "string",
                 "null"
+            ],
+            "enum": [
+                "pii",
+                "red",
+                "yellow",
+                "green"
             ]
         },
         "retentionDays": {

@@ -26,9 +26,12 @@ class GovernanceDatasetFacet(BaseFacet):
         return SCHEMA_URL
 
     license: Optional[str] = None
+    attribution: Optional[str] = None
     owners: Optional[List[str]] = None
     accessLevel: Optional[str] = None  # open / internal / restricted / secret
-    accessRights: Optional[str] = None  # textual policy (e.g. "public", "internal_use")
+    accessRequirements: Optional[str] = (
+        None  # textual policy (e.g. "public", "internal_use")
+    )
     classification: Optional[str] = None  # e.g. green/yellow/red or DLP class
     tags: Optional[List[str]] = None
     retentionDays: Optional[int] = None
