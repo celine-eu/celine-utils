@@ -7,6 +7,7 @@ import os
 
 from celine.common.logger import get_logger
 from celine.pipelines.utils import get_namespace
+from celine.common.keycloak import KeycloakClient, KeycloakClientConfig
 
 logger = get_logger(__name__)
 
@@ -27,14 +28,32 @@ COMMON_ACCESS = [
     "internal",
     "public",
     "restricted",
-    "secret",
 ]
 
 COMMON_CLASSIFICATION = [
     "green",
     "yellow",
     "red",
+    "pii",
 ]
+
+
+def _get_auth_headers() -> dict[str, str]:
+    cfg = KeycloakClientConfig()
+    if not cfg.client_id or not cfg.client_secret:
+        return {}
+
+    kc = KeycloakClient(cfg)
+
+    token: str | None = None
+    try:
+        logger.debug(f"Fetching JWT token {cfg.client_id} from {cfg.server_url}")
+        token = kc.get_access_token()
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch token: {e}")
+
+    logger.debug(f"Got JWT token for {cfg.client_id}")
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _resolve_marquez_url(cli_url: Optional[str]) -> str:
@@ -61,11 +80,18 @@ def _fetch_marquez_datasets(marquez_url: str, namespace: str) -> list[str]:
     url = f"{marquez_url}/api/v1/namespaces/{namespace}/datasets"
     logger.debug(f"Fetching datasets from {url}")
 
-    resp = requests.get(url)
+    headers = _get_auth_headers()
+    resp = requests.get(url, headers=headers)
     if resp.status_code != 200:
         raise RuntimeError(f"Marquez request failed: {resp.status_code} - {resp.text}")
 
-    data = resp.json()
+    data = {}
+    try:
+        data = resp.json()
+    except Exception as e:
+        logger.debug(f"{resp.text}")
+        raise RuntimeError(f"Failed to parse response ({resp.status_code}): {e}")
+
     return [d["name"] for d in data.get("datasets", [])]
 
 

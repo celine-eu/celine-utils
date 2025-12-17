@@ -1,7 +1,7 @@
 from keycloak import KeycloakOpenID
 import time
 
-from .config import KeycloakClientConfig
+from celine.common.keycloak.config import KeycloakClientConfig
 
 
 class KeycloakClient:
@@ -14,6 +14,7 @@ class KeycloakClient:
             client_secret_key=self.config.client_secret,
             verify=self.config.verify,
         )
+
         self.token = None
         self.token_expiry = 0
 
