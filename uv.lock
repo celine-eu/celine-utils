@@ -338,7 +338,7 @@ requires-dist = [
 dev = [
     { name = "debugpy", specifier = ">=1.8.16" },
     { name = "pytest", specifier = ">=8.4.2" },
-    { name = "python-semantic-release", specifier = ">=10.4.1" },
+    { name = "python-semantic-release", specifier = ">=10.5.3" },
 ]
 
 [[package]]
