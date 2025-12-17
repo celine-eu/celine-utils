@@ -284,13 +284,17 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.4.0"
+version = "1.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
+    { name = "dbt-core" },
+    { name = "dbt-postgres" },
+    { name = "meltano" },
     { name = "openlineage-python" },
     { name = "paho-mqtt" },
     { name = "pandas" },
+    { name = "prefect" },
     { name = "prefect-dbt" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
@@ -304,11 +308,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "dbt-core" },
-    { name = "dbt-postgres" },
     { name = "debugpy" },
-    { name = "meltano" },
-    { name = "prefect" },
     { name = "pytest" },
     { name = "python-semantic-release" },
 ]
@@ -316,9 +316,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.3.0" },
+    { name = "dbt-core", specifier = ">=1.10.10" },
+    { name = "dbt-postgres", specifier = ">=1.9.1" },
+    { name = "meltano", specifier = ">=3.9.1" },
     { name = "openlineage-python", specifier = ">=1.37.0" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "pandas", specifier = ">=2.3.2" },
+    { name = "prefect", specifier = ">=3.4.19" },
     { name = "prefect-dbt", specifier = ">=0.7.6" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic", specifier = ">=2.11.7" },
@@ -332,11 +336,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "dbt-core", specifier = ">=1.10.10" },
-    { name = "dbt-postgres", specifier = ">=1.9.1" },
     { name = "debugpy", specifier = ">=1.8.16" },
-    { name = "meltano", specifier = ">=3.9.1" },
-    { name = "prefect", specifier = ">=3.4.14" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "python-semantic-release", specifier = ">=10.4.1" },
 ]

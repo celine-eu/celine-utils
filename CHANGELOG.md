@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.1 (2025-12-17)
+
+### Bug Fixes
+
+- Include direct pipelines deps
+  ([`6788637`](https://github.com/celine-eu/celine-utils/commit/678863718a7e214d9220480ae0286bc0f2a9b93a))
+
+
 ## v1.4.0 (2025-12-17)
 
 ### Features
