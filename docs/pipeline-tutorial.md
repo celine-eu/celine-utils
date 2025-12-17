@@ -28,7 +28,7 @@ CELINE provides a CLI command to **scaffold a complete pipeline application** wi
 From the root of your pipelines repository:
 
 ```bash
-celine-cli pipeline init app demo_app
+celine-utils pipeline init app demo_app
 ```
 
 This command creates a fully functional example pipeline with:
@@ -72,7 +72,7 @@ ghcr.io/celine-eu/pipeline
 
 This image already contains:
 - Python + uv
-- `celine-cli`
+- `celine-utils`
 - Meltano
 - dbt
 - Prefect
@@ -166,7 +166,7 @@ jobs:
 Run manually:
 
 ```bash
-celine-cli pipeline run meltano "run import"
+celine-utils pipeline run meltano "run import"
 ```
 
 CELINE automatically:
@@ -182,10 +182,10 @@ CELINE follows a medallion-style convention:
 
 | Layer   | Command |
 |-------|---------|
-| Staging | `celine-cli pipeline run dbt staging` |
-| Silver  | `celine-cli pipeline run dbt silver` |
-| Gold    | `celine-cli pipeline run dbt gold` |
-| Tests   | `celine-cli pipeline run dbt test` |
+| Staging | `celine-utils pipeline run dbt staging` |
+| Silver  | `celine-utils pipeline run dbt silver` |
+| Gold    | `celine-utils pipeline run dbt gold` |
+| Tests   | `celine-utils pipeline run dbt test` |
 
 During execution, CELINE:
 
@@ -224,7 +224,7 @@ Governance is:
 Generate interactively:
 
 ```bash
-celine-cli governance generate marquez --app demo_app
+celine-utils governance generate marquez --app demo_app
 ```
 
 **Note** Since governance are openlineage facets, disabling openlineage using `OPENLINEAGE_ENABLED=false` will exclude the governance tracking capabilities.
@@ -235,7 +235,7 @@ Example `flows/pipeline.py`:
 
 ```python
 from prefect import flow
-from celine.pipelines.pipeline import (
+from celine.utils.pipelines.pipeline import (
     meltano_run_import,
     dbt_run_staging,
     dbt_run_silver,
@@ -342,7 +342,7 @@ Follow the infra repository README to deploy the full stack.
 
 ## Key Takeaways
 
-- Use `celine-cli pipeline init` to bootstrap pipelines
+- Use `celine-utils pipeline init` to bootstrap pipelines
 - One Docker image per pipeline app
 - Always use `ghcr.io/celine-eu/pipeline`
 - Governance is declarative and automatic

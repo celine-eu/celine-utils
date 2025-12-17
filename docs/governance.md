@@ -245,7 +245,7 @@ CELINE provides an interactive CLI to generate governance files.
 ### Command
 
 ```bash
-celine-cli governance generate marquez --app <app_name>
+celine-utils governance generate marquez --app <app_name>
 ```
 
 The CLI will:
@@ -257,7 +257,7 @@ The CLI will:
 ### Non-Interactive Mode
 
 ```bash
-celine-cli governance generate marquez --app <app_name> --yes
+celine-utils governance generate marquez --app <app_name> --yes
 ```
 
 Generates a skeleton file using defaults.

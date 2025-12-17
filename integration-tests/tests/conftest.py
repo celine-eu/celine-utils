@@ -2,14 +2,14 @@ import pytest
 import os
 from pathlib import Path
 
-from celine.pipelines.pipeline_config import PipelineConfig
+from celine.utils.pipelines.pipeline_config import PipelineConfig
 
 ROOT = Path(__file__).parent
 
 
 @pytest.fixture(scope="session")
 def celine_cli():
-    return ["python", "-m", "celine.cli.main"]
+    return ["python", "-m", "celine.utils.cli.main"]
 
 
 @pytest.fixture(scope="session", autouse=True)

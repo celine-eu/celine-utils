@@ -27,7 +27,7 @@ This is not an end-user application; it is a **platform utility layer**.
 A unified CLI built with Typer exposes administrative, governance, and pipeline utilities:
 
 ```text
-celine
+celine-utils
  ├── governance
  │    └── generate
  └── pipeline

@@ -36,11 +36,11 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-celine-cli = "celine.cli.main:main"
+celine-utils = "celine.utils.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["celine*"]
+include = ["celine.utils*"]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]

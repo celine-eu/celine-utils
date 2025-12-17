@@ -2,7 +2,7 @@ import yaml
 from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
 
-from celine.cli.commands.governance.generate import generate_app
+from celine.utils.cli.commands.governance.generate import generate_app
 
 runner = CliRunner()
 
@@ -28,7 +28,7 @@ def mock_marquez_response(names):
 def test_resolve_marquez_url_env(monkeypatch):
     monkeypatch.setenv("OPENLINEAGE_URL", "http://env-mq:5000")
 
-    from celine.cli.commands.governance.generate import _resolve_marquez_url
+    from celine.utils.cli.commands.governance.generate import _resolve_marquez_url
 
     assert _resolve_marquez_url(None) == "http://env-mq:5000"
 
@@ -36,7 +36,7 @@ def test_resolve_marquez_url_env(monkeypatch):
 def test_resolve_marquez_url_default(monkeypatch):
     monkeypatch.delenv("OPENLINEAGE_URL", raising=False)
 
-    from celine.cli.commands.governance.generate import _resolve_marquez_url
+    from celine.utils.cli.commands.governance.generate import _resolve_marquez_url
 
     assert _resolve_marquez_url(None) == "http://localhost:5000"
 
@@ -49,17 +49,17 @@ def test_resolve_marquez_url_default(monkeypatch):
 def test_resolve_namespace_env(monkeypatch):
     monkeypatch.setenv("OPENLINEAGE_NAMESPACE", "env.ns")
 
-    from celine.cli.commands.governance.generate import _resolve_namespace
+    from celine.utils.cli.commands.governance.generate import _resolve_namespace
 
     assert _resolve_namespace("app1", None) == "env.ns"
 
 
-@patch("celine.cli.commands.governance.generate.get_namespace")
+@patch("celine.utils.cli.commands.governance.generate.get_namespace")
 def test_resolve_namespace_default(mock_get_ns, monkeypatch):
     mock_get_ns.return_value = "default.ns"
     monkeypatch.delenv("OPENLINEAGE_NAMESPACE", raising=False)
 
-    from celine.cli.commands.governance.generate import _resolve_namespace
+    from celine.utils.cli.commands.governance.generate import _resolve_namespace
 
     assert _resolve_namespace("app1", None) == "default.ns"
 
@@ -69,7 +69,7 @@ def test_resolve_namespace_default(mock_get_ns, monkeypatch):
 # ------------------------------------------------------------------------------
 
 
-@patch("celine.cli.commands.governance.generate.requests.get")
+@patch("celine.utils.cli.commands.governance.generate.requests.get")
 def test_generate_governance_yes_mode(mock_get, tmp_path, monkeypatch):
     """
     Non-interactive mode should generate a governance.yaml with defaults
@@ -112,7 +112,7 @@ def test_generate_governance_yes_mode(mock_get, tmp_path, monkeypatch):
 # ------------------------------------------------------------------------------
 
 
-@patch("celine.cli.commands.governance.generate.requests.get")
+@patch("celine.utils.cli.commands.governance.generate.requests.get")
 def test_generate_governance_output_override(mock_get, tmp_path):
     datasets = ["x.raw.ds1"]
 
@@ -147,7 +147,7 @@ def test_generate_governance_output_override(mock_get, tmp_path):
 # ------------------------------------------------------------------------------
 
 
-@patch("celine.cli.commands.governance.generate.requests.get")
+@patch("celine.utils.cli.commands.governance.generate.requests.get")
 def test_generate_no_datasets(mock_get, tmp_path, monkeypatch):
     mock_resp = MagicMock()
     mock_resp.status_code = 200

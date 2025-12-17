@@ -1,5 +1,5 @@
-from celine.pipelines.pipeline_prefect import PipelineRunner
-from celine.pipelines.pipeline_config import PipelineConfig
+from celine.utils.pipelines.pipeline_prefect import PipelineRunner
+from celine.utils.pipelines.pipeline_config import PipelineConfig
 
 
 def test_run_dbt_operation_basic(pipeline_cfg: PipelineConfig):
