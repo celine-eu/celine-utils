@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.4.0 (2025-12-17)
+
+### Features
+
+- Add auth to marquez call
+  ([`3d818d6`](https://github.com/celine-eu/celine-utils/commit/3d818d6ef8be9e98aae644f0aa603e788160f989))
+
+- Add governance fields, update docs
+  ([`047acd8`](https://github.com/celine-eu/celine-utils/commit/047acd8ef6d24f95a0e6c86d9a08cd0916b04525))
+
+- Refactor base module ns
+  ([`1c51c33`](https://github.com/celine-eu/celine-utils/commit/1c51c33cb15131f1aa4c9e6aaea26fad45afc80e))
+
+
 ## v1.3.0 (2025-12-15)
 
 ### Bug Fixes
