@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.4.2 (2025-12-18)
+
+### Bug Fixes
+
+- Correct return types
+  ([`2e390c1`](https://github.com/celine-eu/celine-utils/commit/2e390c16f668b384e85ad74e040d197a713e6a81))
+
+### Chores
+
+- Update ref
+  ([`924a161`](https://github.com/celine-eu/celine-utils/commit/924a1617e2923499627d85981e842949c45f5a17))
+
+
 ## v1.4.1 (2025-12-17)
 
 ### Bug Fixes
