@@ -636,7 +636,7 @@ wheels = [
 
 [[package]]
 name = "dbt-core"
-version = "1.10.13"
+version = "1.10.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -662,9 +662,9 @@ dependencies = [
     { name = "sqlparse" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/8c/abc5646deb0e2a040b6ea4b41e72747e1a43e4204af351188f611783084a/dbt_core-1.10.13.tar.gz", hash = "sha256:f3bd91f90318073c44c45fc14345a032a2fb4a20886b01df4623ac58bf236c09", size = 899172, upload-time = "2025-09-25T20:34:34.687Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/2c/a614f4c41af9b63cafb88e182c3a30aa36faf7eb4cad9b99b927709a7f0d/dbt_core-1.10.17.tar.gz", hash = "sha256:b3b7a9d9ff839405840659034e6f92d07fb27c4714476dc8cfdc5359a7b864c2", size = 900268, upload-time = "2025-12-20T01:32:13.059Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/22/23f908133657775cbda0013c5626b64f7600a63a94815a6e617d6937c7e3/dbt_core-1.10.13-py3-none-any.whl", hash = "sha256:c15139493f822175892bfac58c53308884121760c4703fb41054e7b2de6ebd68", size = 985911, upload-time = "2025-09-25T20:34:32.647Z" },
+    { url = "https://files.pythonhosted.org/packages/47/f1/d68b24831e8855d0b4ecc54f8341cf8d3e0a60046af08a65817954f3f4ab/dbt_core-1.10.17-py3-none-any.whl", hash = "sha256:a4a807dc37ecd88899616689c68a6446b46231c11d7e3776f4f1a06e7becce76", size = 986991, upload-time = "2025-12-20T01:32:11.079Z" },
 ]
 
 [[package]]
@@ -1406,7 +1406,7 @@ wheels = [
 
 [[package]]
 name = "meltano"
-version = "4.0.7"
+version = "4.0.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -1438,9 +1438,9 @@ dependencies = [
     { name = "uv" },
     { name = "virtualenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/54/fb37c82f8f0ab86f542225726fbe820f71d4e786334ab1a1c6621db68176/meltano-4.0.7.tar.gz", hash = "sha256:5d1dcee6ac6b95eaf9282965b1133de12d5b3a20173123a5a143c4aebc6ee401", size = 12760659, upload-time = "2025-12-09T02:58:03.768Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/41/2c1cb004f744b5844c885dc40c4039b5f59bd672a26ca252bc237a0af467/meltano-4.0.8.tar.gz", hash = "sha256:78dda8af3b6db01d6f7ac3369441bdfcb8f7519f1e5ca6e3f60e77c5f5f4aae6", size = 12763967, upload-time = "2025-12-17T19:57:10.296Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/84/1caf48c52e9fa8621afdf0df4b951b4ccd9a123a579015498f40b8d586d5/meltano-4.0.7-py3-none-any.whl", hash = "sha256:5c00c704e3eca51a128bb4a490e81901107cc6e772165ea710f87341a38182b1", size = 395207, upload-time = "2025-12-09T02:58:01.682Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/1b/6d8a3c0a8ca8a3dab9ea4a4e1b161830e8e79482c06266a75f736135d600/meltano-4.0.8-py3-none-any.whl", hash = "sha256:538a25d2d8c7a91cd25620b0721455ca6881618221dd7ce2bfe5f4249436e556", size = 396017, upload-time = "2025-12-17T19:57:08.507Z" },
 ]
 
 [[package]]
@@ -1896,7 +1896,7 @@ wheels = [
 
 [[package]]
 name = "prefect"
-version = "3.6.6"
+version = "3.6.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosqlite" },
@@ -1950,19 +1950,18 @@ dependencies = [
     { name = "toml" },
     { name = "typer" },
     { name = "typing-extensions" },
-    { name = "uv" },
     { name = "uvicorn" },
     { name = "websockets" },
     { name = "whenever", marker = "python_full_version >= '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/59/9294656514745c1c2b87d7b0c6d917db469c65c00ae5cf4a54981299708c/prefect-3.6.6.tar.gz", hash = "sha256:1645870d62ad20cdebc6fe0c4e00a21c5672ee668bb0b5a2a3efc8c0db4ca1bb", size = 5652513, upload-time = "2025-12-11T21:14:46.378Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0e/d4/610f0a5dbe5d5d219e2a6c4272887fa3f54e4c7886b27ddb82721e821d19/prefect-3.6.7.tar.gz", hash = "sha256:e78c39a8fa9d899047b2d888768f52806baec098392eaa982fb66ad00300e1e4", size = 5652431, upload-time = "2025-12-18T20:30:51.877Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/9e/016f2b9652f27d02f059179c3d9ba15544ddfe002438d0bc2733ad31aa60/prefect-3.6.6-py3-none-any.whl", hash = "sha256:0898a88c3ac83872309b3ffe65834f8df4241f53dc6733f46dc214a054b8a467", size = 6181387, upload-time = "2025-12-11T21:14:43.937Z" },
+    { url = "https://files.pythonhosted.org/packages/59/3d/68243e3e219d765a3012a1e396b3ea8566c3ea2b60283e27327c0f4415e9/prefect-3.6.7-py3-none-any.whl", hash = "sha256:9953b690b340d8f79eaff776fe8a2b714e1055e54116b00177f906cd76cd760d", size = 6181057, upload-time = "2025-12-18T20:30:49.669Z" },
 ]
 
 [[package]]
 name = "prefect-dbt"
-version = "0.7.11"
+version = "0.7.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dbt-core" },
@@ -1970,9 +1969,9 @@ dependencies = [
     { name = "prefect-shell" },
     { name = "sgqlc" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ce/ad/deaa51d555de8a1e13eb1077bcac09860dd5ef26aa7c2b3e8477c4c0e4e6/prefect_dbt-0.7.11.tar.gz", hash = "sha256:db90f501f356ac8a3e4052087addbfdff3f5b104b1c340d375862ab7357ab3a2", size = 80937, upload-time = "2025-12-09T23:41:22.171Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/e3/c3e79645dd0e96f2c54a41a425d104bdfc5449e0dac8d9d7be3dfa0dd074/prefect_dbt-0.7.13.tar.gz", hash = "sha256:42377a596c7de872cf3e3a4fafe33dc4dcf583cf464f8da128bbd6d5b1c54ebd", size = 81594, upload-time = "2025-12-19T16:08:35.481Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/ad/e8bb6af651fc9cc9316da3752855d284d3205da3f3541d1cab2f11e64432/prefect_dbt-0.7.11-py3-none-any.whl", hash = "sha256:a22ede6f3a39fcae62b6738d5807b74cc2a81e1de816024608e28c0bb26d19eb", size = 59833, upload-time = "2025-12-09T23:41:20.574Z" },
+    { url = "https://files.pythonhosted.org/packages/51/ff/7f304fb732b28e356b4efd0928f12aaaf31e6d8ddf3396348f379b0ee930/prefect_dbt-0.7.13-py3-none-any.whl", hash = "sha256:77693f98b0ec0fc836a6dfa3b06550d654fed5fd282d69f6a5b3e4db514d5682", size = 60065, upload-time = "2025-12-19T16:08:33.992Z" },
 ]
 
 [[package]]
