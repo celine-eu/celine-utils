@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.4.3 (2025-12-28)
+
+### Bug Fixes
+
+- Add governance title, description fields
+  ([`8cc94c4`](https://github.com/celine-eu/celine-utils/commit/8cc94c4b490dc30cac892614c51ac83dd5a0291c))
+
+### Chores
+
+- Typo
+  ([`e4e4df8`](https://github.com/celine-eu/celine-utils/commit/e4e4df89cebf741412bdd7d7bf9d0f9496a115ae))
+
+
 ## v1.4.2 (2025-12-18)
 
 ### Bug Fixes
