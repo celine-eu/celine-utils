@@ -11,6 +11,20 @@
             "type": "object",
             "description": "Default governance applied to all datasets unless overridden",
             "properties": {
+                "title": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Human-readable dataset title"
+                },
+                "description": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Human-readable dataset description"
+                },
                 "license": {
                     "type": [
                         "string",

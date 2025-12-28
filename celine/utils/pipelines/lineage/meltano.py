@@ -89,10 +89,14 @@ class MeltanoLineage:
             and rule.retention_days is None
             and not rule.documentation_url
             and not rule.source_system
+            and not rule.title
+            and not rule.description
         ):
             return None
 
         return GovernanceDatasetFacet(
+            title=rule.title,
+            description=rule.description,
             license=rule.license,
             attribution=rule.attribution,
             owners=owners,

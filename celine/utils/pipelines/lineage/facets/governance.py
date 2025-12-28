@@ -25,6 +25,8 @@ class GovernanceDatasetFacet(BaseFacet):
     def _get_schema():
         return SCHEMA_URL
 
+    title: Optional[str] = None
+    description: Optional[str] = None
     license: Optional[str] = None
     attribution: Optional[str] = None
     owners: Optional[List[str]] = None

@@ -20,6 +20,8 @@ class GovernanceOwner(BaseModel):
 
 
 class GovernanceRule(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
     license: Optional[str] = None
     attribution: Optional[str] = None
     ownership: List[GovernanceOwner] = Field(default_factory=list)
@@ -75,6 +77,8 @@ class GovernanceResolver:
                 for o in owners_raw
             ]
             return GovernanceRule(
+                title=block.get("title"),
+                description=block.get("description"),
                 license=block.get("license"),
                 ownership=owners,
                 access_level=block.get("access_level"),
@@ -89,6 +93,8 @@ class GovernanceResolver:
                     for k, v in block.items()
                     if k
                     not in {
+                        "title",
+                        "description",
                         "license",
                         "ownership",
                         "access_level",
@@ -193,6 +199,8 @@ class GovernanceResolver:
         tags = sorted(set(base.tags or []) | set(override.tags or []))
 
         return GovernanceRule(
+            title=pick(base.title, override.title),
+            description=pick(base.description, override.description),
             license=pick(base.license, override.license),
             ownership=owners,
             access_level=pick(base.access_level, override.access_level),

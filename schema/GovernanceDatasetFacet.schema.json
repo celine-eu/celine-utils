@@ -15,6 +15,18 @@
             "type": "string",
             "format": "uri"
         },
+        "title": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "description": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
         "accessLevel": {
             "type": [
                 "string",
