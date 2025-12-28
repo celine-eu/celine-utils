@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.4 (2025-12-28)
+
+### Bug Fixes
+
+- Missing dbt facets fields
+  ([`be4cd67`](https://github.com/celine-eu/celine-utils/commit/be4cd671f23b5bb5f9fb0f1cf31bbdb88a69d975))
+
+
 ## v1.4.3 (2025-12-28)
 
 ### Bug Fixes
