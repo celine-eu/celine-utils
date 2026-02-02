@@ -1,10 +1,16 @@
-contents:
-  - celine
-  - integration-tests/tests
-  - integration-tests/apps
-  - schema
-  - docs
-  - README.md
-  - pyproject.toml
-
-output: data/sources.txt
+dumps:
+  - name: all
+    contents:
+      - celine
+      - integration-tests/tests
+      - integration-tests/apps
+      - schema
+      - docs
+      - README.md
+      - pyproject.toml
+  - name: py
+    contents:
+      - celine
+      - integration-tests/tests
+      - integration-tests/apps
+      - schema
