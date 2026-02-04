@@ -3,7 +3,7 @@ name = "celine-utils"
 version = "1.4.4"
 description = "CELINE utils"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "bcrypt>=4.3.0",
     "openlineage-python>=1.37.0",
@@ -17,12 +17,12 @@ dependencies = [
     "requests>=2.32.5",
     "sqlalchemy>=2.0.43",
     "typer>=0.16.1",
-
     "dbt-core>=1.10.10",
     "dbt-postgres>=1.9.1",
     "prefect-dbt>=0.7.6",
     "meltano>=3.9.1",
     "prefect>=3.4.19",
+    "celine-sdk>=1.0.1",
 ]
 
 [dependency-groups]
@@ -41,7 +41,7 @@ build-backend = "setuptools.build_meta"
 celine-utils = "celine.utils.cli.main:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["celine.utils*"]
 
 [tool.semantic_release]

@@ -1,5 +1,8 @@
 {
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "python.analysis.autoSearchPaths": true,
     "python.analysis.extraPaths": [
-        "celine"
+        "src/celine",
+        "../celine-sdk/src",
     ]
 }

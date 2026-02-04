@@ -10,7 +10,7 @@ dumps:
       - pyproject.toml
   - name: py
     contents:
-      - celine
+      - src
       - integration-tests/tests
       - integration-tests/apps
       - schema

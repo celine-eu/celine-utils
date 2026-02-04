@@ -1,8 +1,8 @@
 import traceback
 import re
 import subprocess, os, datetime
-
-import click
+import atexit
+import time
 
 from pathlib import Path
 from typing import Any, Optional, Tuple
@@ -47,9 +47,54 @@ MELTANO_LINE_RE = re.compile(
     r"^\s*\d{4}-\d{2}-\d{2}T[\d:\.]+Z\s*\[(?P<level>[a-zA-Z\s]+)\]\s*(?P<msg>.*)$"
 )
 DBT_ERROR_HEADER = re.compile(
-    r".*\b(Failure|Database Error)\b in model (?P<name>[\w_]+) \((?P<path>.+?)\)",
+    r".*\b(Failure|Database Error)\b in model (?P<n>[\w_]+) \((?P<path>.+?)\)",
     re.IGNORECASE,
 )
+
+
+class PipelineTaskFailureException(Exception): ...
+
+
+# Module-level pipeline state tracking (singleton per container)
+_pipeline_run_id: str | None = None
+_pipeline_namespace: str | None = None
+_pipeline_started: bool = False
+_pipeline_finished: bool = False
+_pipeline_start_time: float | None = None
+_pipeline_cfg: PipelineConfig | None = None
+
+
+def _emit_pipeline_completion():
+    """
+    Emit pipeline COMPLETE event on process exit.
+    Called via atexit if pipeline started and didn't fail.
+    """
+    global _pipeline_finished
+
+    if _pipeline_finished or not _pipeline_started:
+        return
+
+    if _pipeline_cfg is None or _pipeline_run_id is None or _pipeline_namespace is None:
+        return
+
+    _pipeline_finished = True
+
+    duration_ms = None
+    if _pipeline_start_time is not None:
+        duration_ms = int((time.time() - _pipeline_start_time) * 1000)
+
+    try:
+        from celine.utils.pipelines.mqtt import emit_pipeline_event
+
+        emit_pipeline_event(
+            cfg=_pipeline_cfg,
+            namespace=_pipeline_namespace,
+            status="COMPLETE",
+            run_id=_pipeline_run_id,
+            duration_ms=duration_ms,
+        )
+    except Exception:
+        pass  # Silently ignore on exit
 
 
 class PipelineRunner:
@@ -78,16 +123,24 @@ class PipelineRunner:
         return None
 
     def _task_result(
-        self, status: bool | PipelineTaskStatus, command: str, details: Any = None
+        self, status: bool | PipelineTaskStatus, command: str, details: str = ""
     ) -> PipelineTaskResult:
+
+        status = (
+            "success" if status is True else ("failed" if status is False else status)
+        )
+
+        if self.cfg.raise_on_failure and status == "failed":
+            self.logger.warning(
+                "Task failed, raising exception. Set `config.raise_on_failure=false` to continue the pipeline run."
+            )
+            raise PipelineTaskFailureException(
+                f"Task failed command={command} status={status} details={details}"
+            )
 
         result = PipelineTaskResult(
             command=command,
-            status=(
-                "success"
-                if status is True
-                else ("failed" if status is False else status)
-            ),
+            status=status,
             details=details or "",
         )
 
@@ -113,6 +166,71 @@ class PipelineRunner:
             ),
         }
 
+    def _emit_mqtt_pipeline_event(
+        self,
+        status: str,
+        run_id: str,
+        namespace: str,
+        error: str | None = None,
+    ):
+        """
+        Emit MQTT pipeline-level event.
+
+        Handles:
+        - First START event: initializes pipeline tracking, registers atexit
+        - FAIL/ABORT: marks pipeline as failed, emits failure event
+        - COMPLETE events are emitted via atexit hook
+        """
+        global _pipeline_run_id, _pipeline_namespace, _pipeline_started
+        global _pipeline_finished, _pipeline_start_time, _pipeline_cfg
+
+        if not self.cfg.mqtt_events_enabled:
+            return
+
+        try:
+            from celine.utils.pipelines.mqtt import emit_pipeline_event
+
+            # First task START -> emit pipeline START
+            if status == "START" and not _pipeline_started:
+                _pipeline_run_id = run_id
+                _pipeline_namespace = namespace
+                _pipeline_started = True
+                _pipeline_finished = False
+                _pipeline_start_time = time.time()
+                _pipeline_cfg = self.cfg
+
+                # Register atexit handler for completion
+                atexit.register(_emit_pipeline_completion)
+
+                emit_pipeline_event(
+                    cfg=self.cfg,
+                    namespace=namespace,
+                    status="START",
+                    run_id=run_id,
+                )
+                self.logger.info(f"MQTT pipeline START emitted: {namespace}")
+
+            # FAIL or ABORT -> emit pipeline FAIL immediately
+            elif status in ("FAIL", "ABORT") and not _pipeline_finished:
+                _pipeline_finished = True
+
+                duration_ms = None
+                if _pipeline_start_time is not None:
+                    duration_ms = int((time.time() - _pipeline_start_time) * 1000)
+
+                emit_pipeline_event(
+                    cfg=self.cfg,
+                    namespace=namespace,
+                    status="FAIL",
+                    run_id=_pipeline_run_id or run_id,
+                    error=error,
+                    duration_ms=duration_ms,
+                )
+                self.logger.debug(f"MQTT pipeline FAIL emitted: {namespace}")
+
+        except Exception:
+            self.logger.warning("Failed to emit MQTT pipeline event", exc_info=True)
+
     def _emit_event(
         self,
         job_name: str,
@@ -125,11 +243,26 @@ class PipelineRunner:
         namespace: str | None = None,
     ):
 
-        if not self.cfg.openlineage_enabled or self.client is None:
-            return
-
         if not namespace:
             namespace = get_namespace(self.cfg.app_name)
+
+        # --- MQTT pipeline event ---
+        error_msg = None
+        if run_facets and "errorMessage" in run_facets:
+            error_facet = run_facets["errorMessage"]
+            if isinstance(error_facet, ErrorMessageRunFacet):
+                error_msg = error_facet.message
+
+        self._emit_mqtt_pipeline_event(
+            status=state.value,
+            run_id=run_id,
+            namespace=namespace,
+            error=error_msg,
+        )
+
+        # --- OpenLineage event (existing logic) ---
+        if not self.cfg.openlineage_enabled or self.client is None:
+            return
 
         try:
             facets = self._default_run_facets()
@@ -258,6 +391,10 @@ class PipelineRunner:
                 )
                 return self._task_result(False, full_command, error_msg)
         except Exception as e:
+
+            if isinstance(e, PipelineTaskFailureException):
+                raise
+
             self._emit_event(
                 job_name,
                 EventType.ABORT,
@@ -452,6 +589,8 @@ class PipelineRunner:
             error_msg = ""
             if not success:
                 error_msg = "\n".join(self._extract_dbt_error_block(cli_output))
+                if error_msg.strip() == "":
+                    error_msg = cli_output
                 facets = self._get_error_facet(
                     f"Command {command_str} exited with code {result.returncode}",
                     error_msg,
@@ -476,10 +615,14 @@ class PipelineRunner:
             return self._task_result(
                 status=success,
                 command=command_str,
-                details=error_msg if not success else None,
+                details=error_msg if not success else "",
             )
 
         except Exception as e:
+
+            if isinstance(e, PipelineTaskFailureException):
+                raise e
+
             # Unexpected failure → ABORT
             self.logger.exception("dbt execution error")
             self._emit_event(

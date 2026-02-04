@@ -1,6 +1,7 @@
 # celine/cli/commands/pipeline/run.py
 from __future__ import annotations
 
+import ast
 import asyncio
 import importlib.util
 import inspect
@@ -100,6 +101,36 @@ def _load_env_files(pipelines_root: Path, app_root: Path, app_name: str) -> None
         )
     else:
         load_first([app_root / f for f in env_files], override=True)
+
+
+def _find_flow_function(flow_path: Path) -> str | None:
+    """
+    Scan a Python file for a function decorated with @flow.
+
+    Uses AST parsing to find the first function with a @flow decorator.
+    Returns the function name, or None if not found.
+    """
+    try:
+        source = flow_path.read_text()
+        tree = ast.parse(source)
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                for decorator in node.decorator_list:
+                    # Handle @flow
+                    if isinstance(decorator, ast.Name) and decorator.id == "flow":
+                        return node.name
+                    # Handle @flow(...)
+                    if isinstance(decorator, ast.Call):
+                        if (
+                            isinstance(decorator.func, ast.Name)
+                            and decorator.func.id == "flow"
+                        ):
+                            return node.name
+        return None
+    except Exception as e:
+        logger.debug(f"Failed to parse {flow_path} for @flow decorator: {e}")
+        return None
 
 
 # =============================================================================
@@ -209,9 +240,14 @@ def run_dbt(
 
 @pipeline_run_app.command("prefect")
 def run_prefect(
-    flow: str = typer.Option(..., "--flow", "-f", help="Name of flows/<flow>.py"),
+    flow: str = typer.Option(
+        "pipeline", "--flow", "-f", help="Name of flows/<flow>.py"
+    ),
     function: str = typer.Option(
-        ..., "--function", "-x", help="Function inside the flow module"
+        None,
+        "--function",
+        "-x",
+        help="Function inside the flow module (auto-detected if omitted)",
     ),
 ):
     _build_runner()
@@ -222,6 +258,20 @@ def run_prefect(
         logger.exception("Flow loading failed")
         typer.echo(f"Failed loading flow: {e}")
         raise typer.Exit(1)
+
+    # Auto-detect function if not provided
+    if function is None:
+        app_root = _discover_app_root()
+        flow_file = app_root / "flows" / f"{flow}.py"
+        function = _find_flow_function(flow_file)
+
+        if function is None:
+            typer.echo(
+                f"No @flow decorated function found in '{flow}.py'. Use --function to specify."
+            )
+            raise typer.Exit(1)
+
+        logger.debug(f"Auto-detected @flow function: {function}")
 
     if not hasattr(module, function):
         typer.echo(f"Function '{function}' not found in flow '{flow}'.")

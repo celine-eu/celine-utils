@@ -16,13 +16,7 @@ plugins:
             format: csv
 
     - name: tap-spreadsheets
-      namespace: tap_spreadsheets
       variant: celine-eu
-      pip_url: git+https://github.com/celine-eu/tap-spreadsheets.git@v1.0.0
-      capabilities:
-        - discover
-        - catalog
-        - state
 
   loaders:
     - name: target-postgres
