@@ -33,16 +33,18 @@ class PipelineConfig(AppBaseSettings):
     dbt_profiles_dir: Optional[str] = Field(default=None, alias="DBT_PROFILES_DIR")
 
     # Database
-    postgres_host: str = Field(default="postgres", alias="POSTGRES_HOST")
-    postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
+    postgres_host: str = Field(default="172.17.0.1", alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=15432, alias="POSTGRES_PORT")
     postgres_db: str = Field(default="datasets", alias="POSTGRES_DB")
     postgres_user: str = Field(default="postgres", alias="POSTGRES_USER")
-    postgres_password: str = Field(default="postgres", alias="POSTGRES_PASSWORD")
+    postgres_password: str = Field(
+        default="securepassword123", alias="POSTGRES_PASSWORD"
+    )
 
     meltano_database_uri: str | None = Field(default=None, alias="MELTANO_DATABASE_URI")
 
     openlineage_url: str = Field(
-        default="http://172.17.0.1:5000", alias="OPENLINEAGE_URL"
+        default="http://172.17.0.1:5001", alias="OPENLINEAGE_URL"
     )
     openlineage_api_key: str | None = Field(default=None, alias="OPENLINEAGE_API_KEY")
     openlineage_enabled: bool = Field(
@@ -69,3 +71,27 @@ class PipelineConfig(AppBaseSettings):
         if not hasattr(self, "_sdk"):
             self._sdk = _default_sdk_settings()
         return self._sdk
+
+    @staticmethod
+    def get_as_envs(cfg: "PipelineConfig") -> dict[str, str]:
+        envs: dict[str, str] = {}
+
+        for name, field in cfg.model_fields.items():
+            alias = field.validation_alias
+
+            if alias is None:
+                continue
+
+            value = getattr(cfg, name)
+
+            if value is None:
+                continue
+
+            if isinstance(alias, (list, tuple)):
+                env_key = alias[0]
+            else:
+                env_key = alias
+
+            envs[str(env_key)] = str(value)
+
+        return envs

@@ -329,12 +329,19 @@ class PipelineRunner:
 
         try:
             cmd = full_command.split()
+
+            env = {
+                **os.environ,
+                **PipelineConfig.get_as_envs(self.cfg),
+                "NO_COLOR": "1",
+            }
+
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 cwd=project_root,
-                env={**os.environ, "NO_COLOR": "1"},
+                env=env,
             )
 
             success = result.returncode == 0
@@ -535,6 +542,7 @@ class PipelineRunner:
         try:
             env = {
                 **os.environ,
+                **PipelineConfig.get_as_envs(self.cfg),
                 "DBT_PROFILES_DIR": str(profiles_dir or ""),
                 "OPENLINEAGE_DBT_JOB_NAME": job_name,
             }
