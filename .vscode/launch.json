@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pytest debugger",
+            "name": "celine-utils pytest debugger",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
