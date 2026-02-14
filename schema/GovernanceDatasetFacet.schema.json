@@ -36,7 +36,8 @@
                 "open",
                 "internal",
                 "restricted"
-            ]
+            ],
+            "description": "Dataset access level for policy enforcement"
         },
         "attribution": {
             "type": [
@@ -67,25 +68,46 @@
                 "red",
                 "yellow",
                 "green"
-            ]
+            ],
+            "description": "Data classification level"
         },
         "retentionDays": {
             "type": [
                 "integer",
                 "null"
-            ]
+            ],
+            "description": "Data retention period in days"
         },
         "license": {
             "type": [
                 "string",
                 "null"
-            ]
+            ],
+            "description": "License identifier or URL"
         },
         "sourceSystem": {
             "type": [
                 "string",
                 "null"
-            ]
+            ],
+            "description": "Source system that produced this dataset"
+        },
+        "userFilterColumn": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Column name containing user sub for row-level filtering. When set, non-admin users can only see rows where this column matches their JWT sub claim."
+        },
+        "owners": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": "string"
+            },
+            "description": "List of owners in format 'group:/path' or 'user:sub'"
         }
     }
 }

@@ -91,6 +91,7 @@ class MeltanoLineage:
             and not rule.source_system
             and not rule.title
             and not rule.description
+            and not rule.user_filter_column  # NEW: include in empty check
         ):
             return None
 
@@ -107,6 +108,7 @@ class MeltanoLineage:
             retentionDays=rule.retention_days,
             documentationUrl=rule.documentation_url,
             sourceSystem=rule.source_system,
+            userFilterColumn=rule.user_filter_column,  # NEW
         )
 
     def collect_inputs_outputs(

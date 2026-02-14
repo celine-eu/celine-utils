@@ -122,6 +122,7 @@ class DbtLineage:
                 ]
                 meta_rule = GovernanceRule(
                     license=g.get("license"),
+                    attribution=g.get("attribution"),
                     ownership=owners,
                     access_level=g.get("access_level"),
                     access_requirements=g.get("access_requirements"),
@@ -130,6 +131,7 @@ class DbtLineage:
                     retention_days=g.get("retention_days"),
                     documentation_url=g.get("documentation_url"),
                     source_system=g.get("source_system"),
+                    user_filter_column=g.get("user_filter_column"),  # NEW
                     extra={},
                 )
 
@@ -158,6 +160,7 @@ class DbtLineage:
             and not rule.source_system
             and not rule.title
             and not rule.description
+            and not rule.user_filter_column  # NEW: include in empty check
         ):
             return None
 
@@ -174,6 +177,7 @@ class DbtLineage:
             retentionDays=rule.retention_days,
             documentationUrl=rule.documentation_url,
             sourceSystem=rule.source_system,
+            userFilterColumn=rule.user_filter_column,  # NEW
         )
 
     def _build_assertion(self, test_node: dict, result: dict) -> DqAssertion:

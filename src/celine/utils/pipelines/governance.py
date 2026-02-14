@@ -32,6 +32,7 @@ class GovernanceRule(BaseModel):
     retention_days: Optional[int] = None
     documentation_url: Optional[str] = None
     source_system: Optional[str] = None
+    user_filter_column: Optional[str] = None  # NEW: column for row-level user filtering
     extra: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -80,6 +81,7 @@ class GovernanceResolver:
                 title=block.get("title"),
                 description=block.get("description"),
                 license=block.get("license"),
+                attribution=block.get("attribution"),
                 ownership=owners,
                 access_level=block.get("access_level"),
                 access_requirements=block.get("access_requirements"),
@@ -88,6 +90,7 @@ class GovernanceResolver:
                 retention_days=block.get("retention_days"),
                 documentation_url=block.get("documentation_url"),
                 source_system=block.get("source_system"),
+                user_filter_column=block.get("user_filter_column"),  # NEW
                 extra={
                     k: v
                     for k, v in block.items()
@@ -96,6 +99,7 @@ class GovernanceResolver:
                         "title",
                         "description",
                         "license",
+                        "attribution",
                         "ownership",
                         "access_level",
                         "access_requirements",
@@ -104,6 +108,7 @@ class GovernanceResolver:
                         "retention_days",
                         "documentation_url",
                         "source_system",
+                        "user_filter_column",  # NEW: exclude from extra
                     }
                 },
             )
@@ -202,6 +207,7 @@ class GovernanceResolver:
             title=pick(base.title, override.title),
             description=pick(base.description, override.description),
             license=pick(base.license, override.license),
+            attribution=pick(base.attribution, override.attribution),
             ownership=owners,
             access_level=pick(base.access_level, override.access_level),
             access_requirements=pick(
@@ -212,5 +218,8 @@ class GovernanceResolver:
             retention_days=pick(base.retention_days, override.retention_days),
             documentation_url=pick(base.documentation_url, override.documentation_url),
             source_system=pick(base.source_system, override.source_system),
+            user_filter_column=pick(
+                base.user_filter_column, override.user_filter_column
+            ),
             extra={**base.extra, **override.extra},
         )

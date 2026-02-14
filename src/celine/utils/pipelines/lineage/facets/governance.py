@@ -1,10 +1,11 @@
-# celine/pipelines/lineage/facets/governance.py
-from __future__ import annotations
+# src/celine/utils/pipelines/lineage/facets/governance.py
+"""
+Custom OpenLineage facet for governance metadata.
+"""
 
 from typing import List, Optional
 
 import attr
-from typing import Optional, List
 from openlineage.client.facet import BaseFacet
 
 SCHEMA_URL = "https://celine-eu.github.io/schema/GovernanceDatasetFacet.schema.json"
@@ -39,3 +40,4 @@ class GovernanceDatasetFacet(BaseFacet):
     retentionDays: Optional[int] = None
     documentationUrl: Optional[str] = None
     sourceSystem: Optional[str] = None
+    userFilterColumn: Optional[str] = None  # NEW: column for row-level user filtering
