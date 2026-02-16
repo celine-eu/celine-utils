@@ -22,7 +22,7 @@ dependencies = [
     "prefect-dbt>=0.7.6",
     "meltano>=3.9.1",
     "prefect>=3.4.19",
-    "celine-sdk>=1.0.1",
+    "celine-sdk>=1.1.0",
 ]
 
 [dependency-groups]

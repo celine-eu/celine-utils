@@ -162,7 +162,7 @@ def emit_pipeline_event(
     try:
         from celine.sdk.broker import BrokerMessage, QoS
 
-        topic = f"celine/pipelines/status/{namespace}"
+        topic = f"celine/pipelines/runs/{namespace}"
 
         payload = {
             "pipeline": namespace,
@@ -181,7 +181,7 @@ def emit_pipeline_event(
         message = BrokerMessage(
             topic=topic,
             payload=payload,
-            qos=QoS.AT_LEAST_ONCE,
+            qos=QoS.EXACTLY_ONCE,
             retain=False,
         )
 
