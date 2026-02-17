@@ -2,6 +2,10 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    tags:
+      - "*"
 
 permissions:
   contents: write # Needed to upload artifacts to the release
