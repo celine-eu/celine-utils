@@ -84,23 +84,18 @@ def _discover_pipelines_root(app_root: Path, app_name: str) -> Path:
 def _load_env_files(pipelines_root: Path, app_root: Path, app_name: str) -> None:
     env_files = [".env", ".env.local"]
 
-    def load_first(candidates: list[Path], override: bool):
-        for file in candidates:
-            if file.exists():
-                logger.debug(f"Loading environment file: {file}")
-                load_dotenv(file, override=override)
-                return
+    def load_if_exists(path: Path, override: bool):
+        if path.exists():
+            logger.debug(f"Loading environment file: {path} (override={override})")
+            load_dotenv(path, override=override)
 
-    pipelines_root_from_env = os.getenv("PIPELINES_ROOT") is not None
+    # Always load root-level .env first (lower priority)
+    for f in env_files:
+        load_if_exists(pipelines_root / f, override=False)
 
-    if pipelines_root_from_env:
-        load_first([pipelines_root / f for f in env_files], override=False)
-        load_first(
-            [pipelines_root / "apps" / app_name / f for f in env_files],
-            override=True,
-        )
-    else:
-        load_first([app_root / f for f in env_files], override=True)
+    # Then app-level .env (higher priority, overrides root)
+    for f in env_files:
+        load_if_exists(app_root / f, override=True)
 
 
 def _find_flow_function(flow_path: Path) -> str | None:
@@ -164,7 +159,7 @@ def _build_runner() -> PipelineRunner:
         cfg = PipelineConfig()
 
         # propagate envs
-        if not os.getenv("OPENLINEAGE_URL"):
+        if not os.getenv("OPENLINEAGE_URL") and cfg.openlineage_url:
             os.environ["OPENLINEAGE_URL"] = cfg.openlineage_url
 
         return PipelineRunner(cfg)
