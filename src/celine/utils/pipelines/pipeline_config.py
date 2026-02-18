@@ -2,16 +2,7 @@ from typing import Optional
 from pydantic import Field
 
 from celine.utils.common.config.settings import AppBaseSettings
-
-
-def _default_sdk_settings():
-    """Lazy import to avoid hard dependency on celine-sdk."""
-    try:
-        from celine.sdk.settings import SdkSettings
-
-        return SdkSettings()
-    except ImportError:
-        return None
+from celine.sdk.settings import MqttSettings, OidcSettings, SdkSettings
 
 
 class PipelineConfig(AppBaseSettings):
@@ -40,11 +31,13 @@ class PipelineConfig(AppBaseSettings):
     postgres_password: str = Field(
         default="securepassword123", alias="POSTGRES_PASSWORD"
     )
-
-    meltano_database_uri: str | None = Field(default=None, alias="MELTANO_DATABASE_URI")
+    meltano_database_uri: str | None = Field(
+        default="postgresql://postgres:securepassword123@172.17.0.1:15432/meltano",
+        alias="MELTANO_DATABASE_URI",
+    )
 
     openlineage_url: str = Field(
-        default="http://172.17.0.1:5001", alias="OPENLINEAGE_URL"
+        default="http://172.17.0.1:5000", alias="OPENLINEAGE_URL"
     )
     openlineage_api_key: str | None = Field(default=None, alias="OPENLINEAGE_API_KEY")
     openlineage_enabled: bool = Field(
@@ -55,28 +48,24 @@ class PipelineConfig(AppBaseSettings):
 
     # MQTT pipeline events (via celine-sdk)
     mqtt_events_enabled: bool = Field(
-        default=False,
+        default=True,
         alias="MQTT_EVENTS_ENABLED",
         description="Enable MQTT pipeline event publishing",
     )
 
-    @property
-    def sdk(self):
-        """
-        Access celine-sdk settings (MQTT, OIDC).
-
-        Returns None if celine-sdk is not installed.
-        Settings are loaded from CELINE_MQTT_* and CELINE_OIDC_* env vars.
-        """
-        if not hasattr(self, "_sdk"):
-            self._sdk = _default_sdk_settings()
-        return self._sdk
+    sdk: SdkSettings = SdkSettings(
+        oidc=OidcSettings(
+            audience="svc-pipelines",
+            client_id="svc-pipelines",
+            client_secret="svc-pipelines",
+        )
+    )
 
     @staticmethod
     def get_as_envs(cfg: "PipelineConfig") -> dict[str, str]:
         envs: dict[str, str] = {}
 
-        for name, field in cfg.model_fields.items():
+        for name, field in PipelineConfig.model_fields.items():
             alias = field.validation_alias
 
             if alias is None:

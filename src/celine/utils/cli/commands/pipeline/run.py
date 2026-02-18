@@ -162,6 +162,11 @@ def _build_runner() -> PipelineRunner:
         _load_env_files(pipelines_root, app_root, app_name)
 
         cfg = PipelineConfig()
+
+        # propagate envs
+        if not os.getenv("OPENLINEAGE_URL"):
+            os.environ["OPENLINEAGE_URL"] = cfg.openlineage_url
+
         return PipelineRunner(cfg)
 
     except Exception as e:
