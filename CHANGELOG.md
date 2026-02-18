@@ -2,6 +2,39 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-02-18)
+
+### Bug Fixes
+
+- Correct topic
+  ([`3b2dcbc`](https://github.com/celine-eu/celine-utils/commit/3b2dcbcd7486474cc2c107a2b938e93454c104da))
+
+- Expose lineage env, properly load sdk settings
+  ([`aaae068`](https://github.com/celine-eu/celine-utils/commit/aaae0689a5faf9896150c62c7cb3f97f8d5265d3))
+
+### Chores
+
+- Add dumpster
+  ([`5236430`](https://github.com/celine-eu/celine-utils/commit/5236430f07a5bfc7822fe8c0d0388f0a0124336e))
+
+- Move to src
+  ([`8da170a`](https://github.com/celine-eu/celine-utils/commit/8da170a6b45a68c5e87156581161b8317e4fa60f))
+
+- Run actions on selected tags/branches
+  ([`f15c1d4`](https://github.com/celine-eu/celine-utils/commit/f15c1d42f8c75aaed1cc109486043b26104d2034))
+
+- Up debugger config
+  ([`1a8427a`](https://github.com/celine-eu/celine-utils/commit/1a8427a15e632b680ce274ba152217c3f82563f2))
+
+### Features
+
+- Add user column filter
+  ([`e46c960`](https://github.com/celine-eu/celine-utils/commit/e46c9608645cfbd57fe90eb317da98d69a12c456))
+
+- Expand envs from pipeline config
+  ([`c38e892`](https://github.com/celine-eu/celine-utils/commit/c38e8928c22807183bfbd40accc5b06d5c64d5db))
+
+
 ## v1.4.4 (2025-12-28)
 
 ### Bug Fixes
