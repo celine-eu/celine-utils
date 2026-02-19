@@ -15,11 +15,11 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from celine.sdk.broker import MqttBroker, MqttConfig
 from celine.sdk.auth import OidcClientCredentialsProvider
+from celine.sdk.broker import BrokerMessage, QoS, MqttBroker
+from celine.sdk.broker import PipelineRunEvent
 
 if TYPE_CHECKING:
-    from celine.sdk.broker import MqttBroker
-    from celine.utils.pipelines.pipeline_config import PipelineConfig
-    from celine.utils.pipelines.pipeline_result import PipelineStatus
+    from celine.utils.pipelines.pipeline import PipelineConfig, PipelineStatus
 
 logger = logging.getLogger(__name__)
 
@@ -158,27 +158,26 @@ async def emit_pipeline_event(
         return False
 
     try:
-        from celine.sdk.broker import BrokerMessage, QoS
 
         topic = f"celine/pipelines/runs/{namespace}"
 
-        payload = {
-            "pipeline": namespace,
-            "status": status,
-            "run_id": run_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "duration_ms": 0,
-        }
+        payload = PipelineRunEvent(
+            pipeline=namespace,
+            status=status,
+            run_id=run_id,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            duration_ms=0,
+        )
 
         if error is not None:
-            payload["error"] = error
+            payload.error = error
 
         if duration_ms is not None:
-            payload["duration_ms"] = duration_ms
+            payload.duration_ms = duration_ms
 
         message = BrokerMessage(
             topic=topic,
-            payload=payload,
+            payload=payload.model_dump(),
             qos=QoS.EXACTLY_ONCE,
             retain=False,
         )
