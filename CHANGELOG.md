@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.6.2 (2026-02-19)
+
+### Bug Fixes
+
+- Use shared event for pipelines run
+  ([`dd6dc51`](https://github.com/celine-eu/celine-utils/commit/dd6dc517b472fc532508fa8c4da0f3e7136cff79))
+
+### Chores
+
+- Udpate celine sdk
+  ([`019a22c`](https://github.com/celine-eu/celine-utils/commit/019a22cf1b857d1e4109b0beb04c59e6705e8ce0))
+
+
 ## v1.6.1 (2026-02-19)
 
 ### Bug Fixes
