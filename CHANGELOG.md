@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.1 (2026-02-19)
+
+### Bug Fixes
+
+- Use async mqtt connect
+  ([`f435a3d`](https://github.com/celine-eu/celine-utils/commit/f435a3da6cf396579f81c2fdce79a48c1568ca32))
+
+
 ## v1.6.0 (2026-02-19)
 
 ### Bug Fixes
