@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-02-19)
+
+### Bug Fixes
+
+- Proper load env
+  ([`d38cfe6`](https://github.com/celine-eu/celine-utils/commit/d38cfe6a38c15145a4ca6d3572c5b0cfce4deb0a))
+
+### Features
+
+- Refactor pipeline api, introduce context manager for pipeline tracking
+  ([`f669d1d`](https://github.com/celine-eu/celine-utils/commit/f669d1d78303e366591c44cd304877f1498bbb7e))
+
+
 ## v1.5.0 (2026-02-18)
 
 ### Bug Fixes
