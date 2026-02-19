@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import Field
 
 from celine.utils.common.config.settings import AppBaseSettings
-from celine.sdk.settings import MqttSettings, OidcSettings, SdkSettings
+from celine.sdk.settings import OidcSettings, SdkSettings
 
 
 class PipelineConfig(AppBaseSettings):

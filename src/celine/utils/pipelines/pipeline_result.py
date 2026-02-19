@@ -2,13 +2,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Literal, Dict, Any
+from enum import StrEnum
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-PipelineTaskStatus = Literal["success", "failed"]
+class PipelineStatus(StrEnum):
+    STARTED = "started"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 @dataclass
@@ -19,7 +23,7 @@ class PipelineTaskResult:
     """
 
     command: str
-    status: PipelineTaskStatus
+    status: PipelineStatus
     details: Any | None = None
     timestamp: str = field(default_factory=_utc_now_iso)
 

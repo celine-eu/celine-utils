@@ -110,7 +110,7 @@ def _find_flow_function(flow_path: Path) -> str | None:
         tree = ast.parse(source)
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 for decorator in node.decorator_list:
                     # Handle @flow
                     if isinstance(decorator, ast.Name) and decorator.id == "flow":
@@ -192,9 +192,14 @@ def _load_flow_module(flow_name: str) -> Any:
 
 
 def _run_func(func: Any) -> Any:
+    import inspect, asyncio
+
     if inspect.iscoroutinefunction(func):
         return asyncio.run(func())
-    return func()
+    result = func()
+    if inspect.iscoroutine(result):
+        return asyncio.run(result)
+    return result
 
 
 # =============================================================================

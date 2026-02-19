@@ -12,16 +12,17 @@ from celine.utils.pipelines.pipeline_prefect import (
 from celine.utils.pipelines.pipeline_runner import PipelineRunner
 from celine.utils.pipelines.pipeline_result import (
     PipelineTaskResult,
-    PipelineTaskStatus,
+    PipelineStatus,
 )
+
+from celine.utils.pipelines.context import pipeline_context
+
 import os
 
 DEV_MODE = os.getenv("PREFECT_MODE", "dev").lower() == "dev"
 
 
 __all__ = [
-    "PipelineConfig",
-    "PipelineRunner",
     "dbt_run_gold",
     "dbt_run_silver",
     "dbt_run_staging",
@@ -30,6 +31,9 @@ __all__ = [
     "meltano_run",
     "dbt_run",
     "dbt_run_operation",
+    "pipeline_context",
+    "PipelineConfig",
+    "PipelineRunner",
     "PipelineTaskResult",
-    "PipelineTaskStatus",
+    "PipelineStatus",
 ]

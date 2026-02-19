@@ -14,9 +14,11 @@ import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from celine.sdk.broker import MqttBroker
     from celine.utils.pipelines.pipeline_config import PipelineConfig
+    from celine.utils.pipelines.pipeline_result import PipelineStatus
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +102,7 @@ def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
         )
 
         # Register cleanup on exit
-        atexit.register(_cleanup_broker)
+        atexit.register(cleanup_broker)
 
         return _broker
 
@@ -115,45 +117,43 @@ def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
         return None
 
 
-def _cleanup_broker():
+def cleanup_broker():
     """Disconnect broker on process exit."""
     global _broker
-    if _broker is not None:
+    if _broker is None:
+        return
+
+    broker = _broker
+    _broker = None  # Clear first so a second call is a no-op
+
+    async def _disconnect():
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(_broker.disconnect())
-            else:
-                loop.run_until_complete(_broker.disconnect())
+            await broker.disconnect()
         except Exception:
-            pass
-        _broker = None
+            pass  # Swallow MqttCodeError / unexpected disconnection on teardown
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Schedule and forget — we can't await here
+            loop.create_task(_disconnect())
+        else:
+            loop.run_until_complete(_disconnect())
+    except Exception:
+        pass
 
 
-def emit_pipeline_event(
+async def emit_pipeline_event(
     cfg: "PipelineConfig",
     namespace: str,
-    status: str,
+    status: PipelineStatus,
     run_id: str,
     error: str | None = None,
     duration_ms: int | None = None,
 ) -> bool:
     """
     Emit a pipeline-level event to MQTT.
-
-    Topic: celine/pipelines/status/{namespace}
-
-    Args:
-        cfg: Pipeline configuration
-        namespace: Pipeline namespace (typically app_name)
-        status: Event status (START, COMPLETE, FAIL, ABORT)
-        run_id: Unique pipeline run identifier
-        error: Error message (for FAIL/ABORT)
-        duration_ms: Pipeline duration in milliseconds (for COMPLETE/FAIL/ABORT)
-
-    Returns:
-        True if published successfully, False otherwise.
-        Never raises - failures are logged.
+    ...
     """
     broker = _get_broker(cfg)
     if broker is None:
@@ -185,22 +185,13 @@ def emit_pipeline_event(
             retain=False,
         )
 
-        # Publish synchronously
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If already in async context, create task
-            future = asyncio.ensure_future(broker.publish(message))
-            # Can't wait, fire and forget
-            logger.debug("MQTT event queued: %s -> %s", topic, status)
+        result = await broker.publish(message)
+        if result.success:
+            logger.debug("MQTT event sent: %s -> %s", topic, status)
             return True
         else:
-            result = loop.run_until_complete(broker.publish(message))
-            if result.success:
-                logger.debug("MQTT event sent: %s -> %s", topic, status)
-                return True
-            else:
-                logger.warning("MQTT publish failed: %s", result.error)
-                return False
+            logger.warning("MQTT publish failed: %s", result.error)
+            return False
 
     except Exception:
         logger.exception("Failed to emit MQTT pipeline event")
