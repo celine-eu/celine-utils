@@ -13,7 +13,8 @@ import atexit
 import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-
+from celine.sdk.broker import MqttBroker, MqttConfig
+from celine.sdk.auth import OidcClientCredentialsProvider
 
 if TYPE_CHECKING:
     from celine.sdk.broker import MqttBroker
@@ -27,7 +28,7 @@ _broker: "MqttBroker | None" = None
 _broker_init_attempted: bool = False
 
 
-def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
+async def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
     """
     Get or initialize the global MQTT broker.
 
@@ -51,8 +52,6 @@ def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
         return None
 
     try:
-        from celine.sdk.broker import MqttBroker, MqttConfig
-        from celine.sdk.auth import OidcClientCredentialsProvider
 
         if cfg.sdk is None:
             raise Exception("SDK config not found")
@@ -92,8 +91,7 @@ def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
 
         _broker = MqttBroker(config=config, token_provider=token_provider)
 
-        # Connect synchronously
-        asyncio.get_event_loop().run_until_complete(_broker.connect())
+        await _broker.connect()
 
         logger.info(
             "MQTT broker connected: %s:%d",
@@ -155,7 +153,7 @@ async def emit_pipeline_event(
     Emit a pipeline-level event to MQTT.
     ...
     """
-    broker = _get_broker(cfg)
+    broker = await _get_broker(cfg)
     if broker is None:
         return False
 
