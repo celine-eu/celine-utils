@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.3 (2026-02-20)
+
+### Bug Fixes
+
+- Emit flow name
+  ([`2e3fead`](https://github.com/celine-eu/celine-utils/commit/2e3feadf8e52efa62aad4ce0173bfaabf20ae8e2))
+
+
 ## v1.6.2 (2026-02-19)
 
 ### Bug Fixes
