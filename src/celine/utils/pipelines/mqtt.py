@@ -144,6 +144,7 @@ def cleanup_broker():
 async def emit_pipeline_event(
     cfg: "PipelineConfig",
     namespace: str,
+    flow: str | None,
     status: PipelineStatus,
     run_id: str,
     error: str | None = None,
@@ -162,7 +163,8 @@ async def emit_pipeline_event(
         topic = f"celine/pipelines/runs/{namespace}"
 
         payload = PipelineRunEvent(
-            pipeline=namespace,
+            flow=flow,
+            namespace=namespace,
             status=status,
             run_id=run_id,
             timestamp=datetime.now(timezone.utc).isoformat(),
