@@ -4,16 +4,7 @@ tasks:
   setup:
     desc: Setup environment
     cmds:
-      - |
-        if ! command -v uv >/dev/null 2>&1; then
-          echo "ERROR: uv is not installed. Install it first."
-          exit 1
-        fi
-      - |
-        if [ ! -d ".venv" ]; then
-          echo "No .venv found, running 'uv sync'..."
-          uv sync
-        fi
+      - uv sync
 
   cli:
     cmds:
