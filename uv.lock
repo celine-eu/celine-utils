@@ -313,7 +313,7 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.6.3"
+version = "1.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
