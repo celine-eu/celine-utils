@@ -2,7 +2,7 @@
 
 **CELINE Utils** is a collection of shared utilities, libraries, and command-line tools that form the technical backbone of the **CELINE data platform**.
 
-It provides reusable building blocks for data pipelines, governance, lineage, metadata management, and platform integrations. The repository is designed to be embedded into CELINE applications and executed within orchestrated environments using Meltano, dbt, Prefect, and OpenLineage.
+It provides reusable building blocks for data pipelines, governance, lineage, metadata management, and platform integrations. The repository is designed to be embedded into CELINE applications and executed within orchestrated environments using Meltano, dbt, Prefect, and OpenLineage
 
 ---
 
