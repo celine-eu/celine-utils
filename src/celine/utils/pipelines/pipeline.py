@@ -15,7 +15,7 @@ from celine.utils.pipelines.pipeline_result import (
     PipelineStatus,
 )
 
-from celine.utils.pipelines.context import pipeline_context
+from celine.utils.pipelines.context import flow_hooks
 
 import os
 
@@ -31,7 +31,7 @@ __all__ = [
     "meltano_run",
     "dbt_run",
     "dbt_run_operation",
-    "pipeline_context",
+    "flow_hooks",
     "PipelineConfig",
     "PipelineRunner",
     "PipelineTaskResult",
