@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.0 (2026-02-25)
+
+### Features
+
+- Upgrade flow hooks api
+  ([`6bf7740`](https://github.com/celine-eu/celine-utils/commit/6bf77404a5d9e93e6094f1c8e454dce6bb51471f))
+
+
 ## v1.7.1 (2026-02-25)
 
 ### Bug Fixes
