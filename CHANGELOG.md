@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.3 (2026-02-25)
+
+### Bug Fixes
+
+- Sync callbacks
+  ([`69d6408`](https://github.com/celine-eu/celine-utils/commit/69d640808a82cbb580dd8f89f1d0f962d4f79328))
+
+
 ## v1.8.2 (2026-02-25)
 
 ### Bug Fixes
