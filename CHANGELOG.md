@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v1.7.1 (2026-02-25)
+
+### Bug Fixes
+
+- Do not raise if connect fails, keep pipeline running
+  ([`720716b`](https://github.com/celine-eu/celine-utils/commit/720716bde64b2d749d2af9bd523b9b008b875816))
+
+### Chores
+
+- **deps**: Bump openlineage-python from 1.39.0 to 1.41.0
+  ([`7cfd741`](https://github.com/celine-eu/celine-utils/commit/7cfd741fb3504a6e437fc76c02eed62a9b53d62b))
+
+- **deps**: Bump pydantic-settings from 2.11.0 to 2.12.0
+  ([`ed18c86`](https://github.com/celine-eu/celine-utils/commit/ed18c868b51d285fbfe02b06ff3d7d04e4c4dffb))
+
+- **deps**: Bump python-dotenv from 1.1.1 to 1.2.1
+  ([`7cedf82`](https://github.com/celine-eu/celine-utils/commit/7cedf821d38f6b2d75096751d3cafeaafb8fc82c))
+
+- **deps**: Bump the runtime-dependencies group across 1 directory with 3 updates
+  ([`6895028`](https://github.com/celine-eu/celine-utils/commit/68950280109be125d278671bb4e00a9da31df489))
+
+- **deps-dev**: Bump the development-dependencies group across 1 directory with 2 updates
+  ([`a8e2d60`](https://github.com/celine-eu/celine-utils/commit/a8e2d606fe92105645c792a826ddeb777832841e))
+
+### Continuous Integration
+
+- Bump actions/checkout from 6.0.1 to 6.0.2 in the actions group
+  ([`6c06e1e`](https://github.com/celine-eu/celine-utils/commit/6c06e1ed5c732de19620f655e18ce18aebd12c90))
+
+
 ## v1.7.0 (2026-02-23)
 
 ### Chores
