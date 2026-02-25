@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.2 (2026-02-25)
+
+### Bug Fixes
+
+- Handle mqtt failure on connect
+  ([`a2ef16a`](https://github.com/celine-eu/celine-utils/commit/a2ef16a9da564b8ecb339334b342320f489c8ae5))
+
+
 ## v1.8.1 (2026-02-25)
 
 ### Bug Fixes
