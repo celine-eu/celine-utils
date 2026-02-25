@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.1 (2026-02-25)
+
+### Bug Fixes
+
+- Rebuild
+  ([`3ec1da3`](https://github.com/celine-eu/celine-utils/commit/3ec1da352fe6e7354ff1449b0a3b8e9eec418fe0))
+
+
 ## v1.8.0 (2026-02-25)
 
 ### Features

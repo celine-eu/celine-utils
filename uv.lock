@@ -313,7 +313,7 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.8.0"
+version = "1.8.1"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
@@ -339,7 +339,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "debugpy" },
-    { name = "dumpster-cli" },
     { name = "pytest" },
     { name = "python-semantic-release" },
 ]
@@ -369,7 +368,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "debugpy", specifier = ">=1.8.16" },
-    { name = "dumpster-cli", specifier = ">=1.3.3" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "python-semantic-release", specifier = ">=10.5.3" },
 ]
@@ -884,21 +882,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6a/ab/88d67f02024700b48cd8232579ad1316aa9df2272c63049c27cc094229d6/dotty_dict-1.3.1.tar.gz", hash = "sha256:4b016e03b8ae265539757a53eba24b9bfda506fb94fbce0bee843c6f05541a15", size = 7699, upload-time = "2022-07-09T18:50:57.727Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/91/e0d457ee03ec33d79ee2cd8d212debb1bc21dfb99728ae35efdb5832dc22/dotty_dict-1.3.1-py3-none-any.whl", hash = "sha256:5022d234d9922f13aa711b4950372a06a6d64cb6d6db9ba43d0ba133ebfce31f", size = 7014, upload-time = "2022-07-09T18:50:55.058Z" },
-]
-
-[[package]]
-name = "dumpster-cli"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "gitpython" },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/99/c65109913d016e7134d1af5bb6a9607006f935d36e868602c15123bcdec3/dumpster_cli-1.4.0.tar.gz", hash = "sha256:a9fff8dfba895c6692811c61c18b7ab87959d848bf1d807982db632f6e15ac6f", size = 15083, upload-time = "2026-01-30T08:31:52.925Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/c8/111ce08edf4ecfc3ebf4832ca904c0076737c6388f6b4f2d3e2024ad938b/dumpster_cli-1.4.0-py3-none-any.whl", hash = "sha256:42300ff683bd9839bce39245d596fbffef0bdeb1ceab38991240c615f05c23d9", size = 15187, upload-time = "2026-01-30T08:31:51.797Z" },
 ]
 
 [[package]]
