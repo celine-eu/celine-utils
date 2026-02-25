@@ -89,9 +89,15 @@ async def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
             token_refresh_margin=mqtt_cfg.token_refresh_margin,
         )
 
-        _broker = MqttBroker(config=config, token_provider=token_provider)
+        # NOTE: do NOT assign _broker until connect() succeeds.
+        # If connect() raises, leaving _broker as a dead object causes all
+        # subsequent _get_broker() calls to return it instead of None,
+        # making every emit attempt hang or fail.
+        broker = MqttBroker(config=config, token_provider=token_provider)
 
-        await _broker.connect()
+        await broker.connect()
+
+        _broker = broker
 
         logger.info(
             "MQTT broker connected: %s:%d",
@@ -145,14 +151,13 @@ async def emit_pipeline_event(
     cfg: "PipelineConfig",
     namespace: str,
     flow: str | None,
-    status: PipelineStatus,
+    status: "PipelineStatus",
     run_id: str,
     error: str | None = None,
     duration_ms: int | None = None,
 ) -> bool:
     """
     Emit a pipeline-level event to MQTT.
-    ...
     """
     broker = await _get_broker(cfg)
     if broker is None:
