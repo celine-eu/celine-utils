@@ -116,8 +116,10 @@ async def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
             "Install with: pip install celine-sdk"
         )
         return None
-    except Exception:
-        logger.exception("Failed to initialize MQTT broker, events disabled")
+    except asyncio.CancelledError:
+        raise
+    except BaseException as e:
+        logger.warning("Failed to initialize MQTT broker, events disabled: %s", e)
         return None
 
 
@@ -197,6 +199,8 @@ async def emit_pipeline_event(
             logger.warning("MQTT publish failed: %s", result.error)
             return False
 
+    except asyncio.CancelledError:
+        raise
     except Exception:
-        logger.exception("Failed to emit MQTT pipeline event")
+        logger.warning("Failed to emit MQTT pipeline event")
         return False
