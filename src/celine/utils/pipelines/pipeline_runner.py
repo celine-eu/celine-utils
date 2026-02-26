@@ -2,6 +2,7 @@ import traceback
 import re
 import subprocess, os, datetime
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Optional, Tuple
 from uuid import uuid4
@@ -48,6 +49,11 @@ DBT_ERROR_HEADER = re.compile(
     r".*\b(Failure|Database Error)\b in model (?P<n>[\w_]+) \((?P<path>.+?)\)",
     re.IGNORECASE,
 )
+
+# Single shared executor for all lineage emit calls.
+# max_workers=4: enough concurrency for parallel pipeline tasks without
+# creating unbounded threads. Daemon=True so it doesn't block process exit.
+_emit_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ol-emit")
 
 
 class PipelineTaskFailureException(Exception): ...
@@ -138,36 +144,49 @@ class PipelineRunner:
         job_facets: dict[str, JobFacet] | None = None,
         namespace: str | None = None,
     ):
+        if not self.cfg.openlineage_enabled or self.client is None:
+            return
 
         if not namespace:
             namespace = get_namespace(self.cfg.app_name)
 
-        # --- OpenLineage event ---
-        if not self.cfg.openlineage_enabled or self.client is None:
-            return
+        # Snapshot mutable args before handing off to the thread — the
+        # calling code may mutate lists after returning.
+        inputs = list(inputs) if inputs else []
+        outputs = list(outputs) if outputs else []
+        run_facets = dict(run_facets) if run_facets else {}
+        job_facets = dict(job_facets) if job_facets else {}
 
-        try:
-            facets = self._default_run_facets()
-            if run_facets:
+        def _do_emit():
+            try:
+                facets = self._default_run_facets()
                 facets.update(run_facets)
 
-            event = RunEvent(
-                eventTime=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                producer=PRODUCER,
-                run=Run(runId=run_id, facets=facets),
-                job=Job(
-                    namespace=namespace,
-                    name=job_name,
-                    facets=job_facets or {},
-                ),
-                eventType=state,
-                inputs=inputs or [],
-                outputs=outputs or [],
-            )
-            self.client.emit(event)
-            self.logger.debug(f"Emitted {state.value} for {job_name} ({run_id})")
-        except Exception:
-            self.logger.exception(f"Failed to emit {state.value} for {job_name}")
+                event = RunEvent(
+                    eventTime=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    producer=PRODUCER,
+                    run=Run(runId=run_id, facets=facets),
+                    job=Job(
+                        namespace=namespace,
+                        name=job_name,
+                        facets=job_facets,
+                    ),
+                    eventType=state,
+                    inputs=inputs,
+                    outputs=outputs,
+                )
+                if self.client:
+                    self.client.emit(event)
+                    self.logger.debug(
+                        f"Emitted {state.value} for {job_name} ({run_id})"
+                    )
+
+            except Exception:
+                # Never propagate — lineage is non-critical and must not
+                # affect pipeline execution or Prefect's own task machinery.
+                self.logger.exception(f"Failed to emit {state.value} for {job_name}")
+
+        _emit_executor.submit(_do_emit)
 
     def _build_engine(self) -> Engine:
         if self._engine:
@@ -418,7 +437,7 @@ class PipelineRunner:
         run_id = str(uuid4())
         command_str = " ".join(command)
 
-        # Emit START event
+        # Emit START event — no datasets yet, that's correct per OpenLineage spec
         self._emit_event(job_name, EventType.START, run_id)
 
         try:

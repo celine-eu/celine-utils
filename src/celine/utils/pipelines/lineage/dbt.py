@@ -131,7 +131,7 @@ class DbtLineage:
                     retention_days=g.get("retention_days"),
                     documentation_url=g.get("documentation_url"),
                     source_system=g.get("source_system"),
-                    user_filter_column=g.get("user_filter_column"),  # NEW
+                    user_filter_column=g.get("user_filter_column"),
                     extra={},
                 )
 
@@ -160,7 +160,7 @@ class DbtLineage:
             and not rule.source_system
             and not rule.title
             and not rule.description
-            and not rule.user_filter_column  # NEW: include in empty check
+            and not rule.user_filter_column
         ):
             return None
 
@@ -177,7 +177,7 @@ class DbtLineage:
             retentionDays=rule.retention_days,
             documentationUrl=rule.documentation_url,
             sourceSystem=rule.source_system,
-            userFilterColumn=rule.user_filter_column,  # NEW
+            userFilterColumn=rule.user_filter_column,
         )
 
     def _build_assertion(self, test_node: dict, result: dict) -> DqAssertion:
@@ -241,11 +241,17 @@ class DbtLineage:
         inputs, outputs = [], []
         namespace = get_namespace(self.app_name)
 
+        # Track which dataset keys are outputs of this run — these already
+        # carry full schema facets so we never need to introspect them as
+        # inputs too, avoiding redundant DatasetField upserts in Marquez.
+        output_keys: set[str] = set()
+
         for node_id, node in manifest.get("nodes", {}).items():
             if node_id not in executed_nodes or node["resource_type"] != "model":
                 continue
 
             key = self._dataset_key(node)
+            output_keys.add(key)
             fields = self._build_schema_fields(node)
 
             facets: dict[str, t.Any] = {"schema": SchemaDatasetFacet(fields=fields)}
@@ -260,7 +266,16 @@ class DbtLineage:
 
             outputs.append(OutputDataset(namespace=namespace, name=key, facets=facets))
 
-            # Inputs: upstream deps
+        # Build inputs: upstream deps carry only governance facet if applicable.
+        # Schema is intentionally omitted — Marquez already has it from when
+        # the upstream dataset was last written as an output, and re-sending it
+        # on every downstream run causes N×M DatasetField upserts under
+        # concurrency (the main source of lock contention / slow Marquez writes).
+        seen_input_keys: set[str] = set()
+        for node_id, node in manifest.get("nodes", {}).items():
+            if node_id not in executed_nodes or node["resource_type"] != "model":
+                continue
+
             for dep in node.get("depends_on", {}).get("nodes", []):
                 dep_node = manifest["nodes"].get(dep) or manifest.get(
                     "sources", {}
@@ -268,10 +283,17 @@ class DbtLineage:
                 if not dep_node:
                     continue
                 dep_key = self._dataset_key(dep_node)
+
+                # De-duplicate: a dep may be shared by multiple models in the run
+                if dep_key in seen_input_keys:
+                    continue
+                seen_input_keys.add(dep_key)
+
                 in_facets: dict[str, t.Any] = {}
                 gov_in = self._build_governance_facet(dep_key, dep_node)
                 if gov_in:
                     in_facets["governance"] = gov_in
+
                 inputs.append(
                     InputDataset(
                         namespace=namespace,
