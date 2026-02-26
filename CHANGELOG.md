@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.5 (2026-02-26)
+
+### Bug Fixes
+
+- Revert threadpool executor
+  ([`2f78c4e`](https://github.com/celine-eu/celine-utils/commit/2f78c4e63a247e52f8913df7621b4fae2ce72fca))
+
+
 ## v1.8.4 (2026-02-26)
 
 ### Bug Fixes
