@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.4 (2026-02-26)
+
+### Bug Fixes
+
+- Improve dbt lineage logging
+  ([`74c5c18`](https://github.com/celine-eu/celine-utils/commit/74c5c181d9a2a5da19a4cdf3d0dd2be3ad9cfea8))
+
+
 ## v1.8.3 (2026-02-25)
 
 ### Bug Fixes
