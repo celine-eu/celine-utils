@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.9.0 (2026-02-28)
+
+### Bug Fixes
+
+- Add verify_ssl
+  ([`c646c93`](https://github.com/celine-eu/celine-utils/commit/c646c936e0021fc59fa30e88a1c1efa82739ac26))
+
+### Features
+
+- Upgrade sdk
+  ([`f136b7b`](https://github.com/celine-eu/celine-utils/commit/f136b7bac68b267cc4a4aad42efe2ab7e8192472))
+
+
 ## v1.8.5 (2026-02-26)
 
 ### Bug Fixes
