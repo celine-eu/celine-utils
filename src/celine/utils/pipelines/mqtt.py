@@ -68,6 +68,7 @@ async def _get_broker(cfg: "PipelineConfig") -> "MqttBroker | None":
                 client_secret=oidc_cfg.client_secret,
                 scope=oidc_cfg.scope,
                 timeout=oidc_cfg.timeout,
+                verify_ssl=oidc_cfg.verify_ssl,
             )
             logger.debug("MQTT: OIDC token provider configured")
 
