@@ -21,7 +21,7 @@ dependencies = [
     "dbt-postgres>=1.9.1",
     "prefect-dbt>=0.7.6",
     "meltano>=3.9.1",
-    "prefect>=3.4.19",
+    "prefect>=3.6.18",
     "celine-sdk>=1.4.0",
 ]
 
