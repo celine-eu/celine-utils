@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.1 (2026-03-02)
+
+### Bug Fixes
+
+- Update prefect version to 3.6.18
+  ([`7a908b6`](https://github.com/celine-eu/celine-utils/commit/7a908b6078c8d9fa3bd68892f1dc6e818291738b))
+
+
 ## v1.9.0 (2026-02-28)
 
 ### Bug Fixes
