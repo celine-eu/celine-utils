@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.2 (2026-03-02)
+
+### Bug Fixes
+
+- Pipeline runner
+  ([`37e817a`](https://github.com/celine-eu/celine-utils/commit/37e817ac09cffcdc97cf9395f177e8d12f9c85d2))
+
+
 ## v1.9.1 (2026-03-02)
 
 ### Bug Fixes
