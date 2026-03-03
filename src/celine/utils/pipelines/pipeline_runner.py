@@ -1,3 +1,4 @@
+import shlex
 import traceback
 import re
 import subprocess, os, datetime
@@ -348,11 +349,13 @@ class PipelineRunner:
         if not project_dir:
             return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
-        command = (
-            ["dbt", "--no-use-colors", "run", "--select", tag]
-            if tag != "test"
-            else ["dbt", "test"]
-        )
+        parts = shlex.split(tag)
+        if parts[0] == "test":
+            command = ["dbt", "--no-use-colors", "test"] + parts[1:]
+        elif "--select" in parts or "-s" in parts:
+            command = ["dbt", "--no-use-colors", "run"] + parts
+        else:
+            command = ["dbt", "--no-use-colors", "run", "--select"] + parts
 
         return self._run_dbt(
             job_name=job_name,
