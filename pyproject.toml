@@ -1,6 +1,6 @@
 [project]
 name = "celine-utils"
-version = "1.9.3"
+version = "1.9.4"
 description = "CELINE utils"
 readme = "README.md"
 requires-python = ">=3.12"

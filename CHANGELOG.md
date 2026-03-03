@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.4 (2026-03-03)
+
+### Bug Fixes
+
+- Udpate
+  ([`af4af44`](https://github.com/celine-eu/celine-utils/commit/af4af44842c753c1dca4327361c2ef8297451d4f))
+
+
 ## v1.9.3 (2026-03-03)
 
 ### Bug Fixes
