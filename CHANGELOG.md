@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.2 (2026-03-03)
+
+### Bug Fixes
+
+- Load env for secret
+  ([`2fcf159`](https://github.com/celine-eu/celine-utils/commit/2fcf1590ef6b1d3c6da49a1887dd77285226d2f8))
+
+
 ## v1.9.1 (2026-03-02)
 
 ### Bug Fixes
