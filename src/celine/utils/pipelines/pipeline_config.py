@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 from pydantic import Field
 
@@ -57,7 +58,7 @@ class PipelineConfig(AppBaseSettings):
         oidc=OidcSettings(
             audience="svc-pipelines",
             client_id="svc-pipelines",
-            client_secret="svc-pipelines",
+            client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-pipelines"),
         )
     )
 
