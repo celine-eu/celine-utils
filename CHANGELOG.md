@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.9.3 (2026-03-03)
+
+### Bug Fixes
+
+- Force release
+  ([`de782bd`](https://github.com/celine-eu/celine-utils/commit/de782bd6b5d183ffb8e268b42c342fcfb755f04f))
+
+- Pipeline runner
+  ([`37e817a`](https://github.com/celine-eu/celine-utils/commit/37e817ac09cffcdc97cf9395f177e8d12f9c85d2))
+
+
 ## v1.9.2 (2026-03-02)
 
 ### Bug Fixes
