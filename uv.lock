@@ -301,7 +301,7 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.10.1"
+version = "1.10.2"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
@@ -310,7 +310,6 @@ dependencies = [
     { name = "dbt-postgres" },
     { name = "meltano" },
     { name = "openlineage-python" },
-    { name = "paho-mqtt" },
     { name = "pandas" },
     { name = "prefect" },
     { name = "prefect-dbt" },
@@ -339,7 +338,6 @@ requires-dist = [
     { name = "dbt-postgres", specifier = ">=1.9.1" },
     { name = "meltano", specifier = ">=3.9.1" },
     { name = "openlineage-python", specifier = ">=1.37.0" },
-    { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "pandas", specifier = ">=2.3.2" },
     { name = "prefect", specifier = ">=3.6.18" },
     { name = "prefect-dbt", specifier = ">=0.7.6" },

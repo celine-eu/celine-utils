@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.2 (2026-03-14)
+
+### Bug Fixes
+
+- Tmp home on cli run
+  ([`91ea10a`](https://github.com/celine-eu/celine-utils/commit/91ea10a6f8ac6132166176295129c9d370bf867b))
+
+
 ## v1.10.1 (2026-03-14)
 
 ### Bug Fixes
