@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v1.10.1 (2026-03-14)
+
+### Bug Fixes
+
+- Correct env propagation
+  ([`8f93c29`](https://github.com/celine-eu/celine-utils/commit/8f93c29e5d4296ba35e257b654ea0331e5ec663b))
+
+### Chores
+
+- **deps**: Bump dbt-postgres from 1.9.1 to 1.10.0
+  ([`10753e2`](https://github.com/celine-eu/celine-utils/commit/10753e2799a12c6bca21472a591e2611ed58d01b))
+
+- **deps**: Bump meltano from 4.0.7 to 4.1.2
+  ([`c002495`](https://github.com/celine-eu/celine-utils/commit/c002495ee3970bac769581c3b0364cbafaa67cba))
+
+- **deps**: Bump openlineage-python from 1.41.0 to 1.44.1
+  ([`0602d62`](https://github.com/celine-eu/celine-utils/commit/0602d627f14ca22e37c061cdf4a9cdb4d902ac25))
+
+- **deps**: Bump pydantic-settings from 2.12.0 to 2.13.1
+  ([`c3ccc68`](https://github.com/celine-eu/celine-utils/commit/c3ccc68889163e5507015d90a5e5af7af768a844))
+
+- **deps**: Bump the runtime-dependencies group across 1 directory with 5 updates
+  ([`bf03308`](https://github.com/celine-eu/celine-utils/commit/bf03308f50ef43e6ba6f058f05dfd5ba2e67ddfa))
+
+### Continuous Integration
+
+- Bump actions/download-artifact in the actions group
+  ([`c4d68a7`](https://github.com/celine-eu/celine-utils/commit/c4d68a7e4299a82842b000d4d722ac9fdb175eb7))
+
+
 ## v1.10.0 (2026-03-14)
 
 ### Features
