@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.0 (2026-03-14)
+
+### Features
+
+- Add code api for lineage
+  ([`bc05f56`](https://github.com/celine-eu/celine-utils/commit/bc05f56baeac8df609a9e9684c2e85925193ef6a))
+
+
 ## v1.9.4 (2026-03-03)
 
 ### Bug Fixes
