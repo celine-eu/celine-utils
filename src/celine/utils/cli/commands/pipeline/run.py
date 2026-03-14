@@ -158,9 +158,10 @@ def _build_runner() -> PipelineRunner:
 
         cfg = PipelineConfig()
 
-        # propagate envs
-        if not os.getenv("OPENLINEAGE_URL") and cfg.openlineage_url:
-            os.environ["OPENLINEAGE_URL"] = cfg.openlineage_url
+        # Propagate config values to os.environ so expand_envs() can resolve
+        # ${POSTGRES_DB} and similar placeholders in raw meltano.yml / dbt configs.
+        for key, val in PipelineConfig.get_as_envs(cfg).items():
+            os.environ.setdefault(key, val)
 
         return PipelineRunner(cfg)
 
