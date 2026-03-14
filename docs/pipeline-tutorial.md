@@ -93,7 +93,7 @@ ENV APP_NAME=${APP_NAME}
 
 # Enable / disable OpenLineage support
 ENV OPENLINEAGE_ENABLED=false
-ENV OPENLINEAGE_URL=http://marquez-api:5001
+ENV OPENLINEAGE_URL=http://marquez-api:5000
 ENV OPENLINEAGE_NAMESPACE=${APP_NAME}
 
 ENV PIPELINES_ROOT=${PIPELINES_ROOT:-/pipelines}

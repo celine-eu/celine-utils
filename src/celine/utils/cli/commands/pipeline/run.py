@@ -175,20 +175,39 @@ def _build_runner() -> PipelineRunner:
 # =============================================================================
 
 
-def _load_flow_module(flow_name: str) -> Any:
+def _load_flow_module(flow_name: str | None) -> tuple[str, Any]:
     app_root = _discover_app_root()
-    flow_file = app_root / "flows" / f"{flow_name}.py"
+    flows_dir = app_root / "flows"
+
+    # Try exact match first
+    flow_file = flows_dir / f"{flow_name}.py"
 
     if not flow_file.exists():
-        raise FileNotFoundError(f"Flow '{flow_name}' not found at {flow_file}")
+        py_files = list(flows_dir.glob("*.py")) if flows_dir.exists() else []
 
-    spec = importlib.util.spec_from_file_location(flow_name, flow_file)
+        # Try "pipeline" as fallback name
+        pipeline_file = flows_dir / "pipeline.py"
+        if pipeline_file.exists():
+            flow_file = pipeline_file
+            flow_name = "pipeline"
+        elif len(py_files) == 1:
+            # Only one .py file exists — load it regardless of name
+            flow_file = py_files[0]
+            flow_name = flow_file.stem
+        else:
+            available = [f.stem for f in py_files] if py_files else []
+            raise FileNotFoundError(
+                f"Flow '{flow_name}' not found in {flows_dir}. "
+                + (f"Available flows: {available}" if available else "No flows found.")
+            )
+
+    spec = importlib.util.spec_from_file_location(flow_file.stem, flow_file)
     if not spec or not spec.loader:
         raise ImportError(f"Cannot import flow module: {flow_file}")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore
-    return module
+    return str(flow_name), module
 
 
 def _run_func(func: Any) -> Any:
@@ -214,6 +233,7 @@ def run_meltano(
     )
 ):
     runner = _build_runner()
+
     try:
         res = runner.run_meltano(command)
         if res.status == "failed":
@@ -245,8 +265,8 @@ def run_dbt(
 
 @pipeline_run_app.command("prefect")
 def run_prefect(
-    flow: str = typer.Option(
-        "pipeline", "--flow", "-f", help="Name of flows/<flow>.py"
+    flow: str | None = typer.Option(
+        None, "--flow", "-f", help="Name of flows/<flow>.py"
     ),
     function: str = typer.Option(
         None,
@@ -258,7 +278,8 @@ def run_prefect(
     _build_runner()
 
     try:
-        module = _load_flow_module(flow)
+        flow, module = _load_flow_module(flow)
+        logger.info(f"Loaded flow 'flows/{flow}.py'")
     except Exception as e:
         logger.exception("Flow loading failed")
         typer.echo(f"Failed loading flow: {e}")

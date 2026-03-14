@@ -1,4 +1,5 @@
 from celine.utils.pipelines.pipeline_config import PipelineConfig
+from celine.utils.pipelines.lineage.code import PipelineLineage, DatasetRef
 from celine.utils.pipelines.pipeline_prefect import (
     dbt_run_gold,
     dbt_run_silver,
@@ -36,4 +37,6 @@ __all__ = [
     "PipelineRunner",
     "PipelineTaskResult",
     "PipelineStatus",
+    "PipelineLineage",
+    "DatasetRef",
 ]
