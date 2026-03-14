@@ -6,6 +6,8 @@ import asyncio
 import importlib.util
 import inspect
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -276,44 +278,50 @@ def run_prefect(
         help="Function inside the flow module (auto-detected if omitted)",
     ),
 ):
-    _build_runner()
+    prefect_home = tempfile.mkdtemp(prefix="prefect-")
+    os.environ["PREFECT_HOME"] = prefect_home
 
     try:
-        flow, module = _load_flow_module(flow)
-        logger.info(f"Loaded flow 'flows/{flow}.py'")
-    except Exception as e:
-        logger.exception("Flow loading failed")
-        typer.echo(f"Failed loading flow: {e}")
-        raise typer.Exit(1)
+        _build_runner()
 
-    # Auto-detect function if not provided
-    if function is None:
-        app_root = _discover_app_root()
-        flow_file = app_root / "flows" / f"{flow}.py"
-        function = _find_flow_function(flow_file)
-
-        if function is None:
-            typer.echo(
-                f"No @flow decorated function found in '{flow}.py'. Use --function to specify."
-            )
+        try:
+            flow, module = _load_flow_module(flow)
+            logger.info(f"Loaded flow 'flows/{flow}.py'")
+        except Exception as e:
+            logger.exception("Flow loading failed")
+            typer.echo(f"Failed loading flow: {e}")
             raise typer.Exit(1)
 
-        logger.debug(f"Auto-detected @flow function: {function}")
+        # Auto-detect function if not provided
+        if function is None:
+            app_root = _discover_app_root()
+            flow_file = app_root / "flows" / f"{flow}.py"
+            function = _find_flow_function(flow_file)
 
-    if not hasattr(module, function):
-        typer.echo(f"Function '{function}' not found in flow '{flow}'.")
-        raise typer.Exit(1)
+            if function is None:
+                typer.echo(
+                    f"No @flow decorated function found in '{flow}.py'. Use --function to specify."
+                )
+                raise typer.Exit(1)
 
-    func = getattr(module, function)
+            logger.debug(f"Auto-detected @flow function: {function}")
 
-    typer.echo(f"Executing flow function: {flow}.{function}()")
+        if not hasattr(module, function):
+            typer.echo(f"Function '{function}' not found in flow '{flow}'.")
+            raise typer.Exit(1)
 
-    try:
-        result = _run_func(func)
-        typer.echo("Execution completed")
-        typer.echo(str(result))
-        return result
-    except Exception as e:
-        logger.exception("Flow function execution failed")
-        typer.echo(f"Flow execution failed: {e}")
-        raise typer.Exit(1)
+        func = getattr(module, function)
+
+        typer.echo(f"Executing flow function: {flow}.{function}()")
+
+        try:
+            result = _run_func(func)
+            typer.echo("Execution completed")
+            typer.echo(str(result))
+            return result
+        except Exception as e:
+            logger.exception("Flow function execution failed")
+            typer.echo(f"Flow execution failed: {e}")
+            raise typer.Exit(1)
+    finally:
+        shutil.rmtree(prefect_home, ignore_errors=True)
