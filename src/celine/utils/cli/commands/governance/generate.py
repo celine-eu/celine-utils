@@ -62,7 +62,7 @@ def _resolve_marquez_url(cli_url: Optional[str]) -> str:
     env = os.getenv("OPENLINEAGE_URL")
     if env:
         return env.rstrip("/")
-    return "http://localhost:5000"
+    return "http://localhost:5003"
 
 
 def _resolve_namespace(app_name: str, cli_namespace: Optional[str]) -> str:
