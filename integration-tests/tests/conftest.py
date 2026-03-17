@@ -23,7 +23,7 @@ def set_envs():
     print(f"demo_app_path={demo_app_path}")
 
     env_defaults = {
-        "POSTGRES_HOST": "172.17.0.1",
+        "POSTGRES_HOST": "host.docker.internal",
         "PIPELINES_ROOT": "./",  # point to test apps
         "APP_NAME": app_name,
         "POSTGRES_USER": "postgres",
@@ -33,7 +33,7 @@ def set_envs():
         "MELTANO_PROJECT_ROOT": str(demo_app_path / "meltano"),
         "DBT_PROJECT_DIR": str(demo_app_path / "dbt"),
         "DBT_PROFILES_DIR": str(demo_app_path / "dbt"),
-        "OPENLINEAGE_URL": "http://172.17.0.1:5000",
+        "OPENLINEAGE_URL": "http://host.docker.internal:5003",
     }
 
     for key, value in env_defaults.items():

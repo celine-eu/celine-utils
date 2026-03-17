@@ -26,11 +26,11 @@ def mock_marquez_response(names):
 
 
 def test_resolve_marquez_url_env(monkeypatch):
-    monkeypatch.setenv("OPENLINEAGE_URL", "http://env-mq:5000")
+    monkeypatch.setenv("OPENLINEAGE_URL", "http://env-mq:5003")
 
     from celine.utils.cli.commands.governance.generate import _resolve_marquez_url
 
-    assert _resolve_marquez_url(None) == "http://env-mq:5000"
+    assert _resolve_marquez_url(None) == "http://env-mq:5003"
 
 
 def test_resolve_marquez_url_default(monkeypatch):
@@ -38,7 +38,7 @@ def test_resolve_marquez_url_default(monkeypatch):
 
     from celine.utils.cli.commands.governance.generate import _resolve_marquez_url
 
-    assert _resolve_marquez_url(None) == "http://localhost:5000"
+    assert _resolve_marquez_url(None) == "http://localhost:5003"
 
 
 # ------------------------------------------------------------------------------

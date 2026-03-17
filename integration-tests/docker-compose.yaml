@@ -40,7 +40,8 @@ services:
     networks:
       - celine_utils_net
     extra_hosts:
-      - "prefect.celine.localhost:172.17.0.1"
+      - "host.docker.internal:host-gateway"
+      - "prefect.celine.localhost:host-gateway"
 
   pipeline-test:
     image: ghcr.io/celine-eu/pipeline
@@ -77,13 +78,14 @@ services:
       - ./data:/data
 
     extra_hosts:
-      - "prefect.celine.localhost:172.17.0.1"
+      - "host.docker.internal:host-gateway"
+      - "prefect.celine.localhost:host-gateway"
 
   marquez-web:
     image: "ilum/marquez-web:0.53.0"
     environment:
       - MARQUEZ_HOST=marquez-api
-      - MARQUEZ_PORT=5000
+      - MARQUEZ_PORT=5003
       - WEB_PORT=5002
     networks:
       - celine_utils_net
@@ -96,7 +98,7 @@ services:
   marquez-api:
     image: "ilum/marquez:0.53.0"
     environment:
-      - MARQUEZ_PORT=5000
+      - MARQUEZ_PORT=5003
       - MARQUEZ_ADMIN_PORT=5001
       - MARQUEZ_CONFIG=/usr/src/app/marquez.yaml
 
@@ -121,6 +123,6 @@ services:
     networks:
       - celine_utils_net
     ports:
-      - 5000:5000
+      - 5003:5003
 
     restart: unless-stopped

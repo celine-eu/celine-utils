@@ -25,7 +25,7 @@ class PipelineConfig(AppBaseSettings):
     dbt_profiles_dir: Optional[str] = Field(default=None, alias="DBT_PROFILES_DIR")
 
     # Database
-    postgres_host: str = Field(default="172.17.0.1", alias="POSTGRES_HOST")
+    postgres_host: str = Field(default="host.docker.internal", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=15432, alias="POSTGRES_PORT")
     postgres_db: str = Field(default="datasets", alias="POSTGRES_DB")
     postgres_user: str = Field(default="postgres", alias="POSTGRES_USER")
@@ -33,12 +33,12 @@ class PipelineConfig(AppBaseSettings):
         default="securepassword123", alias="POSTGRES_PASSWORD"
     )
     meltano_database_uri: str | None = Field(
-        default="postgresql://postgres:securepassword123@172.17.0.1:15432/meltano",
+        default="postgresql://postgres:securepassword123@host.docker.internal:15432/meltano",
         alias="MELTANO_DATABASE_URI",
     )
 
     openlineage_url: str = Field(
-        default="http://172.17.0.1:5000", alias="OPENLINEAGE_URL"
+        default="http://host.docker.internal:5003", alias="OPENLINEAGE_URL"
     )
     openlineage_api_key: str | None = Field(default=None, alias="OPENLINEAGE_API_KEY")
     openlineage_enabled: bool = Field(

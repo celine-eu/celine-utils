@@ -3,7 +3,7 @@ datasets:
   outputs:
     dev:
       type: postgres
-      host: 172.17.0.1
+      host: host.docker.internal
       user: postgres
       password: securepassword123
       port: 15432
