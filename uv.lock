@@ -279,7 +279,7 @@ wheels = [
 
 [[package]]
 name = "celine-sdk"
-version = "1.4.2"
+version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiomqtt" },
@@ -294,9 +294,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/ce/96134af160e5fb70a05d52d1fb05bf8f0bde9d3646a71b920fe42df4a9fb/celine_sdk-1.4.2.tar.gz", hash = "sha256:b4583bd70ed264fd0728c67f7c73f17101675c39b34d11ac39b12bef69764c07", size = 148445, upload-time = "2026-03-06T09:20:57.88Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/58/47ae0a0d8add10236b9bd30ac00868b643f0c363a1c554c7ae78a429cce6/celine_sdk-1.4.3.tar.gz", hash = "sha256:1c17e5d82fca4979b8ef8d228ff36163aa18171570fb624c034e5e1acd7da9b0", size = 149572, upload-time = "2026-03-21T15:44:06.765Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/1d/f3448f407be16f8af1a99b76454ac01322da57f598140b59b1115f5e8c4e/celine_sdk-1.4.2-py3-none-any.whl", hash = "sha256:4702551f0e8d638061807fc27ead17cea9f7a16f7475b788de85fcb997551772", size = 392351, upload-time = "2026-03-06T09:20:56.463Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/ec/e3b71909756af98f453317130eb02253c4a4e18e1b35905e1a8fd86359ad/celine_sdk-1.4.3-py3-none-any.whl", hash = "sha256:0dceae862c3d8e8c59c7e665c39f4c35ec31327ffb39c85336eac475718ebd73", size = 393078, upload-time = "2026-03-21T15:44:05.052Z" },
 ]
 
 [[package]]
@@ -333,7 +333,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.3.0" },
-    { name = "celine-sdk", specifier = ">=1.4.0" },
+    { name = "celine-sdk", specifier = ">=1.4.3" },
     { name = "dbt-core", specifier = ">=1.10.10" },
     { name = "dbt-postgres", specifier = ">=1.9.1" },
     { name = "meltano", specifier = ">=3.9.1" },
