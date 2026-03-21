@@ -1585,7 +1585,7 @@ wheels = [
 
 [[package]]
 name = "openlineage-python"
-version = "1.44.1"
+version = "1.45.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1596,7 +1596,7 @@ dependencies = [
     { name = "requests" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/5d/e398d28e8948e96fe869ba09415c60d0c10dd9653b8c376d93f1748f3b63/openlineage_python-1.44.1-py3-none-any.whl", hash = "sha256:cc121f82cb15dcf5f2f1347bd30d4c83cae1d510809e6ccce111b98298271503", size = 102883, upload-time = "2026-02-20T17:24:29.681Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/9e/a3918a9d7ed883c744119269b1477489ccbe25d04cf90e193b006d1ba5e4/openlineage_python-1.45.0-py3-none-any.whl", hash = "sha256:cf66e7d517d3c8b510b39ad646d8fd0ca2f0cc92d7d6d601d93b2a859783f380", size = 103592, upload-time = "2026-03-11T15:40:06.556Z" },
 ]
 
 [[package]]
