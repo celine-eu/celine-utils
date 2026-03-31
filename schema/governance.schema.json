@@ -6,207 +6,167 @@
         "defaults",
         "sources"
     ],
-    "properties": {
-        "defaults": {
+    "$defs": {
+        "owner": {
             "type": "object",
-            "description": "Default governance applied to all datasets unless overridden",
+            "required": ["name", "type"],
             "properties": {
-                "title": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "description": "Human-readable dataset title"
+                "name": { "type": "string" },
+                "type": { "type": "string" }
+            }
+        },
+        "temporalCoverage": {
+            "type": "object",
+            "properties": {
+                "start": { "type": ["string", "null"] },
+                "end": { "type": ["string", "null"] }
+            }
+        },
+        "dcatConfig": {
+            "type": "object",
+            "description": "DCAT-AP metadata for catalogue exposition",
+            "properties": {
+                "publisher_uri": {
+                    "type": ["string", "null"],
+                    "format": "uri",
+                    "description": "URI of the publishing organization (foaf:Agent)"
                 },
-                "description": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "description": "Human-readable dataset description"
+                "themes": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uri" },
+                    "description": "DCAT theme URIs (e.g. INSPIRE themes)"
                 },
-                "license": {
-                    "type": [
-                        "string",
-                        "null"
+                "language_uris": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uri" },
+                    "description": "Language URIs from EU Authority Table"
+                },
+                "spatial_uris": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uri" },
+                    "description": "Spatial coverage URIs (e.g. EU NUTS codes)"
+                },
+                "accrual_periodicity": {
+                    "type": ["string", "null"],
+                    "description": "Update frequency URI from MDR frequency table"
+                },
+                "conforms_to": {
+                    "type": ["string", "null"],
+                    "description": "URI of a standard or specification the dataset conforms to"
+                },
+                "temporal": {
+                    "oneOf": [
+                        { "$ref": "#/$defs/temporalCoverage" },
+                        { "type": "null" }
                     ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "dataspaceConfig": {
+            "type": "object",
+            "description": "Dataspace exposure and ODRL policy hints",
+            "properties": {
+                "expose": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Expose this dataset in the EDC dataspace catalogue"
+                },
+                "medallion": {
+                    "type": ["string", "null"],
+                    "enum": ["bronze", "silver", "gold", null],
+                    "description": "Data quality tier"
+                },
+                "contract_required": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Require a signed contract before data access"
+                },
+                "consent_required": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Require per-subject consent (implies user_filter_column usage)"
+                },
+                "odrl_action": {
+                    "type": "string",
+                    "default": "use",
+                    "description": "Primary ODRL action granted (use, distribute, reproduce)"
+                },
+                "purpose": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Permitted usage purposes (ODRL purpose constraints)"
+                }
+            },
+            "additionalProperties": true
+        },
+        "governanceBlock": {
+            "type": "object",
+            "properties": {
+                "title": { "type": ["string", "null"] },
+                "description": { "type": ["string", "null"] },
+                "license": { "type": ["string", "null"] },
+                "attribution": {
+                    "type": ["string", "null"],
+                    "description": "Required attribution text for dataset usage and redistribution"
                 },
                 "ownership": {
                     "type": "array",
-                    "items": {
-                        "type": "object",
-                        "required": [
-                            "name",
-                            "type"
-                        ],
-                        "properties": {
-                            "name": {
-                                "type": "string"
-                            },
-                            "type": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "attribution": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "description": "Required attribution text for dataset usage and redistribution"
+                    "items": { "$ref": "#/$defs/owner" }
                 },
                 "access_level": {
-                    "type": [
-                        "string",
-                        "null"
-                    ]
+                    "type": ["string", "null"],
+                    "enum": ["open", "internal", "restricted", "secret", null],
+                    "description": "open=public, internal=org only, restricted=contract+consent, secret=omit from catalogue"
+                },
+                "access_requirements": {
+                    "type": ["string", "null"],
+                    "enum": ["all", "partner", "contract", null],
+                    "description": "Preconditions required to access this dataset"
                 },
                 "classification": {
-                    "type": [
-                        "string",
-                        "null"
-                    ]
+                    "type": ["string", "null"],
+                    "enum": ["pii", "red", "yellow", "green", null]
                 },
                 "tags": {
                     "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "items": { "type": "string" }
                 },
-                "retention_days": {
-                    "type": [
-                        "integer",
-                        "null"
-                    ]
-                },
+                "retention_days": { "type": ["integer", "null"] },
                 "documentation_url": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "uri"
                 },
-                "source_system": {
-                    "type": [
-                        "string",
-                        "null"
+                "source_system": { "type": ["string", "null"] },
+                "user_filter_column": {
+                    "type": ["string", "null"],
+                    "description": "DB column used for row-level user filtering (enables per-subject consent)"
+                },
+                "dcat": {
+                    "oneOf": [
+                        { "$ref": "#/$defs/dcatConfig" },
+                        { "type": "null" }
                     ]
                 },
-                "access_requirements": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "enum": [
-                        "all",
-                        "partner",
-                        "contract"
-                    ],
-                    "description": "Preconditions required to access this dataset"
+                "dataspace": {
+                    "oneOf": [
+                        { "$ref": "#/$defs/dataspaceConfig" },
+                        { "type": "null" }
+                    ]
                 }
             }
+        }
+    },
+    "properties": {
+        "defaults": {
+            "$ref": "#/$defs/governanceBlock",
+            "description": "Default governance applied to all datasets unless overridden"
         },
         "sources": {
-            "description": "Map of dataset name patterns → governance rules",
+            "description": "Map of dataset name patterns → governance rules (exact match or fnmatch glob)",
             "type": "object",
             "patternProperties": {
-                ".*": {
-                    "type": "object",
-                    "properties": {
-                        "license": {
-                            "type": [
-                                "string",
-                                "null"
-                            ]
-                        },
-                        "access_requirements": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "enum": [
-                                "all",
-                                "partner",
-                                "contract"
-                            ],
-                            "description": "Preconditions required to access this dataset"
-                        },
-                        "attribution": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "description": "Required attribution text for dataset usage and redistribution"
-                        },
-                        "ownership": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "required": [
-                                    "name",
-                                    "type"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        },
-                        "access_level": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "enum": [
-                                "open",
-                                "internal",
-                                "restricted"
-                            ]
-                        },
-                        "classification": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "enum": [
-                                "pii",
-                                "red",
-                                "yellow",
-                                "green"
-                            ]
-                        },
-                        "tags": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "retention_days": {
-                            "type": [
-                                "integer",
-                                "null"
-                            ]
-                        },
-                        "documentation_url": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
-                            "format": "uri"
-                        },
-                        "source_system": {
-                            "type": [
-                                "string",
-                                "null"
-                            ]
-                        }
-                    }
-                }
+                ".*": { "$ref": "#/$defs/governanceBlock" }
             }
         }
     }

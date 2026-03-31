@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from celine.utils.common.logger import get_logger
 
@@ -17,6 +17,42 @@ logger = get_logger(__name__)
 class GovernanceOwner(BaseModel):
     name: str
     type: str = Field(default="OWNER")  # semantic, not enforced by spec
+
+
+class TemporalCoverage(BaseModel):
+    start: Optional[str] = None
+    end: Optional[str] = None
+
+
+class DcatConfig(BaseModel):
+    """DCAT-AP metadata for catalogue exposition. Used by dataset-api to build dcat:Dataset nodes."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    publisher_uri: Optional[str] = None
+    themes: List[str] = Field(default_factory=list)
+    language_uris: List[str] = Field(default_factory=list)
+    spatial_uris: List[str] = Field(default_factory=list)
+    accrual_periodicity: Optional[str] = None  # URI from EU Authority Table
+    conforms_to: Optional[str] = None           # URI of standard/specification
+    temporal: Optional[TemporalCoverage] = None
+
+
+class DataspaceConfig(BaseModel):
+    """Dataspace policy hints for ODRL generation and EDC exposure.
+
+    Simple fields only — complex EDC-specific sub-objects (asset, data_address,
+    contract) are handled by GovernanceRuleV2.DataspaceSpec in the dataspaces
+    connector and are ignored here.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    medallion: Optional[str] = None       # bronze | silver | gold
+    contract_required: bool = False
+    consent_required: bool = False
+    odrl_action: str = "use"
+    purpose: List[str] = Field(default_factory=list)
 
 
 class GovernanceRule(BaseModel):
@@ -32,7 +68,10 @@ class GovernanceRule(BaseModel):
     retention_days: Optional[int] = None
     documentation_url: Optional[str] = None
     source_system: Optional[str] = None
-    user_filter_column: Optional[str] = None  # NEW: column for row-level user filtering
+    user_filter_column: Optional[str] = None  # column for row-level user filtering
+    expose: bool = False                       # catalogue visibility (set per-source)
+    dcat: Optional[DcatConfig] = None          # DCAT-AP catalogue metadata
+    dataspace: Optional[DataspaceConfig] = None  # dataspace exposure hints
     extra: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -77,6 +116,16 @@ class GovernanceResolver:
                 )
                 for o in owners_raw
             ]
+            _known_keys = {
+                "title", "description", "license", "attribution", "ownership",
+                "access_level", "access_requirements", "classification", "tags",
+                "retention_days", "documentation_url", "source_system",
+                "user_filter_column", "expose", "dcat", "dataspace",
+            }
+
+            dcat_raw = block.get("dcat") or {}
+            dataspace_raw = block.get("dataspace") or {}
+
             return GovernanceRule(
                 title=block.get("title"),
                 description=block.get("description"),
@@ -90,27 +139,11 @@ class GovernanceResolver:
                 retention_days=block.get("retention_days"),
                 documentation_url=block.get("documentation_url"),
                 source_system=block.get("source_system"),
-                user_filter_column=block.get("user_filter_column"),  # NEW
-                extra={
-                    k: v
-                    for k, v in block.items()
-                    if k
-                    not in {
-                        "title",
-                        "description",
-                        "license",
-                        "attribution",
-                        "ownership",
-                        "access_level",
-                        "access_requirements",
-                        "classification",
-                        "tags",
-                        "retention_days",
-                        "documentation_url",
-                        "source_system",
-                        "user_filter_column",  # NEW: exclude from extra
-                    }
-                },
+                user_filter_column=block.get("user_filter_column"),
+                expose=bool(block.get("expose", False)),
+                dcat=DcatConfig.model_validate(dcat_raw) if dcat_raw else None,
+                dataspace=DataspaceConfig.model_validate(dataspace_raw) if dataspace_raw else None,
+                extra={k: v for k, v in block.items() if k not in _known_keys},
             )
 
         defaults = _parse_rule(raw.get("defaults") or {})
@@ -221,5 +254,8 @@ class GovernanceResolver:
             user_filter_column=pick(
                 base.user_filter_column, override.user_filter_column
             ),
+            expose=override.expose or base.expose,
+            dcat=pick(base.dcat, override.dcat),
+            dataspace=pick(base.dataspace, override.dataspace),
             extra={**base.extra, **override.extra},
         )
