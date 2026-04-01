@@ -53,6 +53,7 @@ class DataspaceConfig(BaseModel):
     consent_required: bool = False
     odrl_action: str = "use"
     purpose: List[str] = Field(default_factory=list)
+    expose: bool = False                   # catalogue visibility (set per-source)
 
 
 class GovernanceRule(BaseModel):
@@ -69,7 +70,6 @@ class GovernanceRule(BaseModel):
     documentation_url: Optional[str] = None
     source_system: Optional[str] = None
     user_filter_column: Optional[str] = None  # column for row-level user filtering
-    expose: bool = False                       # catalogue visibility (set per-source)
     dcat: Optional[DcatConfig] = None          # DCAT-AP catalogue metadata
     dataspace: Optional[DataspaceConfig] = None  # dataspace exposure hints
     extra: Dict[str, Any] = Field(default_factory=dict)
@@ -120,7 +120,7 @@ class GovernanceResolver:
                 "title", "description", "license", "attribution", "ownership",
                 "access_level", "access_requirements", "classification", "tags",
                 "retention_days", "documentation_url", "source_system",
-                "user_filter_column", "expose", "dcat", "dataspace",
+                "user_filter_column", "dcat", "dataspace",
             }
 
             dcat_raw = block.get("dcat") or {}
@@ -140,7 +140,6 @@ class GovernanceResolver:
                 documentation_url=block.get("documentation_url"),
                 source_system=block.get("source_system"),
                 user_filter_column=block.get("user_filter_column"),
-                expose=bool(block.get("expose", False)),
                 dcat=DcatConfig.model_validate(dcat_raw) if dcat_raw else None,
                 dataspace=DataspaceConfig.model_validate(dataspace_raw) if dataspace_raw else None,
                 extra={k: v for k, v in block.items() if k not in _known_keys},
@@ -224,6 +223,23 @@ class GovernanceResolver:
         return self.config.defaults
 
     @staticmethod
+    def _merge_dataspace(
+        base: Optional[DataspaceConfig], override: Optional[DataspaceConfig]
+    ) -> Optional[DataspaceConfig]:
+        if base is None:
+            return override
+        if override is None:
+            return base
+        return DataspaceConfig(
+            medallion=override.medallion or base.medallion,
+            contract_required=base.contract_required or override.contract_required,
+            consent_required=base.consent_required or override.consent_required,
+            odrl_action=override.odrl_action if override.odrl_action != "use" else base.odrl_action,
+            purpose=sorted(set(base.purpose) | set(override.purpose)),
+            expose=base.expose or override.expose,
+        )
+
+    @staticmethod
     def _merge(base: GovernanceRule, override: GovernanceRule) -> GovernanceRule:
         """
         Overlay override on top of base. Lists are merged (union), scalars overridden
@@ -254,8 +270,7 @@ class GovernanceResolver:
             user_filter_column=pick(
                 base.user_filter_column, override.user_filter_column
             ),
-            expose=override.expose or base.expose,
             dcat=pick(base.dcat, override.dcat),
-            dataspace=pick(base.dataspace, override.dataspace),
+            dataspace=GovernanceResolver._merge_dataspace(base.dataspace, override.dataspace),
             extra={**base.extra, **override.extra},
         )
