@@ -51,3 +51,11 @@ def dbt_run_gold(cfg: dict | PipelineConfig = {}):
 
 def dbt_run_tests(cfg: dict | PipelineConfig = {}):
     return dbt_run("test", cfg)
+
+
+def dbt_seed(cfg: dict | PipelineConfig = {}):
+    """
+    Prefect task wrapper for PipelineRunner.run_dbt_seed.
+    """
+    runner = PipelineRunner(_get_config(cfg))
+    return runner.run_dbt_seed()

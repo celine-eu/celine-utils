@@ -366,6 +366,26 @@ class PipelineRunner:
             collect_lineage=True,
         )
 
+    def run_dbt_seed(self, job_name: str | None = None) -> PipelineTaskResult:
+        if not self.cfg.app_name:
+            raise Exception(f"Missing app_name {self.cfg.app_name}")
+
+        job_name = job_name or f"{self.cfg.app_name}:dbt:seed"
+        project_dir = self.cfg.dbt_project_dir or self._project_path("/dbt")
+        profiles_dir = self.cfg.dbt_profiles_dir or project_dir
+
+        if not project_dir:
+            return self._task_result(False, "dbt seed", "DBT_PROJECT_DIR not set")
+
+        return self._run_dbt(
+            job_name=job_name,
+            command=["dbt", "--no-use-colors", "seed"],
+            project_dir=project_dir,
+            profiles_dir=profiles_dir,
+            lineage_tag=None,
+            collect_lineage=False,
+        )
+
     def run_dbt_operation(
         self, macro: str, args: dict | None = None, job_name: str | None = None
     ) -> PipelineTaskResult:
