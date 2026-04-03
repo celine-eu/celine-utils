@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.13.0 (2026-04-03)
+
+### Features
+
+- Add dbt_seed wrapper
+  ([`6e84f6f`](https://github.com/celine-eu/celine-utils/commit/6e84f6f54a30e849f8a559ea7dad7bdf9164b2d1))
+
+
 ## v1.12.0 (2026-04-03)
 
 ### Features
