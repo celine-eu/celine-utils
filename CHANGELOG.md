@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.12.0 (2026-04-03)
+
+### Features
+
+- Add pipeline run envs for local runtime envs
+  ([`306b570`](https://github.com/celine-eu/celine-utils/commit/306b5700984f0b90a2604730cf8883f2260431a2))
+
+
 ## v1.11.0 (2026-04-03)
 
 ### Chores
