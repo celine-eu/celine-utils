@@ -147,6 +147,9 @@ def _build_runner() -> PipelineRunner:
         meltano_path = app_root / "meltano"
         dbt_path = app_root / "dbt"
 
+        # prefect do not track
+        os.environ["DO_NOT_TRACK"] = "1"
+
         if not os.getenv("MELTANO_PROJECT_ROOT") and meltano_path.exists():
             os.environ["MELTANO_PROJECT_ROOT"] = str(meltano_path)
 

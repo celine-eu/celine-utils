@@ -336,7 +336,7 @@ requires-dist = [
     { name = "celine-sdk", specifier = ">=1.4.3" },
     { name = "dbt-core", specifier = ">=1.10.10" },
     { name = "dbt-postgres", specifier = ">=1.9.1" },
-    { name = "meltano", specifier = ">=3.9.1" },
+    { name = "meltano", specifier = ">=4.1.2" },
     { name = "openlineage-python", specifier = ">=1.37.0" },
     { name = "pandas", specifier = ">=2.3.2" },
     { name = "prefect", specifier = ">=3.6.18" },
