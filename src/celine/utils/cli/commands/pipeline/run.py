@@ -5,7 +5,9 @@ import ast
 import asyncio
 import importlib.util
 import inspect
+import logging
 import os
+import shlex
 import shutil
 import tempfile
 from pathlib import Path
@@ -230,6 +232,28 @@ def _run_func(func: Any) -> Any:
 # =============================================================================
 # CLI Commands
 # =============================================================================
+
+
+@pipeline_run_app.command("envs")
+def run_envs():
+    """Output pipeline run environment variables for local bash sourcing.
+
+    Usage:
+        source <(celine-utils pipeline run envs)
+    """
+    before = dict(os.environ)
+    logging.disable(logging.CRITICAL)
+    try:
+        _build_runner()
+    finally:
+        logging.disable(logging.NOTSET)
+
+    lines = [
+        f"export {key}={shlex.quote(val)}"
+        for key, val in os.environ.items()
+        if before.get(key) != val
+    ]
+    typer.echo("\n".join(lines))
 
 
 @pipeline_run_app.command("meltano")
