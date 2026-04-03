@@ -69,7 +69,7 @@ class GovernanceRule(BaseModel):
     retention_days: Optional[int] = None
     documentation_url: Optional[str] = None
     source_system: Optional[str] = None
-    user_filter_column: Optional[str] = None  # column for row-level user filtering
+    row_filters: List[dict] = Field(default_factory=list)  # row filter specs [{handler, args}]
     dcat: Optional[DcatConfig] = None          # DCAT-AP catalogue metadata
     dataspace: Optional[DataspaceConfig] = None  # dataspace exposure hints
     extra: Dict[str, Any] = Field(default_factory=dict)
@@ -120,7 +120,7 @@ class GovernanceResolver:
                 "title", "description", "license", "attribution", "ownership",
                 "access_level", "access_requirements", "classification", "tags",
                 "retention_days", "documentation_url", "source_system",
-                "user_filter_column", "dcat", "dataspace",
+                "row_filters", "dcat", "dataspace",
             }
 
             dcat_raw = block.get("dcat") or {}
@@ -139,7 +139,7 @@ class GovernanceResolver:
                 retention_days=block.get("retention_days"),
                 documentation_url=block.get("documentation_url"),
                 source_system=block.get("source_system"),
-                user_filter_column=block.get("user_filter_column"),
+                row_filters=block.get("row_filters") or [],
                 dcat=DcatConfig.model_validate(dcat_raw) if dcat_raw else None,
                 dataspace=DataspaceConfig.model_validate(dataspace_raw) if dataspace_raw else None,
                 extra={k: v for k, v in block.items() if k not in _known_keys},
@@ -267,9 +267,7 @@ class GovernanceResolver:
             retention_days=pick(base.retention_days, override.retention_days),
             documentation_url=pick(base.documentation_url, override.documentation_url),
             source_system=pick(base.source_system, override.source_system),
-            user_filter_column=pick(
-                base.user_filter_column, override.user_filter_column
-            ),
+            row_filters=override.row_filters if override.row_filters else base.row_filters,
             dcat=pick(base.dcat, override.dcat),
             dataspace=GovernanceResolver._merge_dataspace(base.dataspace, override.dataspace),
             extra={**base.extra, **override.extra},

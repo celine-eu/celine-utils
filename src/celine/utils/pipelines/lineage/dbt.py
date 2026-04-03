@@ -131,7 +131,7 @@ class DbtLineage:
                     retention_days=g.get("retention_days"),
                     documentation_url=g.get("documentation_url"),
                     source_system=g.get("source_system"),
-                    user_filter_column=g.get("user_filter_column"),
+                    row_filters=g.get("row_filters") or [],
                     extra={},
                 )
 
@@ -160,7 +160,7 @@ class DbtLineage:
             and not rule.source_system
             and not rule.title
             and not rule.description
-            and not rule.user_filter_column
+            and not rule.row_filters
         ):
             return None
 
@@ -177,7 +177,7 @@ class DbtLineage:
             retentionDays=rule.retention_days,
             documentationUrl=rule.documentation_url,
             sourceSystem=rule.source_system,
-            userFilterColumn=rule.user_filter_column,
+            rowFilters=rule.row_filters or None,
         )
 
     def _build_assertion(self, test_node: dict, result: dict) -> DqAssertion:

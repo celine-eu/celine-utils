@@ -85,7 +85,7 @@
                 "consent_required": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Require per-subject consent (implies user_filter_column usage)"
+                    "description": "Require per-subject consent (implies row_filters usage)"
                 },
                 "odrl_action": {
                     "type": "string",
@@ -138,9 +138,24 @@
                     "format": "uri"
                 },
                 "source_system": { "type": ["string", "null"] },
-                "user_filter_column": {
-                    "type": ["string", "null"],
-                    "description": "DB column used for row-level user filtering (enables per-subject consent)"
+                "row_filters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["handler"],
+                        "properties": {
+                            "handler": {
+                                "type": "string",
+                                "description": "Row filter handler name (e.g. rec_registry, direct_user_match, http_in_list)"
+                            },
+                            "args": {
+                                "type": "object",
+                                "description": "Handler-specific arguments (e.g. {column: device_id})"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "description": "Row filter specs for row-level access control. Each entry selects a handler and its args."
                 },
                 "dcat": {
                     "oneOf": [

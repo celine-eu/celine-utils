@@ -3,7 +3,7 @@
 Custom OpenLineage facet for governance metadata.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import attr
 from openlineage.client.facet import BaseFacet
@@ -32,12 +32,15 @@ class GovernanceDatasetFacet(BaseFacet):
     attribution: Optional[str] = None
     owners: Optional[List[str]] = None
     accessLevel: Optional[str] = None  # open / internal / restricted / secret
-    accessRequirements: Optional[str] = (
-        None  # textual policy (e.g. "public", "internal_use")
-    )
-    classification: Optional[str] = None  # e.g. green/yellow/red or DLP class
+    accessRequirements: Optional[str] = None
+    classification: Optional[str] = None  # green / yellow / red / pii
     tags: Optional[List[str]] = None
     retentionDays: Optional[int] = None
     documentationUrl: Optional[str] = None
     sourceSystem: Optional[str] = None
-    userFilterColumn: Optional[str] = None  # NEW: column for row-level user filtering
+    rowFilters: Optional[List[Dict[str, Any]]] = None  # [{handler, args}]
+    medallion: Optional[str] = None  # bronze / silver / gold
+    contractRequired: Optional[bool] = None
+    consentRequired: Optional[bool] = None
+    odrlAction: Optional[str] = None
+    purpose: Optional[List[str]] = None

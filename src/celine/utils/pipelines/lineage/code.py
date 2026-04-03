@@ -319,7 +319,7 @@ class PipelineLineage:
             and not rule.source_system
             and not rule.title
             and not rule.description
-            and not rule.user_filter_column
+            and not rule.row_filters
         ):
             return None
 
@@ -336,7 +336,7 @@ class PipelineLineage:
             retentionDays=rule.retention_days,
             documentationUrl=rule.documentation_url,
             sourceSystem=rule.source_system,
-            userFilterColumn=rule.user_filter_column,
+            rowFilters=rule.row_filters or None,
         )
 
     def _build_datasets(
