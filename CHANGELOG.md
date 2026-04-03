@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v1.11.0 (2026-04-03)
+
+### Chores
+
+- Upgrade celine-sdk to 1.4.3
+  ([`c320672`](https://github.com/celine-eu/celine-utils/commit/c3206722ce1358f1ed4feffce7deb8217e93e68c))
+
+### Features
+
+- Add dssc goverance fields
+  ([`dc9e8f6`](https://github.com/celine-eu/celine-utils/commit/dc9e8f623b8df4b3b8579c68e6267b817dfbc85e))
+
+- Unify expose flag
+  ([`a2dd0ce`](https://github.com/celine-eu/celine-utils/commit/a2dd0ceebed86ed19b13fd14e2300f0ae25fc0e6))
+
+- Upgrade meltano
+  ([`f8b6dd6`](https://github.com/celine-eu/celine-utils/commit/f8b6dd6dcc113669607be366ac1d09a6693894e3))
+
+
 ## v1.10.2 (2026-03-14)
 
 ### Bug Fixes
