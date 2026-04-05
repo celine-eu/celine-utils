@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.14.0 (2026-04-05)
+
+### Chores
+
+- Upgrade celine-sdk to 1.5.0
+  ([`6d9a36b`](https://github.com/celine-eu/celine-utils/commit/6d9a36b0f654c05a10f0c5310ee99209c1234bf7))
+
+### Features
+
+- Add row_filters to governance. drop user filter column fields
+  ([`4abf88d`](https://github.com/celine-eu/celine-utils/commit/4abf88d20e509a0c78b11f995967736c0fd91eab))
+
+- Fix mqtt closing before last message
+  ([`a352002`](https://github.com/celine-eu/celine-utils/commit/a3520023633e1b113c56c97f02a2bdd8c195a883))
+
+
 ## v1.13.0 (2026-04-03)
 
 ### Features
