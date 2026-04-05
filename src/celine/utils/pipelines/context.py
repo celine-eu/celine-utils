@@ -8,7 +8,7 @@ from types import FrameType
 from typing import Any
 from uuid import uuid4
 
-from celine.utils.pipelines.mqtt import cleanup_broker, emit_pipeline_event
+from celine.utils.pipelines.mqtt import emit_pipeline_event
 from celine.utils.pipelines.pipeline_config import PipelineConfig
 from celine.utils.pipelines.pipeline_result import PipelineStatus
 from celine.utils.pipelines.utils import get_namespace
@@ -154,7 +154,6 @@ def flow_hooks(cfg: PipelineConfig):
             run_id,
             duration_ms=int((time.time() - start_time) * 1000),
         )
-        cleanup_broker()
 
     def on_failure(flow, flow_run, state):
         _emit_in_thread_and_wait(
@@ -166,6 +165,5 @@ def flow_hooks(cfg: PipelineConfig):
             error=state.message,
             duration_ms=int((time.time() - start_time) * 1000),
         )
-        cleanup_broker()
 
     return on_running, on_completion, on_failure
