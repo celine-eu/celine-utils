@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.14.1 (2026-04-06)
+
+### Bug Fixes
+
+- Bump version
+  ([`d4ad474`](https://github.com/celine-eu/celine-utils/commit/d4ad474a2d7227ebc5a5f21545c9d39359cd4510))
+
+### Chores
+
+- Upgrade celine-sdk to 1.6.0
+  ([`a7f4676`](https://github.com/celine-eu/celine-utils/commit/a7f46765a1e76a67756d04e832516a2b2fa4994f))
+
+
 ## v1.14.0 (2026-04-05)
 
 ### Chores
