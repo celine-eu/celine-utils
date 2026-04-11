@@ -1,0 +1,65 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CELINE Owner Registry",
+    "description": "Schema for owners.yaml and owners.local.yaml files used by dataset-api to resolve ownership blocks in governance.yaml to canonical foaf:Agent metadata.",
+    "type": "object",
+    "required": ["owners"],
+    "additionalProperties": false,
+    "properties": {
+        "owners": {
+            "type": "array",
+            "description": "List of owner entries. The id field is the lookup key matched against the name field in governance.yaml ownership blocks.",
+            "items": {
+                "$ref": "#/$defs/ownerEntry"
+            },
+            "minItems": 1
+        }
+    },
+    "$defs": {
+        "ownerEntry": {
+            "type": "object",
+            "required": ["id", "type", "name"],
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Short alias used as the lookup key. Must match the name field in governance.yaml ownership blocks. Use lowercase kebab-case (e.g. 'open-meteo', 'trentino-mobilita').",
+                    "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Schema.org organization type CURIE. Emitted as the JSON-LD @type alongside foaf:Organization in DCAT-AP responses.",
+                    "enum": [
+                        "schema:Corporation",
+                        "schema:GovernmentOrganization",
+                        "schema:ResearchOrganization",
+                        "schema:EducationalOrganization",
+                        "schema:NGO",
+                        "schema:Organization",
+                        "schema:Project"
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Human-readable display name used as foaf:name in DCAT-AP output.",
+                    "minLength": 1
+                },
+                "did": {
+                    "type": "string",
+                    "description": "did:web: URI for organizations operating a dataspace connector. Takes priority over url as the canonical @id once set.",
+                    "pattern": "^did:web:.+"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Canonical homepage URI used as foaf:homepage in DCAT-AP output."
+                },
+                "role": {
+                    "type": "string",
+                    "description": "Keycloak organization role for this owner. Used by celine-policies keycloak sync-orgs to provision a KC organization with this role. Defaults to 'org' when omitted. Common values: 'rec' (Renewable Energy Community), 'dso' (Distribution System Operator), 'org' (generic organization).",
+                    "minLength": 1
+                }
+            }
+        }
+    }
+}

@@ -9,6 +9,7 @@ import logging
 import os
 import shlex
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -139,12 +140,16 @@ def _find_flow_function(flow_path: Path) -> str | None:
 
 def _build_runner() -> PipelineRunner:
     try:
+        # Remove previously-sourced values so discovery is always CWD-based
+        os.environ.pop("APP_NAME", None)
+        os.environ.pop("PIPELINES_ROOT", None)
+
         app_root = _discover_app_root()
         app_name = _discover_app_name(app_root)
         pipelines_root = _discover_pipelines_root(app_root, app_name)
 
-        os.environ.setdefault("APP_NAME", app_name)
-        os.environ.setdefault("PIPELINES_ROOT", str(pipelines_root))
+        os.environ["APP_NAME"] = app_name
+        os.environ["PIPELINES_ROOT"] = str(pipelines_root)
 
         meltano_path = app_root / "meltano"
         dbt_path = app_root / "dbt"
@@ -212,6 +217,10 @@ def _load_flow_module(flow_name: str | None) -> tuple[str, Any]:
     spec = importlib.util.spec_from_file_location(flow_file.stem, flow_file)
     if not spec or not spec.loader:
         raise ImportError(f"Cannot import flow module: {flow_file}")
+
+    flows_dir_str = str(flows_dir)
+    if flows_dir_str not in sys.path:
+        sys.path.insert(0, flows_dir_str)
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # type: ignore
