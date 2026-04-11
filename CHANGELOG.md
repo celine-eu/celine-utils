@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.14.2 (2026-04-11)
+
+### Bug Fixes
+
+- Correct pipeline env set
+  ([`8440a22`](https://github.com/celine-eu/celine-utils/commit/8440a22b5c167fa5e94bc4f607d04d43a58b83bd))
+
+### Chores
+
+- Upgrade celine-sdk to 1.7.0
+  ([`2156f3b`](https://github.com/celine-eu/celine-utils/commit/2156f3b11d5ad84e8feda4efe7c35a2d77f94893))
+
+
 ## v1.14.1 (2026-04-06)
 
 ### Bug Fixes
