@@ -143,6 +143,9 @@ def _build_runner() -> PipelineRunner:
         # Remove previously-sourced values so discovery is always CWD-based
         os.environ.pop("APP_NAME", None)
         os.environ.pop("PIPELINES_ROOT", None)
+        os.environ.pop("MELTANO_PROJECT_ROOT", None)
+        os.environ.pop("DBT_PROJECT_DIR", None)
+        os.environ.pop("DBT_PROFILES_DIR", None)
 
         app_root = _discover_app_root()
         app_name = _discover_app_name(app_root)
