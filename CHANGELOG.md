@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.14.3 (2026-04-12)
+
+### Bug Fixes
+
+- Override envs on run command
+  ([`77e3ba8`](https://github.com/celine-eu/celine-utils/commit/77e3ba866da4aaf210eb50bbadda551b37e9745b))
+
+### Chores
+
+- Upgrade celine-sdk to 1.8.0
+  ([`0621d12`](https://github.com/celine-eu/celine-utils/commit/0621d1290b9409d003de3014b5402081e34a502b))
+
+
 ## v1.14.2 (2026-04-11)
 
 ### Bug Fixes
