@@ -54,10 +54,38 @@
                     "format": "uri",
                     "description": "Canonical homepage URI used as foaf:homepage in DCAT-AP output."
                 },
-                "role": {
-                    "type": "string",
-                    "description": "Keycloak organization role for this owner. Used by celine-policies keycloak sync-orgs to provision a KC organization with this role. Defaults to 'org' when omitted. Common values: 'rec' (Renewable Energy Community), 'dso' (Distribution System Operator), 'org' (generic organization).",
-                    "minLength": 1
+                "organization": {
+                    "type": "object",
+                    "description": "Keycloak organization provisioning block. When present with create: true, celine-policies keycloak sync-orgs will provision a Keycloak organization for this owner.",
+                    "additionalProperties": false,
+                    "properties": {
+                        "create": {
+                            "type": "boolean",
+                            "description": "When true, this owner is provisioned as a Keycloak organization by sync-orgs. Defaults to false (skipped).",
+                            "default": false
+                        },
+                        "role": {
+                            "type": "string",
+                            "description": "Keycloak organization role. Emitted as attributes.type on the KC organization. Common values: 'rec' (Renewable Energy Community), 'dso' (Distribution System Operator), 'org' (generic organization).",
+                            "minLength": 1
+                        },
+                        "attributes": {
+                            "type": "object",
+                            "description": "Free-form key/value attributes set on the Keycloak organization alongside the role.",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "aliases": {
+                    "type": "array",
+                    "description": "Alternative lookup keys that resolve to this owner. Used to map generic placeholder labels in open-source governance.yaml files (e.g. 'rec') to the real deployment-specific owner. Each alias must be unique across the registry.",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+                    },
+                    "default": []
                 }
             }
         }

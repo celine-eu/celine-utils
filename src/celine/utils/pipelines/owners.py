@@ -20,10 +20,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class OwnerEntry(BaseModel):
     name: Optional[str] = None
     did: Optional[str] = None
     url: Optional[str] = None
+    aliases: List[str] = Field(default_factory=list)
 
 
 class OwnersRegistry:
@@ -54,6 +55,17 @@ class OwnersRegistry:
 
     def __init__(self, entries: list[OwnerEntry]) -> None:
         self._by_id: dict[str, OwnerEntry] = {e.id: e for e in entries}
+        # register aliases so generic labels (e.g. "rec") resolve to the real owner
+        for e in entries:
+            for alias in e.aliases:
+                if alias in self._by_id:
+                    logger.warning(
+                        "Owner alias %r (from %r) conflicts with an existing id — skipping",
+                        alias,
+                        e.id,
+                    )
+                else:
+                    self._by_id[alias] = e
         # index by DID and URL so the DCAT formatter can look up stored URIs
         self._by_uri: dict[str, OwnerEntry] = {}
         for e in entries:
