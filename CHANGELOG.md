@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.15.0 (2026-04-16)
+
+### Chores
+
+- Upgrade celine-sdk to 1.10.0
+  ([`5704b0f`](https://github.com/celine-eu/celine-utils/commit/5704b0f7879a2512816d9fa06bc3faff2ba8077d))
+
+- Upgrade celine-sdk to 1.9.0
+  ([`0fb5334`](https://github.com/celine-eu/celine-utils/commit/0fb5334a256443f03d5ccbcdc37470da7ed81934))
+
+### Features
+
+- Add organization, alias to owners schema
+  ([`f505e93`](https://github.com/celine-eu/celine-utils/commit/f505e9345d5c435cf189ad479edf08793e0ffa03))
+
+
 ## v1.14.3 (2026-04-12)
 
 ### Bug Fixes
