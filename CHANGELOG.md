@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.16.0 (2026-04-17)
+
+### Features
+
+- Upgrade prefect to 3.6.26
+  ([`f47cf1f`](https://github.com/celine-eu/celine-utils/commit/f47cf1fa88fad368b5685849cd3eaf2d98ebb66f))
+
+
 ## v1.15.0 (2026-04-16)
 
 ### Chores
