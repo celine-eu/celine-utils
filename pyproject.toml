@@ -19,7 +19,7 @@ dependencies = [
     "dbt-core>=1.10.10",
     "dbt-postgres>=1.9.1",
     "prefect-dbt>=0.7.6",
-    "meltano>=4.1.2",
+    "meltano>=4.2.0",
     "prefect>=3.6.26",
     "celine-sdk>=1.12.1",
 ]

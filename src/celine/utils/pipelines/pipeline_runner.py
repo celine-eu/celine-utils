@@ -239,8 +239,8 @@ class PipelineRunner:
                     if line.strip():
                         msg, level = self._parse_meltano_log(line)
                         logger_fn(f"\t {msg}")
-                        if not success and level in ["error", "warning"]:
-                            error_logs.append(f"{level.upper()} {msg}")
+                        if not success and level == "error":
+                            error_logs.append(f"ERROR {msg}")
 
             if result.stdout:
                 log_results(result.stdout or "")
