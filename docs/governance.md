@@ -137,6 +137,7 @@ sources:
 ```
 
 Resolution precedence:
+
 1. Exact match
 2. Longest matching wildcard
 3. Defaults
@@ -259,6 +260,7 @@ celine-utils governance generate marquez --app <app_name>
 ```
 
 The CLI will:
+
 1. Discover datasets from Marquez
 2. Prompt for governance metadata per dataset
 3. Allow pattern-based scoping
