@@ -201,6 +201,16 @@ Retention period in days.
 ### `documentation_url`
 Link to human-readable documentation for the dataset.
 
+### `row_filters`
+List of row filter specifications for per-subject or consent-based row filtering. Each filter is a dict with `handler` (the filter strategy) and `args` (handler-specific arguments).
+
+```yaml
+row_filters:
+  - handler: user_column
+    args:
+      column: user_id
+```
+
 ### `source_system`
 Origin system or domain (e.g. `openweathermap`, `copernicus`, `dwd`).
 

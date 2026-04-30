@@ -29,7 +29,7 @@ The `GovernanceRule` model covers:
 - License and access level (`open`, `internal`, `restricted`, `secret`)
 - Data classification (`pii`, `green`, `yellow`, `red`) and retention
 - Tags, documentation links, and source system
-- `user_filter_column` — the column used for per-subject consent-based row filtering
+- `row_filters` — list of filter specs (`[{handler, args}]`) for per-subject consent-based row filtering
 - `expose: true` — controls whether the dataset appears in the DCAT catalogue and is registered as an EDC asset
 
 Extended blocks for DCAT-AP 3.0 and dataspace integration:
@@ -59,10 +59,10 @@ Both `celine-utils` (pipeline side) and `dataset-api/cli/export_governance.py` (
 Structured execution layer for:
 
 - Meltano ingestion pipelines
-- dbt transformations and tests
-- Prefect-based Python flows
+- dbt transformations, tests, and seeds (`dbt_seed` wrapper)
+- Prefect-based Python flows (Prefect 3.x)
 
-The `PipelineRunner` coordinates execution, logging, error handling, and lineage emission consistently across tools.
+The `PipelineRunner` coordinates execution, logging, error handling, and lineage emission consistently across tools. Pipeline run environment variables can be injected via `pipeline_run_envs` for local runtime configuration.
 
 See the [pipeline tutorial](https://celine-eu.github.io/projects/celine-utils/docs/pipeline-tutorial).
 
@@ -71,7 +71,7 @@ See the [pipeline tutorial](https://celine-eu.github.io/projects/celine-utils/do
 - Automatic emission of START, COMPLETE, FAIL, and ABORT events
 - Dataset-level schema facets
 - Data quality assertions from dbt tests
-- Custom CELINE governance facets (including `userFilterColumn`, `medallion`, `classification`)
+- Custom CELINE governance facets (including `row_filters`, `medallion`, `classification`)
 
 ### Dataset tooling
 
@@ -137,7 +137,7 @@ Environment-driven via `pydantic-settings`:
 ## Installation
 
 ```bash
-pip install celine-utils
+uv add celine-utils
 ```
 
 ---
