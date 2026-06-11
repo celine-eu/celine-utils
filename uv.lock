@@ -13,6 +13,9 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
+[manifest]
+overrides = [{ name = "click", specifier = ">=8.2,<8.4" }]
+
 [[package]]
 name = "agate"
 version = "1.9.1"
@@ -334,7 +337,7 @@ requires-dist = [
     { name = "celine-sdk", specifier = ">=1.12.1" },
     { name = "dbt-core", specifier = ">=1.10.10" },
     { name = "dbt-postgres", specifier = ">=1.9.1" },
-    { name = "meltano", specifier = ">=4.1.2" },
+    { name = "meltano", specifier = ">=4.2.0" },
     { name = "openlineage-python", specifier = ">=1.37.0" },
     { name = "pandas", specifier = ">=2.3.2" },
     { name = "prefect", specifier = ">=3.6.26" },
@@ -466,14 +469,14 @@ wheels = [
 
 [[package]]
 name = "click"
-version = "8.1.8"
+version = "8.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593, upload-time = "2024-12-21T18:38:44.339Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/63/f9e1ea081ce35720d8b92acde70daaedace594dc93b693c869e0d5910718/click-8.3.3.tar.gz", hash = "sha256:398329ad4837b2ff7cbe1dd166a4c0f8900c3ca3a218de04466f38f6497f18a2", size = 328061, upload-time = "2026-04-22T15:11:27.506Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl", hash = "sha256:63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2", size = 98188, upload-time = "2024-12-21T18:38:41.666Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/44/c1221527f6a71a01ec6fbad7fa78f1d50dfa02217385cf0fa3eec7087d59/click-8.3.3-py3-none-any.whl", hash = "sha256:a2bf429bb3033c89fa4936ffb35d5cb471e3719e1f3c8a7c3fff0b8314305613", size = 110502, upload-time = "2026-04-22T15:11:25.044Z" },
 ]
 
 [[package]]
@@ -1423,7 +1426,7 @@ wheels = [
 
 [[package]]
 name = "meltano"
-version = "4.1.2"
+version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -1453,9 +1456,9 @@ dependencies = [
     { name = "uv" },
     { name = "virtualenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/61/4c/fae1c2a4841abcd1b8681cacb152d9b6cebac51e419305fe23c8f29ad306/meltano-4.1.2.tar.gz", hash = "sha256:aa544d525463d14ef84388937b28e7c5f1a4f35617a957cea4c254f77a87b611", size = 12772828, upload-time = "2026-02-03T03:26:25.964Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/d2/3467b24d6e6bcd09f32f5eb24e5db7ce2581e9810ea2cd1812099a195e08/meltano-4.2.0.tar.gz", hash = "sha256:c1fa06fdf7b4c29874126d541f8bf0362807675a39598e3759611d67864bb5e4", size = 12780074, upload-time = "2026-04-10T23:40:46.735Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/0d/9d20427b6b5fdeb48233ca500b6237ebde71616b0cbf455726b15812ae93/meltano-4.1.2-py3-none-any.whl", hash = "sha256:ad5230505723a4922b7efbf511bfdabe56854da3d4040b435da5afd91d1b1b5f", size = 399944, upload-time = "2026-02-03T03:26:23.919Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/93/13aa61f6ba2ae7bcd5a216fb0136eee52296b3a307bb5b88e7945b5c7a83/meltano-4.2.0-py3-none-any.whl", hash = "sha256:0729c87fd36014b6cab081f220d31f9844943d39485d464f389fe25086af5ed6", size = 402247, upload-time = "2026-04-10T23:40:44.933Z" },
 ]
 
 [[package]]

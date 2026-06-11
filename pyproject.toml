@@ -66,3 +66,6 @@ patch_tags = ["fix", "perf", "up"]
 parse_squash_commits = true
 ignore_merge_commits = true
 
+[tool.uv]
+override-dependencies = ["click>=8.2,<8.4"]
+

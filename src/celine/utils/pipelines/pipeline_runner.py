@@ -217,6 +217,7 @@ class PipelineRunner:
                 **os.environ,
                 **PipelineConfig.get_as_envs(self.cfg),
                 "NO_COLOR": "1",
+                "MELTANO_CLI_DISABLE_VERSION_CHECK": "true",
             }
 
             result = subprocess.run(
