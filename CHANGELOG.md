@@ -2,6 +2,56 @@
 
 <!-- version list -->
 
+## v1.17.0 (2026-06-11)
+
+### Bug Fixes
+
+- Use latest meltano, do not fail on WARNING logs
+  ([`4b990fd`](https://github.com/celine-eu/celine-utils/commit/4b990fd9c50750326e8060b3c6c9b385e339262d))
+
+### Chores
+
+- Update docs
+  ([`b70e2ae`](https://github.com/celine-eu/celine-utils/commit/b70e2aedf766e3002527a67b6431edcad04dfeef))
+
+- Update docs
+  ([`3bc318d`](https://github.com/celine-eu/celine-utils/commit/3bc318da844ef0c86088fb22274b688ac426925c))
+
+- Upgrade celine-sdk to 1.11.0
+  ([`6c6bef2`](https://github.com/celine-eu/celine-utils/commit/6c6bef2304c6ce7834990a7ee6bfaa7e02ef4a9c))
+
+- Upgrade celine-sdk to 1.12.0
+  ([`37b3562`](https://github.com/celine-eu/celine-utils/commit/37b3562c8e1a1a86f21d769b34f76c25eeef7e8b))
+
+- Upgrade celine-sdk to 1.12.1
+  ([`2010de4`](https://github.com/celine-eu/celine-utils/commit/2010de466064e3d467e493d5b8b8e581437d5a80))
+
+- **deps**: Bump openlineage-python from 1.44.1 to 1.45.0
+  ([`374c71f`](https://github.com/celine-eu/celine-utils/commit/374c71fab2055d47106a7de12af62a405f20035d))
+
+- **deps**: Bump pandas from 2.3.3 to 3.0.2
+  ([`38e8fba`](https://github.com/celine-eu/celine-utils/commit/38e8fbaf653767ecbdcc2f335fa7a6d447a6c12b))
+
+- **deps**: Bump python-keycloak from 5.8.1 to 7.1.1
+  ([`3eefd1f`](https://github.com/celine-eu/celine-utils/commit/3eefd1f2a09befb200d5aa8515a4a535a950fe44))
+
+- **deps**: Bump requests from 2.32.5 to 2.33.1
+  ([`ab4189d`](https://github.com/celine-eu/celine-utils/commit/ab4189db2f918b292ed42a574440e17cb31154cc))
+
+- **deps**: Bump the runtime-dependencies group across 1 directory with 4 updates
+  ([`bea14d6`](https://github.com/celine-eu/celine-utils/commit/bea14d658145d0ae506c8707ece05cb7034795f8))
+
+### Continuous Integration
+
+- Bump the actions group across 1 directory with 3 updates
+  ([`c6a4a96`](https://github.com/celine-eu/celine-utils/commit/c6a4a96d209241ef336a83ff77b2d4ac9a3ef651))
+
+### Features
+
+- Upgrade meltano, suppress version warning
+  ([`eddc69c`](https://github.com/celine-eu/celine-utils/commit/eddc69c86e865ea11265ddb8c133d2cdc7bde516))
+
+
 ## v1.16.0 (2026-04-17)
 
 ### Features
