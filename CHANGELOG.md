@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.18.1 (2026-08-09)
+
+### Bug Fixes
+
+- Correct dcat merge
+  ([`905206c`](https://github.com/celine-eu/celine-utils/commit/905206c019c9eb1a18023ede38532b0d091cdbb9))
+
+
 ## v1.18.0 (2026-08-09)
 
 ### Chores
