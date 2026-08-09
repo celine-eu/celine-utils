@@ -38,6 +38,43 @@ class DcatConfig(BaseModel):
     temporal: Optional[TemporalCoverage] = None
 
 
+class OntologyConfig(BaseModel):
+    """Semantic model binding for a dataset — which mapping spec says what its
+    columns *mean*.
+
+    Two ways to locate one, because mappings divide into two kinds:
+
+    ``spec``
+        A **shared** mapping published in ``celine-ontologies``. Meter readings
+        and forecasts recur across producers, and restating that mapping per
+        dataset would make one fact many.
+    ``spec_file``
+        A path **relative to this governance.yaml**, for a dataset whose shape is
+        its own. Locality is the point: a spec names source *columns*, and those
+        columns are what the pipeline emits, so a spec living in another
+        repository goes stale on a rename with nothing to detect it.
+
+    Exactly one, enforced by the schema — two bindings for one dataset is two
+    answers to "what does this column mean".
+
+    Distinct from ``DcatConfig.conforms_to``, and deliberately so: ``conforms_to``
+    names the model (an IRI a consumer can compare across datasets), while this
+    names the mapping *onto these columns*. Several datasets can conform to one
+    model through different mappings, and one shared mapping can serve datasets
+    that declare different models.
+
+    Resolution deliberately lives in the consumer (dataset-api), not here.
+    Resolving ``spec`` means importing ``celine-ontologies``, and this package is
+    a dependency of every pipeline — the two should not be coupled so that adding
+    a pipeline drags in the ontology stack.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    spec: Optional[str] = None       # shared mapping name, e.g. "obs_rec_energy"
+    spec_file: Optional[str] = None  # path relative to the governance.yaml dir
+
+
 class DataspaceConfig(BaseModel):
     """Dataspace policy hints for ODRL generation and EDC exposure.
 
@@ -71,6 +108,7 @@ class GovernanceRule(BaseModel):
     source_system: Optional[str] = None
     row_filters: List[dict] = Field(default_factory=list)  # row filter specs [{handler, args}]
     dcat: Optional[DcatConfig] = None          # DCAT-AP catalogue metadata
+    ontology: Optional[OntologyConfig] = None  # semantic model / mapping spec binding
     dataspace: Optional[DataspaceConfig] = None  # dataspace exposure hints
     extra: Dict[str, Any] = Field(default_factory=dict)
 
@@ -120,10 +158,11 @@ class GovernanceResolver:
                 "title", "description", "license", "attribution", "ownership",
                 "access_level", "access_requirements", "classification", "tags",
                 "retention_days", "documentation_url", "source_system",
-                "row_filters", "dcat", "dataspace",
+                "row_filters", "dcat", "ontology", "dataspace",
             }
 
             dcat_raw = block.get("dcat") or {}
+            ontology_raw = block.get("ontology") or {}
             dataspace_raw = block.get("dataspace") or {}
 
             return GovernanceRule(
@@ -141,6 +180,7 @@ class GovernanceResolver:
                 source_system=block.get("source_system"),
                 row_filters=block.get("row_filters") or [],
                 dcat=DcatConfig.model_validate(dcat_raw) if dcat_raw else None,
+                ontology=OntologyConfig.model_validate(ontology_raw) if ontology_raw else None,
                 dataspace=DataspaceConfig.model_validate(dataspace_raw) if dataspace_raw else None,
                 extra={k: v for k, v in block.items() if k not in _known_keys},
             )
@@ -269,6 +309,7 @@ class GovernanceResolver:
             source_system=pick(base.source_system, override.source_system),
             row_filters=override.row_filters if override.row_filters else base.row_filters,
             dcat=pick(base.dcat, override.dcat),
+            ontology=pick(base.ontology, override.ontology),
             dataspace=GovernanceResolver._merge_dataspace(base.dataspace, override.dataspace),
             extra={**base.extra, **override.extra},
         )

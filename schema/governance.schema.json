@@ -63,6 +63,25 @@
             },
             "additionalProperties": false
         },
+        "ontologyConfig": {
+            "type": "object",
+            "description": "Semantic model binding: which mapping spec says what this dataset's columns mean. dataset-api derives GET /catalogue/{id}/vocabulary from it. Distinct from dcat.conforms_to, which names the model itself rather than the mapping onto these columns — several datasets can conform to one model through different mappings.",
+            "properties": {
+                "spec": {
+                    "type": ["string", "null"],
+                    "description": "Name of a SHARED mapping spec published in celine-ontologies (e.g. 'obs_rec_energy') — no path, no extension. Use this when the dataset has the same shape as others; meter readings and forecasts recur across producers and the mapping should not be restated per dataset."
+                },
+                "spec_file": {
+                    "type": ["string", "null"],
+                    "description": "Path to a mapping spec file, relative to the directory holding this governance.yaml (e.g. './mappings/rec_custom.yaml'). Use this when the dataset's shape is its own. Keeping it beside the pipeline matters because a spec names SOURCE COLUMNS, and those columns are what the pipeline emits — a spec in another repository goes stale on a rename with nothing to detect it."
+                }
+            },
+            "additionalProperties": false,
+            "oneOf": [
+                { "required": ["spec"], "not": { "required": ["spec_file"] } },
+                { "required": ["spec_file"], "not": { "required": ["spec"] } }
+            ]
+        },
         "dataspaceConfig": {
             "type": "object",
             "description": "Dataspace exposure and ODRL policy hints",
@@ -160,6 +179,12 @@
                 "dcat": {
                     "oneOf": [
                         { "$ref": "#/$defs/dcatConfig" },
+                        { "type": "null" }
+                    ]
+                },
+                "ontology": {
+                    "oneOf": [
+                        { "$ref": "#/$defs/ontologyConfig" },
                         { "type": "null" }
                     ]
                 },
