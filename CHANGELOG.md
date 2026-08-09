@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.18.0 (2026-08-09)
+
+### Chores
+
+- Upgrade celine-sdk to 1.13.0
+  ([`c44fa6f`](https://github.com/celine-eu/celine-utils/commit/c44fa6f18f2d174022d005dce1d7247e97040d4f))
+
+### Features
+
+- Update governance schema to map ontologies
+  ([`f99821e`](https://github.com/celine-eu/celine-utils/commit/f99821e04cb64cbea5905c7c918bdce3386d6ec3))
+
+
 ## v1.17.0 (2026-06-11)
 
 ### Bug Fixes
