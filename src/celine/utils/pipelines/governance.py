@@ -280,6 +280,57 @@ class GovernanceResolver:
         )
 
     @staticmethod
+    def _merge_dcat(
+        base: Optional[DcatConfig], override: Optional[DcatConfig]
+    ) -> Optional[DcatConfig]:
+        """Overlay a dataset's DCAT block onto the file's defaults, field by field.
+
+        Whole-object replacement was the previous behaviour and it loses metadata
+        silently. A dataset stating only
+
+            dcat:
+              conforms_to: http://www.w3.org/ns/sosa/
+
+        meant *"and no themes, no language, no spatial coverage, no
+        periodicity"* — every one dropped from the resolved rule, with the
+        defaults still sitting in the file looking like they applied.
+
+        It survived because `conforms_to` is the first field anybody set on its
+        own: a governance file that restates the whole block per dataset (as
+        `celine-pipelines`' `apps/owm` does, thirteen times) never sees it, and
+        that verbosity reads as style rather than as a workaround.
+
+        **`exclude_unset`, not truthiness.** This mirrors `ds`
+        `libs/governance/resolver.py::_merge_models`, which is the reference
+        implementation — it already merged `dcat` this way, and copying its rule
+        rather than inventing a second one is the point: three parsers reading
+        one file format is how the `{handler, args, principals}` mismatch
+        happened.
+
+        An `or`-based overlay cannot tell *"silent"* from *"said no"*. A dataset
+        writing `conforms_to: null` means **no model**, which is a different
+        claim from declaring nothing and must override an inherited default;
+        under truthiness it falls through and inherits instead. The same hole
+        covers every optional defaulting to `None` and every list defaulting to
+        empty — an overlay could turn a value on and never off.
+
+        `ontology` is deliberately *not* merged like this — its two fields are
+        alternatives (`spec` XOR `spec_file`), so a field-wise overlay could
+        produce a rule declaring both, which the schema forbids and the mapping
+        resolver rejects with "two answers to what one column means".
+        """
+        if base is None:
+            return override
+        if override is None:
+            return base
+        return DcatConfig.model_validate(
+            {
+                **base.model_dump(exclude_unset=True),
+                **override.model_dump(exclude_unset=True),
+            }
+        )
+
+    @staticmethod
     def _merge(base: GovernanceRule, override: GovernanceRule) -> GovernanceRule:
         """
         Overlay override on top of base. Lists are merged (union), scalars overridden
@@ -308,7 +359,7 @@ class GovernanceResolver:
             documentation_url=pick(base.documentation_url, override.documentation_url),
             source_system=pick(base.source_system, override.source_system),
             row_filters=override.row_filters if override.row_filters else base.row_filters,
-            dcat=pick(base.dcat, override.dcat),
+            dcat=GovernanceResolver._merge_dcat(base.dcat, override.dcat),
             ontology=pick(base.ontology, override.ontology),
             dataspace=GovernanceResolver._merge_dataspace(base.dataspace, override.dataspace),
             extra={**base.extra, **override.extra},
