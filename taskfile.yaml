@@ -4,7 +4,26 @@ tasks:
   setup:
     desc: Setup environment
     cmds:
-      - uv sync
+      - uv sync --all-extras
+
+  test:
+    desc: Run the fast unit suite (no docker)
+    cmds:
+      - uv run pytest tests/ {{.CLI_ARGS}}
+
+  test:thin:
+    desc: Prove celine.governance imports and resolves on core deps alone
+    summary: |
+      Mirrors the governance-thin CI job, which is the boundary that keeps
+      celine.governance shareable. celine-utils once required dbt, Meltano,
+      Prefect and Keycloak to parse a YAML file — which is why dataset-api, ds
+      and celine-superset each wrote their own parser instead of importing this
+      one, and why the four then disagreed about what the same file meant.
+    cmds:
+      - rm -rf .venv-thin
+      - uv venv .venv-thin
+      - uv pip install --python .venv-thin/bin/python . pytest
+      - .venv-thin/bin/python -m pytest tests/ -q
 
   cli:
     cmds:

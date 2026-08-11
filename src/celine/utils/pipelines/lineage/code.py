@@ -52,7 +52,7 @@ from celine.utils.pipelines.const import (
     PRODUCER,
     VERSION,
 )
-from celine.utils.pipelines.governance import GovernanceResolver
+from celine.governance import GovernanceResolver
 from celine.utils.pipelines.lineage.facets.governance import GovernanceDatasetFacet
 from celine.utils.pipelines.pipeline_config import PipelineConfig
 from celine.utils.pipelines.utils import get_namespace

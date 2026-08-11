@@ -25,7 +25,7 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from celine.utils.pipelines.governance import GovernanceResolver
+from celine.governance import GovernanceResolver
 
 THEME = "http://publications.europa.eu/resource/authority/data-theme/ENER"
 SOSA = "http://www.w3.org/ns/sosa/"

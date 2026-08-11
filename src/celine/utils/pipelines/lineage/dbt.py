@@ -17,7 +17,7 @@ from openlineage.client.generated.data_quality_assertions_dataset import (
 
 from celine.utils.pipelines.utils import get_namespace
 from celine.utils.common.logger import get_logger
-from celine.utils.pipelines.governance import GovernanceResolver
+from celine.governance import GovernanceResolver
 from celine.utils.pipelines.lineage.facets.governance import GovernanceDatasetFacet
 
 from openlineage.client.generated.data_quality_assertions_dataset import (
@@ -106,7 +106,7 @@ class DbtLineage:
             meta = node.get("meta") or {}
             g = meta.get("governance") or {}
             if g:
-                from celine.utils.pipelines.governance import (
+                from celine.governance import (
                     GovernanceRule,
                     GovernanceOwner,
                 )
@@ -135,7 +135,7 @@ class DbtLineage:
                     extra={},
                 )
 
-        from celine.utils.pipelines.governance import GovernanceResolver as _GR
+        from celine.governance import GovernanceResolver as _GR
 
         if base_rule and meta_rule:
             rule = _GR._merge(base_rule, meta_rule)  # reuse merge logic

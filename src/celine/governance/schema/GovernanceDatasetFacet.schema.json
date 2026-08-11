@@ -102,6 +102,23 @@
             },
             "description": "List of owners in format 'group:/path' or 'user:sub'"
         },
+        "tags": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": "string"
+            },
+            "description": "Free-form keywords declared on the dataset"
+        },
+        "documentationUrl": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "URL of human-readable documentation for this dataset"
+        },
         "rowFilters": {
             "type": "array",
             "items": {

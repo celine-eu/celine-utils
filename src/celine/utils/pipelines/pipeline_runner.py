@@ -33,7 +33,7 @@ from celine.utils.pipelines.pipeline_result import (
 
 from celine.utils.pipelines.lineage.meltano import MeltanoLineage
 from celine.utils.pipelines.lineage.dbt import DbtLineage
-from celine.utils.pipelines.governance import GovernanceResolver
+from celine.governance import GovernanceResolver
 
 from celine.utils.pipelines.utils import get_namespace
 from celine.utils.pipelines.const import (

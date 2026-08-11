@@ -4,15 +4,31 @@ version = "1.18.1"
 description = "CELINE utils"
 readme = "README.md"
 requires-python = ">=3.12"
+# Core = what `celine.governance` needs, and nothing else.
+#
+# This package used to require dbt, Meltano, Prefect and Keycloak in order to
+# parse a YAML file. That is why `dataset-api`, `ds` and `celine-superset` each
+# wrote their own governance parser rather than import this one — no API service
+# could take an orchestration stack as a dependency — and why the four then
+# disagreed about what the same file meant.
+#
+# Keeping this list short is therefore load-bearing, not tidiness. The
+# `governance-thin` CI job installs with no extras and imports
+# `celine.governance`; if anything below grows, that job is what says so.
 dependencies = [
-    "bcrypt>=4.3.0",
+    "pydantic>=2.11.7",
+    "pyyaml>=6.0",
+    "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+# Pipeline execution: dbt/Meltano/Prefect orchestration and lineage emission.
+pipelines = [
     "openlineage-python>=1.37.0",
     "pandas>=2.3.2",
     "psycopg2-binary>=2.9.10",
-    "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.1",
-    "python-keycloak>=5.8.1",
     "requests>=2.32.5",
     "sqlalchemy>=2.0.43",
     "typer>=0.16.1",
@@ -22,6 +38,24 @@ dependencies = [
     "meltano>=4.2.0",
     "prefect>=3.6.26",
     "celine-sdk>=1.13.0",
+]
+# Just the attrs GovernanceDatasetFacet class. `celine.governance.build_facet`
+# returns a plain dict and needs none of this.
+openlineage = [
+    "openlineage-python>=1.37.0",
+]
+# Keycloak / Superset administration.
+admin = [
+    "bcrypt>=4.3.0",
+    "python-keycloak>=5.8.1",
+    "requests>=2.32.5",
+    "pydantic-settings>=2.10.1",
+    "python-dotenv>=1.1.1",
+    "celine-sdk>=1.13.0",
+]
+# Everything — the pre-1.19 dependency set. Existing consumers move to this.
+all = [
+    "celine-utils[pipelines,openlineage,admin]",
 ]
 
 [dependency-groups]
@@ -40,7 +74,17 @@ celine-utils = "celine.utils.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["celine.utils*"]
+# `celine.governance*` ships from this wheel today and is expected to become its
+# own distribution. Omitting it here produces a wheel that imports fine from a
+# source checkout and fails only at a consumer's install — so it is listed
+# explicitly rather than left to a glob.
+include = ["celine.utils*", "celine.governance*"]
+
+# The JSON Schemas are runtime artifacts now that `celine.governance.validation`
+# executes them, not documentation that happens to sit in the tree. They are read
+# through `importlib.resources`, so they must be inside the package.
+[tool.setuptools.package-data]
+"celine.governance.schema" = ["*.json"]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]

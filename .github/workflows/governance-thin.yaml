@@ -1,0 +1,76 @@
+name: governance thin core
+
+# This job is the boundary.
+#
+# `celine.governance` exists because `celine-utils` used to require dbt, Meltano,
+# Prefect and Keycloak in order to parse a YAML file — so `dataset-api`, `ds` and
+# `celine-superset` each wrote their own parser rather than take that dependency,
+# and the four then disagreed about what the same file meant.
+#
+# Extras gate that weight, but nothing in a single repository *enforces* the
+# separation: adding `import sqlalchemy` to a governance module is one line, and
+# a developer environment has every extra installed, so review is the only thing
+# standing in the way. This job installs the package with **no extras** and
+# exercises it. If the core regains a dependency, this fails here rather than at
+# a downstream consumer's install.
+#
+# It also guards the move: `celine.governance` is shipped from the `celine-utils`
+# wheel today and is expected to become its own distribution. Staying importable
+# on core dependencies alone is what keeps that a directory rename.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/celine/governance/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/governance-thin.yaml"
+  pull_request:
+    paths:
+      - "src/celine/governance/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/governance-thin.yaml"
+
+jobs:
+  thin-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install with no extras
+        run: |
+          uv venv
+          uv pip install .          # core dependencies only — no [pipelines], no [all]
+          uv pip install pytest
+
+      - name: Assert the heavy stack is absent
+        run: |
+          uv pip list --format=freeze | tee /tmp/installed.txt
+          if grep -Eiq '^(sqlalchemy|prefect|meltano|dbt-core|dbt-postgres|openlineage-python|python-keycloak|pandas)==' /tmp/installed.txt; then
+            echo "::error::a heavy dependency reached the core install"
+            exit 1
+          fi
+
+      - name: Import and resolve on core dependencies alone
+        run: |
+          uv run python -c "
+          from celine.governance import GovernanceResolver, validate, build_facet
+          raw = {
+              'defaults': {'access_level': 'internal', 'dataspace': {'expose': True}},
+              'sources': {'ds.gold.x': {'dataspace': {'expose': False}}},
+          }
+          validate(raw)
+          rule = GovernanceResolver.from_dict(raw).resolve('ds.gold.x')
+          assert rule.dataspace.expose is False, 'exclude_unset merge regressed'
+          assert build_facet(rule, producer='ci')['accessLevel'] == 'internal'
+          print('thin core OK')
+          "
+
+      - name: Run the governance suite
+        run: uv run pytest tests/ -q

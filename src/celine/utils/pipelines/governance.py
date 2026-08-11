@@ -1,366 +1,48 @@
-# celine/pipelines/governance.py
+"""Deprecated re-export of :mod:`celine.governance`.
+
+The governance grammar moved to ``celine.governance`` so that a consumer can
+parse ``governance.yaml`` without installing dbt, Meltano, Prefect or Keycloak —
+which is why ``dataset-api``, ``ds`` and ``celine-superset`` each wrote their own
+parser instead of importing this one.
+
+Import from ``celine.governance`` directly. This module is kept so that a
+deployed pipeline pinning an older ``celine-utils`` does not break on upgrade,
+and will be removed once no caller remains.
+
+Note the behaviour change that came with the move: overlays now merge by
+``exclude_unset`` rather than truthiness, so a dataset can override an inherited
+value with ``false``/``null``. That was previously impossible and is the defect
+the consolidation existed to fix — see :func:`celine.governance.merge.merge_models`.
+"""
+
 from __future__ import annotations
 
-import fnmatch
-import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import yaml
-from pydantic import BaseModel, ConfigDict, Field
-
-from celine.utils.common.logger import get_logger
-
-logger = get_logger(__name__)
-
-
-class GovernanceOwner(BaseModel):
-    name: str
-    type: str = Field(default="OWNER")  # semantic, not enforced by spec
-
-
-class TemporalCoverage(BaseModel):
-    start: Optional[str] = None
-    end: Optional[str] = None
-
-
-class DcatConfig(BaseModel):
-    """DCAT-AP metadata for catalogue exposition. Used by dataset-api to build dcat:Dataset nodes."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    publisher_uri: Optional[str] = None
-    themes: List[str] = Field(default_factory=list)
-    language_uris: List[str] = Field(default_factory=list)
-    spatial_uris: List[str] = Field(default_factory=list)
-    accrual_periodicity: Optional[str] = None  # URI from EU Authority Table
-    conforms_to: Optional[str] = None           # URI of standard/specification
-    temporal: Optional[TemporalCoverage] = None
-
-
-class OntologyConfig(BaseModel):
-    """Semantic model binding for a dataset — which mapping spec says what its
-    columns *mean*.
-
-    Two ways to locate one, because mappings divide into two kinds:
-
-    ``spec``
-        A **shared** mapping published in ``celine-ontologies``. Meter readings
-        and forecasts recur across producers, and restating that mapping per
-        dataset would make one fact many.
-    ``spec_file``
-        A path **relative to this governance.yaml**, for a dataset whose shape is
-        its own. Locality is the point: a spec names source *columns*, and those
-        columns are what the pipeline emits, so a spec living in another
-        repository goes stale on a rename with nothing to detect it.
-
-    Exactly one, enforced by the schema — two bindings for one dataset is two
-    answers to "what does this column mean".
-
-    Distinct from ``DcatConfig.conforms_to``, and deliberately so: ``conforms_to``
-    names the model (an IRI a consumer can compare across datasets), while this
-    names the mapping *onto these columns*. Several datasets can conform to one
-    model through different mappings, and one shared mapping can serve datasets
-    that declare different models.
-
-    Resolution deliberately lives in the consumer (dataset-api), not here.
-    Resolving ``spec`` means importing ``celine-ontologies``, and this package is
-    a dependency of every pipeline — the two should not be coupled so that adding
-    a pipeline drags in the ontology stack.
-    """
-
-    model_config = ConfigDict(extra="ignore")
-
-    spec: Optional[str] = None       # shared mapping name, e.g. "obs_rec_energy"
-    spec_file: Optional[str] = None  # path relative to the governance.yaml dir
-
-
-class DataspaceConfig(BaseModel):
-    """Dataspace policy hints for ODRL generation and EDC exposure.
-
-    Simple fields only — complex EDC-specific sub-objects (asset, data_address,
-    contract) are handled by GovernanceRuleV2.DataspaceSpec in the dataspaces
-    connector and are ignored here.
-    """
-
-    model_config = ConfigDict(extra="ignore")
-
-    medallion: Optional[str] = None       # bronze | silver | gold
-    contract_required: bool = False
-    consent_required: bool = False
-    odrl_action: str = "use"
-    purpose: List[str] = Field(default_factory=list)
-    expose: bool = False                   # catalogue visibility (set per-source)
-
-
-class GovernanceRule(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    license: Optional[str] = None
-    attribution: Optional[str] = None
-    ownership: List[GovernanceOwner] = Field(default_factory=list)
-    access_level: Optional[str] = None  # open / internal / restricted / secret
-    access_requirements: Optional[str] = None  # free-form (e.g. "public", "internal")
-    classification: Optional[str] = None  # your color / risk class
-    tags: List[str] = Field(default_factory=list)
-    retention_days: Optional[int] = None
-    documentation_url: Optional[str] = None
-    source_system: Optional[str] = None
-    row_filters: List[dict] = Field(default_factory=list)  # row filter specs [{handler, args}]
-    dcat: Optional[DcatConfig] = None          # DCAT-AP catalogue metadata
-    ontology: Optional[OntologyConfig] = None  # semantic model / mapping spec binding
-    dataspace: Optional[DataspaceConfig] = None  # dataspace exposure hints
-    extra: Dict[str, Any] = Field(default_factory=dict)
-
-
-class GovernanceConfig(BaseModel):
-    defaults: GovernanceRule = Field(default_factory=GovernanceRule)
-    sources: Dict[str, GovernanceRule] = Field(default_factory=dict)
-
-
-class GovernanceResolver:
-    """
-    Load governance.yaml and resolve a GovernanceRule for a given OpenLineage dataset
-    name (e.g. 'datasets.gold.grid_wind_risks').
-
-    Matching precedence:
-      1. exact key match in sources
-      2. glob / fnmatch on keys
-      3. defaults
-    """
-
-    def __init__(self, config: GovernanceConfig):
-        self.config = config
-
-    @classmethod
-    def from_file(cls, path: Path) -> "GovernanceResolver":
-        logger.debug(f"Loading governance config from {path}")
-        if not path.exists():
-            logger.warning(f"Governance config file not found at {path}")
-            return cls(GovernanceConfig())
-
-        with path.open("r", encoding="utf-8") as f:
-            raw = yaml.safe_load(f) or {}
-
-        def _parse_rule(data: Dict[str, Any]) -> GovernanceRule:
-            # Allow either embedded under "governance" or at root
-            block = (data.get("governance") if "governance" in data else data) or {}
-            owners_raw = block.get("ownership") or []
-            owners = [
-                (
-                    GovernanceOwner(**o)
-                    if isinstance(o, dict)
-                    else GovernanceOwner(name=str(o))
-                )
-                for o in owners_raw
-            ]
-            _known_keys = {
-                "title", "description", "license", "attribution", "ownership",
-                "access_level", "access_requirements", "classification", "tags",
-                "retention_days", "documentation_url", "source_system",
-                "row_filters", "dcat", "ontology", "dataspace",
-            }
-
-            dcat_raw = block.get("dcat") or {}
-            ontology_raw = block.get("ontology") or {}
-            dataspace_raw = block.get("dataspace") or {}
-
-            return GovernanceRule(
-                title=block.get("title"),
-                description=block.get("description"),
-                license=block.get("license"),
-                attribution=block.get("attribution"),
-                ownership=owners,
-                access_level=block.get("access_level"),
-                access_requirements=block.get("access_requirements"),
-                classification=block.get("classification"),
-                tags=block.get("tags") or [],
-                retention_days=block.get("retention_days"),
-                documentation_url=block.get("documentation_url"),
-                source_system=block.get("source_system"),
-                row_filters=block.get("row_filters") or [],
-                dcat=DcatConfig.model_validate(dcat_raw) if dcat_raw else None,
-                ontology=OntologyConfig.model_validate(ontology_raw) if ontology_raw else None,
-                dataspace=DataspaceConfig.model_validate(dataspace_raw) if dataspace_raw else None,
-                extra={k: v for k, v in block.items() if k not in _known_keys},
-            )
-
-        defaults = _parse_rule(raw.get("defaults") or {})
-
-        sources_cfg: Dict[str, GovernanceRule] = {}
-        for pattern, rule_data in (raw.get("sources") or {}).items():
-            sources_cfg[pattern] = _parse_rule(rule_data or {})
-
-        cfg = GovernanceConfig(defaults=defaults, sources=sources_cfg)
-        return cls(cfg)
-
-    @classmethod
-    def auto_discover(
-        cls,
-        app_name: Optional[str] = None,
-        project_dir: Optional[str] = None,
-    ) -> "GovernanceResolver":
-        """
-        Try to locate governance.yaml using a few conventions:
-
-        1. GOV_CONFIG_PATH env var (absolute path)
-        2. PIPELINES_ROOT/apps/<app_name>/governance.yaml
-        3. <project_dir>/../governance.yaml (for dbt/meltano project dirs)
-        4. fallback: empty config
-        """
-        # 1) Explicit override
-        env_path = os.getenv("GOVERNANCE_CONFIG_PATH")
-        if env_path:
-            p = Path(env_path)
-            if p.is_file():
-                return cls.from_file(p)
-            logger.warning(
-                f"GOVERNANCE_CONFIG_PATH={env_path} does not exist or is not a file"
-            )
-
-        # 2) PIPELINES_ROOT/apps/<app_name>/governance.yaml
-        if app_name:
-            root = Path(os.environ.get("PIPELINES_ROOT", "./"))
-            candidate = root / "apps" / app_name / "governance.yaml"
-            if candidate.is_file():
-                return cls.from_file(candidate)
-
-        # 3) project_dir/../governance.yaml
-        if project_dir:
-            pd = Path(project_dir)
-            candidate = pd.parent / "governance.yaml"
-            if candidate.is_file():
-                return cls.from_file(candidate)
-
-        # 4) fallback: empty config
-        logger.info("No governance config found; using empty defaults.")
-        return cls(GovernanceConfig())
-
-    def resolve(self, dataset_name: str) -> GovernanceRule:
-        """
-        Resolve governance for a given dataset name.
-        dataset_name is the OpenLineage Dataset.name (e.g. 'db.schema.table').
-        """
-        sources = self.config.sources
-
-        # Exact match first
-        if dataset_name in sources:
-            return self._merge(self.config.defaults, sources[dataset_name])
-
-        # Then glob / fnmatch
-        best_match: Optional[Tuple[str, GovernanceRule]] = None
-        for pattern, rule in sources.items():
-            if fnmatch.fnmatch(dataset_name, pattern):
-                # simple heuristic: prefer the longest matching pattern
-                if best_match is None or len(pattern) > len(best_match[0]):
-                    best_match = (pattern, rule)
-
-        if best_match:
-            _, rule = best_match
-            return self._merge(self.config.defaults, rule)
-
-        # Fallback: defaults only
-        return self.config.defaults
-
-    @staticmethod
-    def _merge_dataspace(
-        base: Optional[DataspaceConfig], override: Optional[DataspaceConfig]
-    ) -> Optional[DataspaceConfig]:
-        if base is None:
-            return override
-        if override is None:
-            return base
-        return DataspaceConfig(
-            medallion=override.medallion or base.medallion,
-            contract_required=base.contract_required or override.contract_required,
-            consent_required=base.consent_required or override.consent_required,
-            odrl_action=override.odrl_action if override.odrl_action != "use" else base.odrl_action,
-            purpose=sorted(set(base.purpose) | set(override.purpose)),
-            expose=base.expose or override.expose,
-        )
-
-    @staticmethod
-    def _merge_dcat(
-        base: Optional[DcatConfig], override: Optional[DcatConfig]
-    ) -> Optional[DcatConfig]:
-        """Overlay a dataset's DCAT block onto the file's defaults, field by field.
-
-        Whole-object replacement was the previous behaviour and it loses metadata
-        silently. A dataset stating only
-
-            dcat:
-              conforms_to: http://www.w3.org/ns/sosa/
-
-        meant *"and no themes, no language, no spatial coverage, no
-        periodicity"* — every one dropped from the resolved rule, with the
-        defaults still sitting in the file looking like they applied.
-
-        It survived because `conforms_to` is the first field anybody set on its
-        own: a governance file that restates the whole block per dataset (as
-        `celine-pipelines`' `apps/owm` does, thirteen times) never sees it, and
-        that verbosity reads as style rather than as a workaround.
-
-        **`exclude_unset`, not truthiness.** This mirrors `ds`
-        `libs/governance/resolver.py::_merge_models`, which is the reference
-        implementation — it already merged `dcat` this way, and copying its rule
-        rather than inventing a second one is the point: three parsers reading
-        one file format is how the `{handler, args, principals}` mismatch
-        happened.
-
-        An `or`-based overlay cannot tell *"silent"* from *"said no"*. A dataset
-        writing `conforms_to: null` means **no model**, which is a different
-        claim from declaring nothing and must override an inherited default;
-        under truthiness it falls through and inherits instead. The same hole
-        covers every optional defaulting to `None` and every list defaulting to
-        empty — an overlay could turn a value on and never off.
-
-        `ontology` is deliberately *not* merged like this — its two fields are
-        alternatives (`spec` XOR `spec_file`), so a field-wise overlay could
-        produce a rule declaring both, which the schema forbids and the mapping
-        resolver rejects with "two answers to what one column means".
-        """
-        if base is None:
-            return override
-        if override is None:
-            return base
-        return DcatConfig.model_validate(
-            {
-                **base.model_dump(exclude_unset=True),
-                **override.model_dump(exclude_unset=True),
-            }
-        )
-
-    @staticmethod
-    def _merge(base: GovernanceRule, override: GovernanceRule) -> GovernanceRule:
-        """
-        Overlay override on top of base. Lists are merged (union), scalars overridden
-        if not None on override.
-        """
-
-        def pick(a, b):
-            return b if b is not None else a
-
-        owners = override.ownership or base.ownership
-        tags = sorted(set(base.tags or []) | set(override.tags or []))
-
-        return GovernanceRule(
-            title=pick(base.title, override.title),
-            description=pick(base.description, override.description),
-            license=pick(base.license, override.license),
-            attribution=pick(base.attribution, override.attribution),
-            ownership=owners,
-            access_level=pick(base.access_level, override.access_level),
-            access_requirements=pick(
-                base.access_requirements, override.access_requirements
-            ),
-            classification=pick(base.classification, override.classification),
-            tags=tags,
-            retention_days=pick(base.retention_days, override.retention_days),
-            documentation_url=pick(base.documentation_url, override.documentation_url),
-            source_system=pick(base.source_system, override.source_system),
-            row_filters=override.row_filters if override.row_filters else base.row_filters,
-            dcat=GovernanceResolver._merge_dcat(base.dcat, override.dcat),
-            ontology=pick(base.ontology, override.ontology),
-            dataspace=GovernanceResolver._merge_dataspace(base.dataspace, override.dataspace),
-            extra={**base.extra, **override.extra},
-        )
+import warnings
+
+from celine.governance import (  # noqa: F401
+    DataspaceConfig,
+    DcatConfig,
+    GovernanceConfig,
+    GovernanceOwner,
+    GovernanceResolver,
+    GovernanceRule,
+    OntologyConfig,
+    TemporalCoverage,
+)
+
+warnings.warn(
+    "celine.utils.pipelines.governance is deprecated; import from celine.governance instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+__all__ = [
+    "GovernanceRule",
+    "GovernanceConfig",
+    "GovernanceOwner",
+    "GovernanceResolver",
+    "DcatConfig",
+    "OntologyConfig",
+    "DataspaceConfig",
+    "TemporalCoverage",
+]

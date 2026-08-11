@@ -11,7 +11,7 @@ from openlineage.client.generated.schema_dataset import (
 from celine.utils.common.logger import get_logger
 from celine.utils.pipelines.pipeline_config import PipelineConfig
 from celine.utils.pipelines.utils import get_namespace, expand_envs
-from celine.utils.pipelines.governance import GovernanceResolver
+from celine.governance import GovernanceResolver
 from celine.utils.pipelines.lineage.facets.governance import GovernanceDatasetFacet
 
 
