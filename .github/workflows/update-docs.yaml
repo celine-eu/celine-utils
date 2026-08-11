@@ -7,6 +7,11 @@ on:
             - "README.md"
             - "docs/**"
             - "ontologies/**"
+            # `celine-eu.github.io/repos.yaml` publishes this repo's `schema/`
+            # directory to https://celine-eu.github.io/schema/ — the `_schemaURL`
+            # embedded in every OpenLineage event already in Marquez. Without
+            # this line the published copy silently drifts from the source.
+            - "schema/**"
 
 jobs:
     notify:

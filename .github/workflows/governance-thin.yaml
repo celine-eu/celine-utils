@@ -23,12 +23,18 @@ on:
     branches: [main]
     paths:
       - "src/celine/governance/**"
+      # The JSON Schemas are tracked at the repo root and reach the package
+      # through the `src/celine/governance/schema` symlink, so a schema edit
+      # does **not** match the pattern above. `validation.py` executes them —
+      # without this line a broken schema ships untested.
+      - "schema/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/governance-thin.yaml"
   pull_request:
     paths:
       - "src/celine/governance/**"
+      - "schema/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/governance-thin.yaml"

@@ -80,9 +80,17 @@ where = ["src"]
 # explicitly rather than left to a glob.
 include = ["celine.utils*", "celine.governance*"]
 
-# The JSON Schemas are runtime artifacts now that `celine.governance.validation`
-# executes them, not documentation that happens to sit in the tree. They are read
-# through `importlib.resources`, so they must be inside the package.
+# The JSON Schemas live at `./schema/` in the repo root and MUST STAY THERE:
+# the documentation site serves that directory directly, via the `links` block
+# for this repo in `celine-eu.github.io/repos.yaml`. Moving them breaks
+# https://celine-eu.github.io/schema/GovernanceDatasetFacet.schema.json — the
+# `_schemaURL` embedded in every OpenLineage event already emitted.
+#
+# They are also runtime artifacts now that `celine.governance.validation`
+# executes them, and `importlib.resources` can only read files inside a package.
+# `src/celine/governance/schema` is therefore a **symlink** to `../../../schema`:
+# one authoritative copy, reachable both ways. Do not "tidy" it into a real
+# directory — that recreates the duplicate the symlink exists to avoid.
 [tool.setuptools.package-data]
 "celine.governance.schema" = ["*.json"]
 
