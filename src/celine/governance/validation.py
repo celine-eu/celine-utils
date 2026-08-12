@@ -133,3 +133,28 @@ def validate_file(path: Path, *, strict: bool = False) -> List[str]:
     with path.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return validate(data, source=str(path), strict=strict)
+
+
+def validate_owners(data: Dict[str, Any], *, source: str = "<dict>") -> None:
+    """Validate a parsed ``owners.yaml`` against ``owners.schema.json``.
+
+    Unlike :func:`validate` there is no lenient mode: ``owners.schema.json`` sets
+    ``additionalProperties: false`` and constrains ``type`` to an enum, so it can
+    say precisely what is wrong, and an owners file is short enough that fixing
+    it is not a migration.
+
+    The strictness earns its keep downstream. An entry missing ``id`` is skipped
+    without comment by ``celine-policies``' loader, so a typo in a registry does
+    not fail — it quietly produces one fewer Keycloak organization, and the
+    missing org surfaces later as an authorization failure with no obvious cause.
+    """
+    errors = schema_errors(data, OWNERS_SCHEMA)
+    if errors:
+        raise GovernanceValidationError(source, errors)
+
+
+def validate_owners_file(path: Path) -> None:
+    """Load and validate an ``owners.yaml``."""
+    with path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    validate_owners(data, source=str(path))

@@ -34,7 +34,12 @@ from celine.governance.levels import (
     normalize_access_level,
     normalize_classification,
 )
-from celine.governance.merge import merge_dataspace, merge_models, merge_rules
+from celine.governance.merge import (
+    merge_configs,
+    merge_dataspace,
+    merge_models,
+    merge_rules,
+)
 from celine.governance.models import (
     KNOWN_KEYS,
     DataspaceConfig,
@@ -45,7 +50,12 @@ from celine.governance.models import (
     OntologyConfig,
     TemporalCoverage,
 )
-from celine.governance.owners import OwnerEntry, OwnersRegistry, load_owners_yaml
+from celine.governance.owners import (
+    OwnerEntry,
+    OwnerOrganization,
+    OwnersRegistry,
+    load_owners_yaml,
+)
 from celine.governance.resolver import GovernanceResolver, parse_rule
 from celine.governance.validation import (
     GovernanceValidationError,
@@ -54,6 +64,8 @@ from celine.governance.validation import (
     unknown_keys,
     validate,
     validate_file,
+    validate_owners,
+    validate_owners_file,
 )
 
 __all__ = [
@@ -71,11 +83,14 @@ __all__ = [
     "parse_rule",
     # merging
     "merge_rules",
+    "merge_configs",
     "merge_models",
     "merge_dataspace",
     # validation
     "validate",
     "validate_file",
+    "validate_owners",
+    "validate_owners_file",
     "schema_errors",
     "unknown_keys",
     "load_schema",
@@ -83,6 +98,7 @@ __all__ = [
     # owners
     "OwnersRegistry",
     "OwnerEntry",
+    "OwnerOrganization",
     "load_owners_yaml",
     # levels
     "AccessRequirement",

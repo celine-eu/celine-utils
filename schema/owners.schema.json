@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "CELINE Owner Registry",
-    "description": "Schema for owners.yaml and owners.local.yaml files used by dataset-api to resolve ownership blocks in governance.yaml to canonical foaf:Agent metadata.",
+    "description": "Schema for owners.yaml and owners.local.yaml — the CELINE-side owner registry. It resolves the ownership blocks in governance.yaml to canonical foaf:Agent metadata (dataset-api), to Keycloak organizations (celine-policies), and to Superset groups and roles (celine-superset).\n\nScope note: this describes the CELINE registry, not the dataspace identity registry. The `ds` identity-registry models a strictly larger entity — Gaia-X LegalParticipant identity (registration_number, registration_type, hq_country_code, legal_country_code, parent_organizations, sub_organizations) and a verification lifecycle (status, verified_by, evidence_ref) held together by a database CHECK constraint. Its seed files therefore do not validate against this schema, and that is correct rather than drift: the two describe different things that happen to share a file shape. Do not paste those fields in here to make a seed validate — validate IR seeds against the IR's own models. The shared core is what appears below, and celine.governance.OwnerEntry parses both (unknown keys are ignored, so an IR record loads fine for URI resolution).",
     "type": "object",
     "required": ["owners"],
     "additionalProperties": false,
@@ -23,8 +23,8 @@
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Short alias used as the lookup key. Must match the name field in governance.yaml ownership blocks. Use lowercase kebab-case (e.g. 'open-meteo', 'trentino-mobilita').",
-                    "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+                    "description": "Short alias used as the lookup key. Must match the name field in governance.yaml ownership blocks. Prefer lowercase kebab-case (e.g. 'open-meteo', 'trentino-mobilita'); underscores are permitted because governance files in use already carry them (e.g. 'overture_maps') and the id must match the ownership name exactly.",
+                    "pattern": "^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$"
                 },
                 "type": {
                     "type": "string",
@@ -42,6 +42,11 @@
                 "name": {
                     "type": "string",
                     "description": "Human-readable display name used as foaf:name in DCAT-AP output.",
+                    "minLength": 1
+                },
+                "role": {
+                    "type": "string",
+                    "description": "The party's role with respect to the data, e.g. 'publisher', 'controller', 'processor'. Distinct from organization.role, which is the Keycloak organization role. Declared but not yet consumed by any tooling — left unconstrained until the vocabulary is settled.",
                     "minLength": 1
                 },
                 "did": {
@@ -83,7 +88,7 @@
                     "description": "Alternative lookup keys that resolve to this owner. Used to map generic placeholder labels in open-source governance.yaml files (e.g. 'rec') to the real deployment-specific owner. Each alias must be unique across the registry.",
                     "items": {
                         "type": "string",
-                        "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+                        "pattern": "^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$"
                     },
                     "default": []
                 }

@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
-from celine.governance.merge import merge_rules
+from celine.governance.merge import merge_configs, merge_rules
 from celine.governance.models import (
     KNOWN_KEYS,
     GovernanceConfig,
@@ -81,6 +81,49 @@ class GovernanceResolver:
         return cls(GovernanceConfig(defaults=defaults, sources=sources))
 
     @classmethod
+    def from_file_with_override(
+        cls,
+        base_path: Path,
+        overlay_name: Optional[str] = None,
+        *,
+        infer_from_dir: bool = False,
+    ) -> "GovernanceResolver":
+        """Load ``governance.yaml`` and overlay ``governance.<name>.yaml`` beside it.
+
+        A deployer overlay states what differs in one environment. It is merged
+        with the same rules as a dataset overlays its file's defaults, so it can
+        now **withdraw** as well as add — which is the case the old truthiness
+        merge could not express.
+
+        The overlay name is resolved in order: the ``overlay_name`` argument, the
+        ``GOVERNANCE_OVERLAY_NAME`` environment variable, then — only when
+        ``infer_from_dir`` — the name of the directory holding the file.
+
+        ``infer_from_dir`` is opt-in rather than default because the two callers
+        this consolidates genuinely disagreed: ``dataset-api`` inferred the app
+        name from the parent directory, ``ds`` did not and returned the base
+        unchanged when no name was given. Inferring for everyone would make ``ds``
+        start honouring overlays it deliberately ignores; defaulting to off would
+        make ``dataset-api`` silently stop applying them. Both keep their
+        behaviour by passing what they mean.
+        """
+        base = cls.from_file(base_path)
+
+        name = overlay_name or os.getenv("GOVERNANCE_OVERLAY_NAME")
+        if not name and infer_from_dir:
+            name = base_path.parent.name
+        if not name:
+            return base
+
+        overlay_path = base_path.parent / f"governance.{name}.yaml"
+        if not overlay_path.is_file():
+            return base
+
+        logger.info("Merging deployer override %s", overlay_path)
+        overlay = cls.from_file(overlay_path)
+        return cls(merge_configs(base.config, overlay.config))
+
+    @classmethod
     def auto_discover(
         cls,
         app_name: Optional[str] = None,
@@ -125,7 +168,9 @@ class GovernanceResolver:
 
         best_match: Optional[Tuple[str, GovernanceRule]] = None
         for pattern, rule in sources.items():
-            if fnmatch.fnmatch(dataset_name, pattern):
+            # `fnmatchcase`, not `fnmatch`: the latter applies os.path.normcase,
+            # so a pattern's case-sensitivity would depend on the host OS.
+            if fnmatch.fnmatchcase(dataset_name, pattern):
                 # Longest matching pattern wins — a more specific glob is a more
                 # deliberate statement than a broad one.
                 if best_match is None or len(pattern) > len(best_match[0]):

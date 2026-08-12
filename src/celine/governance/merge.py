@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from celine.governance.models import (
     DataspaceConfig,
     DcatConfig,
+    GovernanceConfig,
     GovernanceRule,
 )
 
@@ -133,3 +134,18 @@ def merge_rules(base: GovernanceRule, override: GovernanceRule) -> GovernanceRul
     merged.dcat = merge_models(base.dcat, override.dcat, DcatConfig)
     merged.dataspace = merge_dataspace(base.dataspace, override.dataspace)
     return merged
+
+
+def merge_configs(base: GovernanceConfig, override: GovernanceConfig) -> GovernanceConfig:
+    """Overlay a whole governance file onto another — a deployer override.
+
+    Defaults merge with defaults; a source present in both merges rule-wise; a
+    source only the overlay declares is added as-is.
+    """
+    sources = dict(base.sources)
+    for key, rule in override.sources.items():
+        sources[key] = merge_rules(sources[key], rule) if key in sources else rule
+    return GovernanceConfig(
+        defaults=merge_rules(base.defaults, override.defaults),
+        sources=sources,
+    )
