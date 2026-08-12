@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.0.1 (2026-08-12)
+
+### Bug Fixes
+
+- Correct owner rendering
+  ([`99aaba6`](https://github.com/celine-eu/celine-utils/commit/99aaba64dcfe5febde7280ff2575d0bbea15f893))
+
+
 ## v2.0.0 (2026-08-12)
 
 ### Bug Fixes
