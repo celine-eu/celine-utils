@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v2.0.0 (2026-08-12)
+
+### Bug Fixes
+
+- Keep governance schemas at the repo root, symlinked into the package
+  ([`d1ae281`](https://github.com/celine-eu/celine-utils/commit/d1ae281a990a1b02f094adc18407f0287cb0c841))
+
+### Features
+
+- Migrate governance to own package
+  ([`a6c8ff0`](https://github.com/celine-eu/celine-utils/commit/a6c8ff00ff7d7d01ead36b6abe753b25a5958a92))
+
+- Split governance parsing from core utils as standalone library
+  ([`c281953`](https://github.com/celine-eu/celine-utils/commit/c281953b1a06b67c88bd5c46d71b098ebba16940))
+
+
 ## v1.18.1 (2026-08-09)
 
 ### Bug Fixes

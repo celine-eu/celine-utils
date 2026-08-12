@@ -302,7 +302,7 @@ wheels = [
 
 [[package]]
 name = "celine-utils"
-version = "1.18.1"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },
