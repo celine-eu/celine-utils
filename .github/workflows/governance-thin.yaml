@@ -51,7 +51,12 @@ jobs:
 
       - name: Install with no extras
         run: |
-          uv venv
+          # `--clear`: `setup-uv` creates `.venv` itself when handed a
+          # `python-version` (v5 does, v7 does not), and a bare `uv venv` aborts
+          # on an existing one — which is exactly how this job failed on the
+          # 2.0.0 release while every other workflow passed. The guard must not
+          # depend on which version of the action made the environment.
+          uv venv --clear
           uv pip install .          # core dependencies only — no [pipelines], no [all]
           uv pip install pytest
 
@@ -63,9 +68,16 @@ jobs:
             exit 1
           fi
 
+      # `.venv/bin/python`, not `uv run`. `uv run` syncs the environment from
+      # `uv.lock` — including the dev group — before it runs anything, so it
+      # silently replaces the no-extras install built above. The step that
+      # asserts what is present would then be checking a different environment
+      # from the one the assertions run in, and a core dependency accidentally
+      # declared only in the dev group would pass here and fail on a real thin
+      # install. Observed: the 2.0.0 CI run downloaded `debugpy` at this step.
       - name: Import and resolve on core dependencies alone
         run: |
-          uv run python -c "
+          .venv/bin/python -c "
           from celine.governance import GovernanceResolver, validate, build_facet
           raw = {
               'defaults': {'access_level': 'internal', 'dataspace': {'expose': True}},
@@ -79,4 +91,4 @@ jobs:
           "
 
       - name: Run the governance suite
-        run: uv run pytest tests/ -q
+        run: .venv/bin/python -m pytest tests/ -q

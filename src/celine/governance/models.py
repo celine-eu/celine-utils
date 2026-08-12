@@ -146,10 +146,22 @@ class GovernanceRule(BaseModel):
         Runs in ``before`` mode so parsing can go through ``model_validate`` —
         which is what keeps ``model_fields_set`` honest. See
         :func:`celine.governance.merge.merge_rules`.
+
+        ``BaseModel`` instances pass through untouched. Running in ``before``
+        mode means this sees whatever the caller passed, including an already
+        built :class:`GovernanceOwner` — which pydantic would otherwise accept
+        for a ``List[GovernanceOwner]`` field. Coercing it as if it were a bare
+        label produced ``name="name='rec' type='OWNER'"``: a valid model
+        carrying the repr of another model, which then travelled all the way to
+        a published ``urn:owner:name='rec' type='OWNER'``. The YAML path is
+        unaffected — it deals in dicts — so nothing detected it.
         """
         if not isinstance(v, list):
             return v
-        return [item if isinstance(item, dict) else {"name": str(item)} for item in v]
+        return [
+            item if isinstance(item, (dict, BaseModel)) else {"name": str(item)}
+            for item in v
+        ]
 
 
 class GovernanceConfig(BaseModel):
