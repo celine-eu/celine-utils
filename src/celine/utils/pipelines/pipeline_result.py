@@ -1,8 +1,22 @@
 from __future__ import annotations
+
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Literal, Dict, Any
-from enum import StrEnum
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:  # pragma: no cover - covered by the 3.10 leg of the test matrix
+    # `enum.StrEnum` is 3.11+. Its defining behaviour is that members compare
+    # and serialise as plain strings, which `str, Enum` has always given —
+    # `StrEnum` mainly adds `str()` returning the value rather than
+    # "PipelineStatus.STARTED". Nothing here relies on that difference: the
+    # values are consumed through `.value` or by comparison.
+    from enum import Enum
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
+        __str__ = str.__str__
 
 
 def _utc_now_iso() -> str:

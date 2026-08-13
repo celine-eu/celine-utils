@@ -3,7 +3,25 @@ name = "celine-utils"
 version = "2.0.1"
 description = "CELINE utils"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
+
+# The supported range, proven rather than assumed: `test.yml` builds its matrix
+# from these classifiers, so a version listed here is a version CI runs.
+#
+# The floor was `>=3.12` and the core never needed it — `pydantic`, `pyyaml` and
+# `jsonschema` resolve as low as 3.9. It came in entirely through one extras-only
+# dependency, `celine-sdk`, which declared 3.12 without requiring it. So a
+# consumer wanting nothing but `celine.governance` paid a floor set by an
+# orchestration dependency it never installed, and `celine-superset` — which
+# ships inside `apache/superset:6.0.0`, Python 3.10 — could not adopt this
+# package at all.
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
 # Core = what `celine.governance` needs, and nothing else.
 #
 # This package used to require dbt, Meltano, Prefect and Keycloak in order to
@@ -37,7 +55,12 @@ pipelines = [
     "prefect-dbt>=0.7.6",
     "meltano>=4.2.0",
     "prefect>=3.6.26",
-    "celine-sdk>=1.13.0",
+    # >=1.15.0, not >=1.13.0: 1.15.0 is the first release supporting the Python
+    # range this package now declares. Under the looser pin uv forks the
+    # resolution — 1.13.0 on 3.12+, 1.15.0 below — so the interpreter would
+    # decide which SDK you get. This is the dependency that held the platform at
+    # 3.12; the floor has to move with it.
+    "celine-sdk>=1.15.0",
 ]
 # Just the attrs GovernanceDatasetFacet class. `celine.governance.build_facet`
 # returns a plain dict and needs none of this.
@@ -51,7 +74,12 @@ admin = [
     "requests>=2.32.5",
     "pydantic-settings>=2.10.1",
     "python-dotenv>=1.1.1",
-    "celine-sdk>=1.13.0",
+    # >=1.15.0, not >=1.13.0: 1.15.0 is the first release supporting the Python
+    # range this package now declares. Under the looser pin uv forks the
+    # resolution — 1.13.0 on 3.12+, 1.15.0 below — so the interpreter would
+    # decide which SDK you get. This is the dependency that held the platform at
+    # 3.12; the floor has to move with it.
+    "celine-sdk>=1.15.0",
 ]
 # Everything — the pre-1.19 dependency set. Existing consumers move to this.
 all = [
@@ -59,10 +87,17 @@ all = [
 ]
 
 [dependency-groups]
-dev = [
-    "debugpy>=1.8.16",
+# `test` is what the CI matrix installs and must work on every supported
+# version; `dev` adds release tooling that only runs on a maintainer's machine.
+# Keeping them apart stops a tool's own floor from dictating the package's — in
+# `celine-sdk` an undifferentiated group did exactly that.
+test = [
     "pytest>=8.4.2",
-    "python-semantic-release>=10.5.3",
+]
+dev = [
+    { include-group = "test" },
+    "debugpy>=1.8.16",
+    "python-semantic-release>=10.5.3; python_version >= '3.11'",
 ]
 
 [build-system]

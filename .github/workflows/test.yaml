@@ -1,0 +1,107 @@
+### Test celine-utils across every Python version it claims to support.
+#
+# The matrix is not written here — it is read from the `Programming Language ::
+# Python :: 3.x` classifiers in `pyproject.toml`, via the
+# `supported_python_classifiers_json_array` output of
+# `build-and-inspect-python-package`. The classifiers are the single declaration
+# of the supported range and this workflow is what makes them true rather than
+# aspirational; there is no second list to forget.
+#
+# Distinct from `governance-thin.yaml`, and both are needed. That job answers
+# "can the core still be installed *without* the extras" on one Python version.
+# This one answers "does the whole package work on every version it claims",
+# with the extras present. A regression in either is invisible to the other.
+
+name: Test celine-utils
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "schema/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yaml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "schema/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  contents: read
+
+jobs:
+  build-package:
+    name: Build & verify package
+    runs-on: ubuntu-latest
+    outputs:
+      supported-python-versions: ${{ steps.baipp.outputs.supported_python_classifiers_json_array }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: hynek/build-and-inspect-python-package@fe0a0fb1925ca263d076ca4f2c13e93a6e92a33e # v2.17.0
+        id: baipp
+
+  pytest:
+    name: Test on ${{ matrix.python-version }}
+    needs: [build-package]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJson(needs.build-package.outputs.supported-python-versions) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # `--all-extras`: the extras hold dbt, Meltano and Prefect, which is where
+      # a version floor would actually appear. The floor this package used to
+      # declare came from an extras-only dependency, so testing the core alone
+      # would leave the claim unproven exactly where it failed before.
+      - name: Install
+        run: uv sync --python ${{ matrix.python-version }} --no-dev --group test --all-extras
+
+      # A version-gated import can sit in a module no test touches — that is how
+      # `celine-sdk` lost two of 553 submodules with its own suite passing.
+      - name: Import every submodule
+        run: |
+          uv run --python ${{ matrix.python-version }} python - <<'EOF'
+          import importlib, pkgutil, sys
+          failed, total = [], 0
+          for root in ("celine.governance", "celine.utils"):
+              pkg = importlib.import_module(root)
+              names = [root] + [m.name for m in pkgutil.walk_packages(pkg.__path__, root + ".")]
+              total += len(names)
+              for name in names:
+                  try:
+                      importlib.import_module(name)
+                  except Exception as exc:
+                      failed.append(f"{name}: {type(exc).__name__}: {exc}")
+          print(f"imported {total - len(failed)}/{total} submodules")
+          for f in failed:
+              print("::error::" + f)
+          sys.exit(1 if failed else 0)
+          EOF
+
+      - name: Run the suite
+        run: uv run --python ${{ matrix.python-version }} pytest tests/ -q
