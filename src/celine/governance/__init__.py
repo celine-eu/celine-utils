@@ -26,6 +26,11 @@ Usage::
     rule.dataspace.expose  # -> True
 """
 
+from celine.governance.exposure import (
+    dataspace_expose,
+    effective_expose,
+    exposure_conflict,
+)
 from celine.governance.facet import SCHEMA_URL, build_facet, is_empty
 from celine.governance.levels import (
     AccessRequirement,
@@ -106,6 +111,10 @@ __all__ = [
     "DataClassification",
     "normalize_access_level",
     "normalize_classification",
+    # exposure gates
+    "effective_expose",
+    "dataspace_expose",
+    "exposure_conflict",
     # facet
     "build_facet",
     "is_empty",

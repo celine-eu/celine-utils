@@ -115,6 +115,23 @@ class GovernanceRule(BaseModel):
 
     title: Optional[str] = None
     description: Optional[str] = None
+
+    # Tri-state, and the `None` is the whole point.
+    #
+    # Until this field existed the only exposure gate was `dataspace.expose`, and
+    # the exporter copied it straight onto the catalogue's flag — so one boolean
+    # answered two different questions: "is this listed and queryable" and "is
+    # this offered into the dataspace". Every `dataspace.expose: true` in the
+    # deployed files is therefore a statement about the *catalogue*; it is the
+    # only way a dataset could appear there.
+    #
+    # `None` means "not stated", and the resolved gate falls back to
+    # `dataspace.expose` — see `celine.governance.exposure.effective_expose`. That
+    # keeps every existing file behaving exactly as it does today while the two
+    # questions are separated, which is what makes the split shippable ahead of
+    # the file migration rather than in lockstep with it.
+    expose: Optional[bool] = None
+
     license: Optional[str] = None
     attribution: Optional[str] = None
     ownership: List[GovernanceOwner] = Field(default_factory=list)
@@ -179,6 +196,7 @@ KNOWN_KEYS: frozenset[str] = frozenset(
     {
         "title",
         "description",
+        "expose",
         "license",
         "attribution",
         "ownership",

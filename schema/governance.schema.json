@@ -9,17 +9,34 @@
     "$defs": {
         "owner": {
             "type": "object",
-            "required": ["name", "type"],
+            "required": [
+                "name",
+                "type"
+            ],
             "properties": {
-                "name": { "type": "string" },
-                "type": { "type": "string" }
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
             }
         },
         "temporalCoverage": {
             "type": "object",
             "properties": {
-                "start": { "type": ["string", "null"] },
-                "end": { "type": ["string", "null"] }
+                "start": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "end": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
             }
         },
         "dcatConfig": {
@@ -27,37 +44,59 @@
             "description": "DCAT-AP metadata for catalogue exposition",
             "properties": {
                 "publisher_uri": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "format": "uri",
                     "description": "URI of the publishing organization (foaf:Agent)"
                 },
                 "themes": {
                     "type": "array",
-                    "items": { "type": "string", "format": "uri" },
+                    "items": {
+                        "type": "string",
+                        "format": "uri"
+                    },
                     "description": "DCAT theme URIs (e.g. INSPIRE themes)"
                 },
                 "language_uris": {
                     "type": "array",
-                    "items": { "type": "string", "format": "uri" },
+                    "items": {
+                        "type": "string",
+                        "format": "uri"
+                    },
                     "description": "Language URIs from EU Authority Table"
                 },
                 "spatial_uris": {
                     "type": "array",
-                    "items": { "type": "string", "format": "uri" },
+                    "items": {
+                        "type": "string",
+                        "format": "uri"
+                    },
                     "description": "Spatial coverage URIs (e.g. EU NUTS codes)"
                 },
                 "accrual_periodicity": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "description": "Update frequency URI from MDR frequency table"
                 },
                 "conforms_to": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "description": "URI of a standard or specification the dataset conforms to"
                 },
                 "temporal": {
                     "oneOf": [
-                        { "$ref": "#/$defs/temporalCoverage" },
-                        { "type": "null" }
+                        {
+                            "$ref": "#/$defs/temporalCoverage"
+                        },
+                        {
+                            "type": "null"
+                        }
                     ]
                 }
             },
@@ -65,21 +104,45 @@
         },
         "ontologyConfig": {
             "type": "object",
-            "description": "Semantic model binding: which mapping spec says what this dataset's columns mean. dataset-api derives GET /catalogue/{id}/vocabulary from it. Distinct from dcat.conforms_to, which names the model itself rather than the mapping onto these columns — several datasets can conform to one model through different mappings.",
+            "description": "Semantic model binding: which mapping spec says what this dataset's columns mean. dataset-api derives GET /catalogue/{id}/vocabulary from it. Distinct from dcat.conforms_to, which names the model itself rather than the mapping onto these columns \u2014 several datasets can conform to one model through different mappings.",
             "properties": {
                 "spec": {
-                    "type": ["string", "null"],
-                    "description": "Name of a SHARED mapping spec published in celine-ontologies (e.g. 'obs_rec_energy') — no path, no extension. Use this when the dataset has the same shape as others; meter readings and forecasts recur across producers and the mapping should not be restated per dataset."
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Name of a SHARED mapping spec published in celine-ontologies (e.g. 'obs_rec_energy') \u2014 no path, no extension. Use this when the dataset has the same shape as others; meter readings and forecasts recur across producers and the mapping should not be restated per dataset."
                 },
                 "spec_file": {
-                    "type": ["string", "null"],
-                    "description": "Path to a mapping spec file, relative to the directory holding this governance.yaml (e.g. './mappings/rec_custom.yaml'). Use this when the dataset's shape is its own. Keeping it beside the pipeline matters because a spec names SOURCE COLUMNS, and those columns are what the pipeline emits — a spec in another repository goes stale on a rename with nothing to detect it."
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Path to a mapping spec file, relative to the directory holding this governance.yaml (e.g. './mappings/rec_custom.yaml'). Use this when the dataset's shape is its own. Keeping it beside the pipeline matters because a spec names SOURCE COLUMNS, and those columns are what the pipeline emits \u2014 a spec in another repository goes stale on a rename with nothing to detect it."
                 }
             },
             "additionalProperties": false,
             "oneOf": [
-                { "required": ["spec"], "not": { "required": ["spec_file"] } },
-                { "required": ["spec_file"], "not": { "required": ["spec"] } }
+                {
+                    "required": [
+                        "spec"
+                    ],
+                    "not": {
+                        "required": [
+                            "spec_file"
+                        ]
+                    }
+                },
+                {
+                    "required": [
+                        "spec_file"
+                    ],
+                    "not": {
+                        "required": [
+                            "spec"
+                        ]
+                    }
+                }
             ]
         },
         "dataspaceConfig": {
@@ -92,8 +155,16 @@
                     "description": "Expose this dataset in the EDC dataspace catalogue"
                 },
                 "medallion": {
-                    "type": ["string", "null"],
-                    "enum": ["bronze", "silver", "gold", null],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "bronze",
+                        "silver",
+                        "gold",
+                        null
+                    ],
                     "description": "Data quality tier"
                 },
                 "contract_required": {
@@ -113,7 +184,9 @@
                 },
                 "purpose": {
                     "type": "array",
-                    "items": { "type": "string" },
+                    "items": {
+                        "type": "string"
+                    },
                     "description": "Permitted usage purposes (ODRL purpose constraints)"
                 }
             },
@@ -122,46 +195,113 @@
         "governanceBlock": {
             "type": "object",
             "properties": {
-                "title": { "type": ["string", "null"] },
-                "description": { "type": ["string", "null"] },
-                "license": { "type": ["string", "null"] },
+                "title": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "description": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "expose": {
+                    "type": "boolean",
+                    "description": "Listed in the catalogue and served by the API: gates /catalogue* and /query. Omit to inherit dataspace.expose, which is how every file written before this field behaves and why adding it changes nothing until a file states it. Combined with dataspace.expose as AND \u2014 offering a dataset that is not listed is a contradiction, since a consumer reaches a dataspace asset through its catalogue entry, and the exporter rejects it rather than resolving it silently."
+                },
+                "license": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
                 "attribution": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "description": "Required attribution text for dataset usage and redistribution"
                 },
                 "ownership": {
                     "type": "array",
-                    "items": { "$ref": "#/$defs/owner" }
+                    "items": {
+                        "$ref": "#/$defs/owner"
+                    }
                 },
                 "access_level": {
-                    "type": ["string", "null"],
-                    "enum": ["open", "internal", "restricted", "secret", null],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "open",
+                        "internal",
+                        "restricted",
+                        "secret",
+                        null
+                    ],
                     "description": "open=public, internal=org only, restricted=contract+consent, secret=omit from catalogue"
                 },
                 "access_requirements": {
-                    "type": ["string", "null"],
-                    "enum": ["all", "partner", "contract", null],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "all",
+                        "partner",
+                        "contract",
+                        null
+                    ],
                     "description": "Preconditions required to access this dataset"
                 },
                 "classification": {
-                    "type": ["string", "null"],
-                    "enum": ["pii", "red", "yellow", "green", null]
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "pii",
+                        "red",
+                        "yellow",
+                        "green",
+                        null
+                    ]
                 },
                 "tags": {
                     "type": "array",
-                    "items": { "type": "string" }
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "retention_days": { "type": ["integer", "null"] },
+                "retention_days": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ]
+                },
                 "documentation_url": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "format": "uri"
                 },
-                "source_system": { "type": ["string", "null"] },
+                "source_system": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
                 "row_filters": {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["handler"],
+                        "required": [
+                            "handler"
+                        ],
                         "properties": {
                             "handler": {
                                 "type": "string",
@@ -178,20 +318,32 @@
                 },
                 "dcat": {
                     "oneOf": [
-                        { "$ref": "#/$defs/dcatConfig" },
-                        { "type": "null" }
+                        {
+                            "$ref": "#/$defs/dcatConfig"
+                        },
+                        {
+                            "type": "null"
+                        }
                     ]
                 },
                 "ontology": {
                     "oneOf": [
-                        { "$ref": "#/$defs/ontologyConfig" },
-                        { "type": "null" }
+                        {
+                            "$ref": "#/$defs/ontologyConfig"
+                        },
+                        {
+                            "type": "null"
+                        }
                     ]
                 },
                 "dataspace": {
                     "oneOf": [
-                        { "$ref": "#/$defs/dataspaceConfig" },
-                        { "type": "null" }
+                        {
+                            "$ref": "#/$defs/dataspaceConfig"
+                        },
+                        {
+                            "type": "null"
+                        }
                     ]
                 }
             }
@@ -203,10 +355,12 @@
             "description": "Default governance applied to all datasets unless overridden"
         },
         "sources": {
-            "description": "Map of dataset name patterns → governance rules (exact match or fnmatch glob)",
+            "description": "Map of dataset name patterns \u2192 governance rules (exact match or fnmatch glob)",
             "type": "object",
             "patternProperties": {
-                ".*": { "$ref": "#/$defs/governanceBlock" }
+                ".*": {
+                    "$ref": "#/$defs/governanceBlock"
+                }
             }
         }
     }
