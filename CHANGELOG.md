@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.2.0 (2026-08-13)
+
+### Features
+
+- Review governance expose + dataspace.expose
+  ([`b98fba2`](https://github.com/celine-eu/celine-utils/commit/b98fba2909ee94d785cc02bf9084a7420432b427))
+
+
 ## v2.1.0 (2026-08-13)
 
 ### Features
