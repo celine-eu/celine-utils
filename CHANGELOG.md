@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.1.0 (2026-08-13)
+
+### Features
+
+- Review python version min/max
+  ([`922e1fc`](https://github.com/celine-eu/celine-utils/commit/922e1fc4d7168315c58b1306f88236cdac089f71))
+
+
 ## v2.0.1 (2026-08-12)
 
 ### Bug Fixes
