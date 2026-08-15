@@ -214,3 +214,6 @@ __marimo__/
 logs/*.log
 # Dumpster output
 .dumpster
+
+# Execution state: transient, and the plan is what survives
+.agents/work/
