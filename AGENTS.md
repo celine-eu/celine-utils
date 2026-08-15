@@ -19,6 +19,7 @@ This repository **owns the governance schemas** that other repositories validate
 |---|---|
 | what this component does | `README.md` |
 | architecture, rationale, features | `docs/` |
+| what this component must do | `docs/specifications/` |
 | why a technical choice was made | `docs/decisions/` |
 | a repeatable procedure | `.agents/playbooks/` |
 | a trap that is true of the code and not obvious from it | `.agents/knowledge/` |
@@ -59,9 +60,9 @@ docs/                        human documentation, published by the docs site
 
 ## Testing
 
-The suite lives in `tests/`. Run it before you change anything and again after,
-and record the invocation in `.agents/playbooks/testing.md` the first time you
-work out what it is — that file ships as a shape to fill, not as an answer.
+The suite lives in `tests/`. Run it before you change anything and again after.
+The layers, their commands and what each one proves are in
+`.agents/playbooks/testing.md`.
 
 ## Maintaining this file
 

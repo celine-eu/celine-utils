@@ -20,6 +20,7 @@ def resolve(raw: dict, name: str):
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0002
 def test_dataset_can_withdraw_an_exposure_the_defaults_granted():
     """`expose: false` over `defaults.expose: true` must take effect.
 
@@ -38,6 +39,7 @@ def test_dataset_can_withdraw_an_exposure_the_defaults_granted():
     assert rule.dataspace.expose is False
 
 
+# @verifies REQ-0002
 def test_unset_expose_still_inherits_the_default():
     """Silence must keep inheriting — the fix must not become "override always"."""
     rule = resolve(

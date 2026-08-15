@@ -146,8 +146,17 @@ OPENLINEAGE_URL=http://marquez-api:5000
 
 Resolution order:
 - Environment variables
-- `.env` files
+- `.env` files (`.env`, `.env.dev`, `.env.prod`)
 - Defaults
+
+Every variable, its default and the traps — including the fact that `POSTGRES_*`
+has two different default sets depending on which component reads it — are in the
+[environment reference](environment.md).
+
+```bash
+# Check what actually resolved, before assuming a variable took effect
+celine-utils pipeline run envs
+```
 
 
 ## Meltano (Ingestion / Bronze)
@@ -217,17 +226,33 @@ sources:
 
 Governance is:
 
-- Pattern-based
+- Pattern-based — exact key, then the longest matching glob, then `defaults`
 - Automatically resolved
 - Emitted as a custom OpenLineage facet
 
-Generate interactively:
+Generate interactively from the datasets Marquez already knows about:
 
 ```bash
 celine-utils governance generate marquez --app demo_app
 ```
 
-**Note** Since governance are openlineage facets, disabling openlineage using `OPENLINEAGE_ENABLED=false` will exclude the governance tracking capabilities.
+Then validate it — a misspelled key passes schema validation and is silently
+dropped, so the dataset takes the default without anything reporting it:
+
+```python
+from pathlib import Path
+from celine.governance import validate_file
+
+validate_file(Path("governance.yaml"))   # warns on unknown keys
+```
+
+Two fields decide where a dataset is visible, and they are **not** the same: `expose`
+lists it in the catalogue, `dataspace.expose` offers it into the dataspace. The
+[format reference](governance.md) covers every field, the merge rules, and the
+overlay mechanism for per-environment differences.
+
+**Note** Since governance travels as an OpenLineage facet, disabling OpenLineage with
+`OPENLINEAGE_ENABLED=false` also disables governance tracking.
 
 ## Python / Prefect Flows
 

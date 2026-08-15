@@ -26,14 +26,20 @@ tasks:
       - .venv-thin/bin/python -m pytest tests/ -q
 
   cli:
+    desc: Run the celine-utils CLI from the working tree
+    summary: |
+      `celine.utils.cli`, not `celine.cli` — the package moved when governance
+      was split out and this task kept the old path, so it raised
+      ModuleNotFoundError for every argument it was given.
     cmds:
-      - cmd: uv run -m celine.cli {{.CLI_ARGS}}
+      - cmd: uv run -m celine.utils.cli.main {{.CLI_ARGS}}
         silent: true
 
   cli-dbg:
+    desc: Run the CLI under debugpy
     cmds:
       - task: clean-pycache
-      - cmd: DEBUGGER=1 DEBUGGER_WAIT=0 uv run -m celine.cli {{.CLI_ARGS}}
+      - cmd: DEBUGGER=1 DEBUGGER_WAIT=0 uv run -m celine.utils.cli.main {{.CLI_ARGS}}
 
   clean-pycache:
     cmds:
@@ -45,11 +51,8 @@ tasks:
       - cd integration-tests && task run -- {{.CLI_ARGS}}
 
   release:
+    desc: Cut a release — see .agents/playbooks/release.md
     cmds:
       - uv run semantic-release -v version --no-vcs-release
       - git push
       - git push --tags
-
-  dump-source:
-    cmds:
-      - uv run python scripts/dump_source.py

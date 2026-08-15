@@ -25,12 +25,12 @@ A declarative `governance.yaml` specification defines the metadata, access contr
 
 The `GovernanceRule` model covers:
 
-- Dataset ownership (`owner`, `attribution`)
-- License and access level (`open`, `internal`, `restricted`, `secret`)
+- Dataset ownership (`ownership`, `attribution`), resolved through an [owner registry](docs/governance-owners.md)
+- License and access level (`open`, `internal`, `restricted` — `secret` is accepted for compatibility and normalised to `restricted`)
 - Data classification (`pii`, `green`, `yellow`, `red`) and retention
 - Tags, documentation links, and source system
 - `row_filters` — list of filter specs (`[{handler, args}]`) for per-subject consent-based row filtering
-- `expose: true` — controls whether the dataset appears in the DCAT catalogue and is registered as an EDC asset
+- **Two exposure gates, ANDed**: `expose` controls whether the dataset is listed in the DCAT catalogue and served by the API, while `dataspace.expose` controls whether it is offered into the dataspace as an EDC asset. `expose` is tri-state — unset falls back to `dataspace.expose` so pre-split files keep their behaviour
 
 Extended blocks for DCAT-AP 3.0 and dataspace integration:
 
@@ -43,16 +43,19 @@ Extended blocks for DCAT-AP 3.0 and dataspace integration:
 - `conforms_to` — dct:conformsTo URI
 - `temporal.start` / `temporal.end` — dct:temporal coverage
 
-`dataspace:` block — consumed by `export_governance.py` when registering datasets in EDC:
+`dataspace:` block — consumed when registering datasets in EDC:
+- `expose` — offer the dataset into the dataspace
 - `contract_required` — enables `ds:contractRequired` ODRL constraint
 - `consent_required` — enables `ds:consentStatus` ODRL constraint and consent-based row filtering
 - `odrl_action` — default ODRL action (default `use`)
 - `purpose` — ODRL purpose values
 - `medallion` — data quality level (gold / silver / bronze)
 
-Governance rules are resolved with pattern matching via `GovernanceResolver` — defaults cascade from the `defaults:` block into each source entry, with per-source values taking precedence. The `expose` and `dcat`/`dataspace` fields use an OR-merge for booleans and override-merge for objects.
+`ontology:` block — which mapping spec says what the columns mean: `spec` (a shared mapping published in `celine-ontologies`) or `spec_file` (a path relative to the governance file). Exactly one, enforced by the schema.
 
-Both `celine-utils` (pipeline side) and `dataset-api/cli/export_governance.py` (catalogue side) parse the same `governance.yaml` format. EDC-specific sub-objects in the `dataspace:` block are silently ignored by `celine-utils` via `model_config = ConfigDict(extra="ignore")`.
+Governance rules are resolved with pattern matching via `GovernanceResolver`: exact key first, then the longest matching glob, then `defaults` alone. The chosen rule is overlaid on the defaults using the fields the file **explicitly set** — not truthiness — so `expose: false` withdraws a dataset instead of being silently dropped. `tags` and `dataspace.purpose` union, `consent_required` and `contract_required` OR, `ownership` / `row_filters` / `ontology` replace wholesale. See [the format reference](https://celine-eu.github.io/projects/celine-utils/docs/governance) for the full table.
+
+`celine.governance` is the single parser: `dataset-api`, `ds` and `celine-superset` import it rather than reimplementing it. EDC-specific sub-objects in the `dataspace:` block belong to `ds` and are ignored here via `model_config = ConfigDict(extra="ignore")` rather than rejected.
 
 ### Pipeline orchestration
 
@@ -84,33 +87,41 @@ The `DatasetClient` enables:
 
 ### Platform integrations
 
-- Keycloak for identity and access management
-- Apache Superset for analytics platform integration
-- MQTT for lightweight messaging
+- MQTT pipeline run events, published through `celine-sdk`
+- Keycloak client-credentials tokens, for authenticating to a protected Marquez
+
+Keycloak and Superset **administration** was removed in 3.0.0 along with the
+`celine-utils admin` command tree — it was a replicable-setup tool with no remaining
+callers. Provisioning lives in `celine-policies`.
 
 ---
 
 ## CLI
 
 ```bash
-celine-utils governance generate   # generate governance.yaml template
-celine-utils pipeline init         # scaffold a new pipeline
-celine-utils pipeline run          # run a pipeline
+celine-utils governance generate marquez --app <app>   # scaffold governance.yaml from Marquez
+celine-utils pipeline init app <name>                  # scaffold a new pipeline app
+celine-utils pipeline run (meltano | dbt | prefect)    # run a pipeline stage
 ```
+
+Full reference: [CLI](https://celine-eu.github.io/projects/celine-utils/docs/cli).
 
 ---
 
 ## Repository structure
 
 ```
-celine/
-  admin/
-  cli/
-  common/
-  datasets/
-  pipelines/
-schemas/
+src/celine/
+  governance/        the thin core — three dependencies, imported by other repositories
+  utils/
+    cli/
+    common/
+    datasets/
+    pipelines/
+schema/              JSON Schemas — published, and symlinked into the package
+docs/
 tests/
+integration-tests/
 ```
 
 ---
@@ -127,18 +138,35 @@ Environment-driven via `pydantic-settings`:
 
 ## Documentation
 
+Two tracks — see the [documentation index](https://celine-eu.github.io/projects/celine-utils/docs/).
+
+**Governance as a library**
+
+- [The governance library](https://celine-eu.github.io/projects/celine-utils/docs/governance-library) — `celine.governance` API, the three-dependency contract, merging, validation
+- [`governance.yaml` format](https://celine-eu.github.io/projects/celine-utils/docs/governance) — the grammar, resolution, the two exposure gates
+- [`owners.yaml` registry](https://celine-eu.github.io/projects/celine-utils/docs/governance-owners) — owner aliases to canonical identities
+- [Schemas](https://celine-eu.github.io/projects/celine-utils/docs/schemas) — the three published JSON Schemas
+
+**Building and running pipelines**
+
 - [Pipeline Tutorial](https://celine-eu.github.io/projects/celine-utils/docs/pipeline-tutorial) — end-to-end pipeline setup guide
-- [Governance](https://celine-eu.github.io/projects/celine-utils/docs/governance) — governance.yaml format, access levels, pattern matching, dcat/dataspace blocks
-- [Schemas](https://celine-eu.github.io/projects/celine-utils/docs/schemas) — JSON Schema definitions including `governance.schema.json`
 - [CLI](https://celine-eu.github.io/projects/celine-utils/docs/cli) — full CLI reference
+- [Environment](https://celine-eu.github.io/projects/celine-utils/docs/environment) — every variable and its default
+
+**Why choices were made** — [Decisions](https://celine-eu.github.io/projects/celine-utils/docs/decisions/).
 
 ---
 
 ## Installation
 
 ```bash
-uv add celine-utils
+uv add celine-utils                    # governance only — three dependencies
+uv add "celine-utils[pipelines]"       # dbt / Meltano / Prefect / lineage
+uv add "celine-utils[all]"             # pipelines + the typed OpenLineage facet
 ```
+
+Parsing `governance.yaml` needs no extras. That is deliberate and enforced by CI —
+see [ADR-0001](https://celine-eu.github.io/projects/celine-utils/docs/decisions/ADR-0001-governance-is-a-thin-core).
 
 ---
 

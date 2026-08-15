@@ -1,3 +1,5 @@
+<!-- harness-standard v2 — issued by the agent harness. Do not edit; replace it with `python -m harness upgrade <target>`. -->
+
 # The knowledge contract
 
 `.agents/` holds what an agent needs to work here and what it produces while working:
@@ -125,6 +127,32 @@ The split is *survives* versus *does not*:
   from `notes.md` — do not leave both.
 - **A measurement pasted into a plan is stale the moment it is written.** State the exit
   criterion as the command that produces the number, and keep the number in `status.md`.
+
+---
+
+## references.md — what the repository refers to but must not commit
+
+Two kinds of value never belong in a committed file:
+
+- **local** — true of one machine and meaningless on another: a home directory, a
+  checkout location, a hostname, a port. Committing it is noise.
+- **restricted** — true everywhere and publishable nowhere: a deployment environment, an
+  organisation, a customer, a person. Committing it is a disclosure, and a disclosure
+  survives the commit that removes it.
+
+`references.md` is the committed register: it declares each name and which kind it is,
+and never the value (REQ-0010). `references.local.md` holds `- NAME: value` and is
+gitignored (REQ-0011). Documents cite the name in `{{DOUBLE_BRACES}}`.
+
+- An absolute home path in committed material is a violation with or without a register
+  (REQ-0303). A declared value appearing in committed material is a violation
+  (REQ-0304); a repository that declares nothing is *not applicable*, which is not the
+  same as clean.
+- **Most local facts want deleting, not declaring.** Where an interpreter lives is
+  machine-bound and discoverable in a second; a name for it buys indirection and no
+  information.
+- The checker infers nothing. It holds the repository to what a person declared, which is
+  what makes the register worth keeping current.
 
 ---
 

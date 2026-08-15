@@ -36,5 +36,13 @@ edited to say something else.
 
 ## The records
 
-<TODO: a one-line table as they accumulate. An index nobody updates is worse than none,
-so either keep it or delete this section.>
+| ADR | Decision |
+|---|---|
+| [ADR-0001](ADR-0001-governance-is-a-thin-core.md) | `celine.governance` is a separate package with three dependencies |
+| [ADR-0002](ADR-0002-schemas-stay-at-the-repository-root.md) | The JSON Schemas stay at `schema/` and reach the package by symlink |
+| [ADR-0003](ADR-0003-two-exposure-gates.md) | Catalogue exposure and dataspace exposure are two gates, ANDed |
+| [ADR-0004](ADR-0004-the-cli-ships-governance-and-pipelines-only.md) | The CLI ships `governance` and `pipeline` only |
+
+The first three are recorded after the fact. Each documents a decision already
+implemented whose reasoning existed only in code comments, where a reader looking for
+*why* would not have found it.

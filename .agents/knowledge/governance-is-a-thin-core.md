@@ -2,6 +2,10 @@
 
 Verified against the code and CI on 2026-08-14.
 
+The decision itself, with its consequences and what will tempt someone to undo it, is
+`docs/decisions/ADR-0001-governance-is-a-thin-core.md`. This file is the working
+knowledge: what will break, and how.
+
 ## Why the package exists
 
 There were **four** implementations of `governance.yaml` parsing — here, in the dataset
