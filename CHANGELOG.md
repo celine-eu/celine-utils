@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v2.3.0 (2026-08-15)
+
+### Chores
+
+- Add .agents harness
+  ([`e4aec77`](https://github.com/celine-eu/celine-utils/commit/e4aec77ff891192abdf2523ce7fc1d4d1a393e84))
+
+- Update agents, fix comments
+  ([`96b9e59`](https://github.com/celine-eu/celine-utils/commit/96b9e59e138987331042adb6cd3ff46e0cfa9e8f))
+
+- Update workfow image version
+  ([`c099ba3`](https://github.com/celine-eu/celine-utils/commit/c099ba3323a4e5fa2ffa61a1c44a26dffaa427fc))
+
+### Features
+
+- Add tests, drop unused admin tooling, fix imports
+  ([`0b2583b`](https://github.com/celine-eu/celine-utils/commit/0b2583b10aec0d95458aa3935e1884fa2ff76392))
+
+
 ## v2.2.0 (2026-08-13)
 
 ### Features

@@ -5,6 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            // Attach to a CLI run started with `task cli-dbg -- <args>`, or with
+            // DEBUGGER=1 DEBUGGER_WAIT=1 to make the process wait for you.
+            "name": "celine-utils CLI attach",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "127.0.0.1",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "${workspaceFolder}"
+                }
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "celine-utils pytest debugger",
             "type": "debugpy",
             "request": "launch",

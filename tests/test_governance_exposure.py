@@ -25,6 +25,7 @@ from celine.governance import (
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0002
 @pytest.mark.parametrize("offered", [True, False])
 def test_legacy_file_keeps_todays_catalogue_behaviour(offered: bool) -> None:
     """No top-level `expose` — the catalogue gate falls back to dataspace.expose.
@@ -39,6 +40,7 @@ def test_legacy_file_keeps_todays_catalogue_behaviour(offered: bool) -> None:
     assert dataspace_expose(rule) is offered
 
 
+# @verifies REQ-0002
 def test_a_file_with_no_dataspace_block_is_exposed_nowhere() -> None:
     rule = parse_rule({"title": "x"})
     assert effective_expose(rule) is False
@@ -50,6 +52,7 @@ def test_a_file_with_no_dataspace_block_is_exposed_nowhere() -> None:
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0002
 def test_catalogue_without_dataspace_is_now_expressible() -> None:
     """The case that motivated all of this: grid topology, visible but not offered."""
     rule = parse_rule({"expose": True, "dataspace": {"expose": False}})
@@ -58,12 +61,14 @@ def test_catalogue_without_dataspace_is_now_expressible() -> None:
     assert exposure_conflict(rule) is None
 
 
+# @verifies REQ-0002
 def test_both_channels() -> None:
     rule = parse_rule({"expose": True, "dataspace": {"expose": True}})
     assert effective_expose(rule) is True
     assert dataspace_expose(rule) is True
 
 
+# @verifies REQ-0002
 def test_expose_false_wins_over_an_inherited_true() -> None:
     """A stated `false` must beat the fallback, not be mistaken for "unstated"."""
     rule = parse_rule({"expose": False, "dataspace": {"expose": False}})
@@ -75,6 +80,7 @@ def test_expose_false_wins_over_an_inherited_true() -> None:
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0002
 def test_offered_but_unlisted_is_reported() -> None:
     rule = parse_rule({"expose": False, "dataspace": {"expose": True}})
     conflict = exposure_conflict(rule)
@@ -82,6 +88,7 @@ def test_offered_but_unlisted_is_reported() -> None:
     assert "cannot be discovered" in conflict
 
 
+# @verifies REQ-0002
 def test_conflict_is_only_that_one_combination() -> None:
     for block in (
         {},
@@ -98,6 +105,7 @@ def test_conflict_is_only_that_one_combination() -> None:
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0002
 def test_a_dataset_can_withdraw_itself_from_a_file_default() -> None:
     """`expose` merges by `exclude_unset`, so a dataset can say no to defaults.
 
@@ -109,6 +117,7 @@ def test_a_dataset_can_withdraw_itself_from_a_file_default() -> None:
     assert effective_expose(merged) is False
 
 
+# @verifies REQ-0002
 def test_a_dataset_that_says_nothing_inherits_the_file_default() -> None:
     merged = merge_rules(parse_rule({"expose": True}), parse_rule({"title": "t"}))
     assert effective_expose(merged) is True
@@ -138,6 +147,7 @@ def test_a_deployer_overlay_can_withdraw_a_dataspace_offer(tmp_path) -> None:
     assert dataspace_expose(rule) is False
 
 
+# @verifies REQ-0002
 def test_expose_reaches_the_rule_rather_than_extra() -> None:
     """`expose` must be in KNOWN_KEYS, or it parses into `extra` and reads as unset.
 

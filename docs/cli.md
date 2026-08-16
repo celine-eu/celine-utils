@@ -1,200 +1,144 @@
-# CLI Reference
+# CLI reference
 
-`celine-utils` provides a unified CLI for governance and pipeline management.
-
-```
+```text
 celine-utils
- ├── governance
- │    └── generate marquez
- └── pipeline
-      ├── init app
-      └── run (meltano | dbt | prefect)
+├── governance
+│   └── generate marquez
+└── pipeline
+    ├── init app
+    └── run  (envs | meltano | dbt | prefect)
 ```
+
+Installed as the `celine-utils` entry point. From a checkout of this repository,
+`task cli -- <args>` runs the same CLI from the working tree.
+
+**This page describes what each command is for and the traps in using it. For the
+exact current options, ask the CLI:**
+
+```bash
+celine-utils <command> --help
+```
+
+An option table copied into a document is stale the next time an option is added,
+with nothing to detect it. The tables below are orientation, not the source of truth.
 
 ---
 
-## governance generate marquez
+## governance
 
-Generate a `governance.yaml` scaffold from datasets discovered in Marquez (OpenLineage backend).
+### `governance generate marquez`
+
+Generate a `governance.yaml` scaffold from the datasets Marquez already knows about,
+so a governance file starts from what the pipeline actually produces rather than from
+a blank page.
 
 ```bash
 celine-utils governance generate marquez --app <app-name> [options]
 ```
 
-**Options:**
+| Option | Meaning |
+|---|---|
+| `--app` | CELINE app name. **Required** |
+| `--output`, `-o` | Output path. Defaults to `PIPELINES_ROOT/apps/<app>/governance.yaml` |
+| `--marquez` | Marquez base URL, overriding `OPENLINEAGE_URL` |
+| `--namespace` | OpenLineage namespace, overriding `OPENLINEAGE_NAMESPACE` |
+| `--yes`, `-y` | Non-interactive — write a skeleton using defaults |
 
-| Option | Description | Default |
-|---|---|---|
-| `--app` | CELINE app name (required) | — |
-| `--output`, `-o` | Output path for `governance.yaml` | `$PIPELINES_ROOT/apps/<app>/governance.yaml` |
-| `--marquez` | Marquez base URL | `$OPENLINEAGE_URL` or `http://localhost:5000` |
-| `--namespace` | OpenLineage namespace | `$OPENLINEAGE_NAMESPACE` or auto-derived |
-| `--yes`, `-y` | Non-interactive mode — use defaults for all datasets | `false` |
-
-**Behavior:**
-
-1. Fetches the list of datasets from Marquez in the specified namespace.
-2. In interactive mode: prompts for license, access level, classification, ownership, and tags for each dataset. Suggests pattern scopes (exact, schema wildcard, prefix wildcard).
-3. In `--yes` mode: writes a skeleton `governance.yaml` with empty rules for each discovered dataset.
-4. Writes the output file to the resolved path.
-
-**Usage examples:**
+Interactively it prompts per dataset for licence, access level, classification,
+ownership and tags, and offers pattern scopes (exact name, schema wildcard, prefix
+wildcard) so one answer can cover many datasets. With `--yes` it writes a skeleton
+with an empty rule per discovered dataset.
 
 ```bash
-# Interactive mode — configure each dataset
+# Interactive, against the configured Marquez
 celine-utils governance generate marquez --app om
 
-# Non-interactive — scaffold only
+# Scaffold only, no prompts
 celine-utils governance generate marquez --app om --yes
 
-# Custom Marquez URL and output path
+# Explicit endpoint, namespace and destination
 celine-utils governance generate marquez \
   --app om \
   --marquez http://marquez.internal:5000 \
+  --namespace ds_prod_silver \
   --output ./governance.yaml
-
-# Custom namespace
-celine-utils governance generate marquez \
-  --app om \
-  --namespace ds_prod_silver
 ```
 
-**Environment variables:**
+The generated file is a starting point, not a finished one: it cannot know licence
+terms or who owns the data. Review it, then [validate](governance-library.md#validation)
+it.
 
-| Variable | Description |
-|---|---|
-| `OPENLINEAGE_URL` | Marquez base URL |
-| `OPENLINEAGE_NAMESPACE` | Default namespace |
-| `PIPELINES_ROOT` | Root of the pipelines monorepo (used for output path resolution) |
-| `KEYCLOAK_*` | Keycloak client credentials for authenticated Marquez requests |
+Reads `OPENLINEAGE_URL`, `OPENLINEAGE_NAMESPACE`, `PIPELINES_ROOT`, and the
+`KEYCLOAK_*` variables when Marquez requires authentication — see
+[environment](environment.md).
 
 ---
 
-## pipeline init app
+## pipeline
 
-Scaffold a new CELINE pipeline application directory.
+### `pipeline init app`
+
+Scaffold a new pipeline application.
 
 ```bash
-celine-utils pipeline init app <app-name> [options]
+celine-utils pipeline init app <app-name> [--force]
 ```
 
-**Arguments:**
+Produces:
 
-| Argument | Description |
-|---|---|
-| `app-name` | Name of the new pipeline application |
-
-**Options:**
-
-| Option | Description | Default |
-|---|---|---|
-| `--force`, `-f` | Overwrite if the folder already looks like a pipeline app | `false` |
-
-**Resulting structure:**
-
-```
+```text
 <app-name>/
-  meltano/
-    meltano.yml
-  dbt/
-    dbt_project.yml
-    profiles.yml
-    models/
-    tests/
-    macros/
-    seeds/
-    snapshots/
-    analyses/
-  flows/
-    pipeline.py
-  .env
-  README.md
+├── meltano/
+├── dbt/
+├── flows/pipeline.py
+├── .env
+└── README.md
 ```
 
-Templates are rendered with `{{ app_name }}` substituted. Database connection values in `.env` are populated from environment variables (`POSTGRES_HOST`, `POSTGRES_USER`, etc.) if present.
+Templates are rendered with the app name substituted, and database values in `.env`
+are populated from `POSTGRES_*` in the environment when present. The command aborts
+if the target already looks like a CELINE pipeline app; `--force` overwrites it.
 
-**Usage examples:**
+See [the pipeline tutorial](pipeline-tutorial.md) for what to do with the result.
 
-```bash
-# Create a new pipeline app named "owm"
-celine-utils pipeline init app owm
+### `pipeline run`
 
-# Overwrite an existing scaffold
-celine-utils pipeline init app owm --force
-```
+Executes one stage of a pipeline. Every subcommand discovers the app root by walking
+upward from the current directory looking for `meltano/`, `dbt/` or `flows/`, so run
+these from inside the app.
 
----
-
-## pipeline run
-
-Execute pipeline components: Meltano ingestion, dbt transformations, or Prefect flows.
-
-### pipeline run meltano
-
-```bash
-celine-utils pipeline run meltano [command]
-```
-
-Runs a Meltano command inside the app's `meltano/` directory.
-
-| Argument | Description | Default |
-|---|---|---|
-| `command` | Meltano command string | `run import` |
-
-```bash
-# Default: run the import tap
-celine-utils pipeline run meltano
-
-# Run a specific command
-celine-utils pipeline run meltano "run import --select my_stream"
-```
-
-### pipeline run dbt
-
-```bash
-celine-utils pipeline run dbt <tag>
-```
-
-Runs `dbt run --select tag:<tag>` and `dbt test --select tag:<tag>` in the app's `dbt/` directory.
-
-| Argument | Description |
+| Command | Does |
 |---|---|
-| `tag` | dbt selector (e.g. `staging`, `silver`, `gold`, `test`) |
+| `pipeline run envs` | Print the pipeline run environment as `export` lines |
+| `pipeline run meltano [command]` | Run a Meltano command in the app's `meltano/`. Default: `run import` |
+| `pipeline run dbt <tag>` | `dbt run` then `dbt test`, both `--select tag:<tag>`, in the app's `dbt/` |
+| `pipeline run prefect` | Load and execute a `@flow` function from `flows/` |
 
 ```bash
+# Make the pipeline's own environment available to your shell
+source <(celine-utils pipeline run envs)
+
+celine-utils pipeline run meltano
+celine-utils pipeline run meltano "run import --select my_stream"
+
 celine-utils pipeline run dbt staging
 celine-utils pipeline run dbt gold
-```
 
-### pipeline run prefect
-
-```bash
-celine-utils pipeline run prefect [options]
-```
-
-Loads and executes a Prefect `@flow`-decorated function from the app's `flows/` directory.
-
-| Option | Description | Default |
-|---|---|---|
-| `--flow`, `-f` | Name of `flows/<flow>.py` (without extension) | auto-detected |
-| `--function`, `-x` | Function name inside the module | auto-detected via `@flow` decorator |
-
-```bash
-# Auto-detect flow file and function
 celine-utils pipeline run prefect
-
-# Specify explicitly
 celine-utils pipeline run prefect --flow pipeline --function om_flow
 ```
 
-**Environment variables used by `pipeline run`:**
+`pipeline run prefect` auto-detects both the flow module and the decorated function
+when `--flow` / `--function` are omitted. Pass them explicitly when a module holds
+more than one flow.
 
-| Variable | Description |
-|---|---|
-| `APP_NAME` | Override the inferred app name |
-| `PIPELINES_ROOT` | Root of the pipelines monorepo |
-| `MELTANO_PROJECT_ROOT` | Override Meltano project directory |
-| `DBT_PROJECT_DIR` | Override dbt project directory |
-| `DBT_PROFILES_DIR` | Override dbt profiles directory |
+Each run emits OpenLineage events and resolves governance for the datasets it
+touches; see [governance](governance.md#how-governance-reaches-lineage).
 
-The runner auto-discovers the app root by walking upward from the current directory, looking for `meltano/`, `dbt/`, or `flows/` subdirectories.
+---
+
+## Configuration
+
+Every command is configured by environment variables, loaded from the process
+environment and from `.env`, `.env.dev`, `.env.prod` where present. The full list is
+in [the environment reference](environment.md).

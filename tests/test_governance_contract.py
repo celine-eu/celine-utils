@@ -32,6 +32,7 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0001
 def test_governance_never_imports_celine_utils():
     """`celine.governance` must stand alone.
 
@@ -55,6 +56,7 @@ def test_governance_never_imports_celine_utils():
     )
 
 
+# @verifies REQ-0001
 def test_governance_imports_no_heavy_dependency():
     """Guards the same boundary from the other direction.
 
@@ -80,6 +82,7 @@ def test_governance_imports_no_heavy_dependency():
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0005
 def test_known_keys_matches_the_model_fields():
     """A field on the model but missing from KNOWN_KEYS parses into `extra` and
     reads as absent — silently, with the schema still validating the file.
@@ -94,6 +97,7 @@ def test_known_keys_matches_the_model_fields():
     )
 
 
+# @verifies REQ-0005
 def test_parsing_records_only_the_keys_the_file_declared():
     """`model_fields_set` is what every overlay reads to tell unset from false.
 
@@ -105,6 +109,7 @@ def test_parsing_records_only_the_keys_the_file_declared():
     assert rule.dataspace is None
 
 
+# @verifies REQ-0005
 def test_unknown_keys_land_in_extra_rather_than_vanishing():
     rule = parse_rule({"access_level": "open", "access_levl": "typo"})
     assert rule.extra == {"access_levl": "typo"}
@@ -115,6 +120,7 @@ def test_unknown_keys_land_in_extra_rather_than_vanishing():
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0005
 def test_schema_violation_raises_with_every_error_at_once():
     """One problem per run turns a five-minute fix into five round trips."""
     bad = {
@@ -126,6 +132,7 @@ def test_schema_violation_raises_with_every_error_at_once():
     assert len(exc.value.errors) == 2
 
 
+# @verifies REQ-0005
 def test_unknown_key_warns_by_default_and_raises_under_strict():
     doc = {"defaults": {}, "sources": {"ds.x": {"access_levl": "open"}}}
     assert validate(doc) == ["sources/ds.x: access_levl"]
@@ -133,6 +140,7 @@ def test_unknown_key_warns_by_default_and_raises_under_strict():
         validate(doc, strict=True)
 
 
+# @verifies REQ-0004
 def test_schemas_are_readable_from_the_installed_package():
     """Read via importlib.resources, not a `__file__` walk — the latter breaks
     the moment this runs from a wheel or a container."""
@@ -146,6 +154,7 @@ def test_schemas_are_readable_from_the_installed_package():
 # ---------------------------------------------------------------------------
 
 
+# @verifies REQ-0004
 def test_schema_url_is_pinned():
     """This string is embedded in every OpenLineage event already in Marquez.
 
@@ -157,6 +166,7 @@ def test_schema_url_is_pinned():
     )
 
 
+# @verifies REQ-0004
 def test_built_facet_validates_against_its_published_schema():
     import jsonschema
 

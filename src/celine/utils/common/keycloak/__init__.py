@@ -1,2 +1,3 @@
-from .keycloak_admin import KeycloakAdminClient, KeycloakAdminConfig
 from .keycloak_client import KeycloakClient, KeycloakClientConfig
+
+__all__ = ["KeycloakClient", "KeycloakClientConfig"]

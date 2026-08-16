@@ -1,6 +1,6 @@
 [project]
 name = "celine-utils"
-version = "2.2.0"
+version = "2.3.0"
 description = "CELINE utils"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -67,23 +67,21 @@ pipelines = [
 openlineage = [
     "openlineage-python>=1.37.0",
 ]
-# Keycloak / Superset administration.
-admin = [
-    "bcrypt>=4.3.0",
-    "python-keycloak>=5.8.1",
-    "requests>=2.32.5",
-    "pydantic-settings>=2.10.1",
-    "python-dotenv>=1.1.1",
-    # >=1.15.0, not >=1.13.0: 1.15.0 is the first release supporting the Python
-    # range this package now declares. Under the looser pin uv forks the
-    # resolution — 1.13.0 on 3.12+, 1.15.0 below — so the interpreter would
-    # decide which SDK you get. This is the dependency that held the platform at
-    # 3.12; the floor has to move with it.
-    "celine-sdk>=1.15.0",
-]
-# Everything — the pre-1.19 dependency set. Existing consumers move to this.
+# The `admin` extra is gone as of 2.3.0, with the `celine-utils admin *` command
+# tree it existed for. That tree was a replicable-setup tool, superseded by
+# `celine-policies`' Keycloak CLI, and unused across every repository in the
+# platform at the time it was removed.
+#
+# It took `python-keycloak` and `bcrypt` with it. `bcrypt` was imported nowhere.
+# `python-keycloak` was: by `celine.utils.common.keycloak`, which
+# `governance generate marquez` imports — so the whole CLI depended on a package
+# only this extra declared, and `celine-utils[pipelines]` shipped a CLI that
+# raised ImportError on `--help`. The token fetch it provided is now a `requests`
+# call, which `pipelines` already declares.
+#
+# Everything — kept so existing consumers of `[all]` do not have to change.
 all = [
-    "celine-utils[pipelines,openlineage,admin]",
+    "celine-utils[pipelines,openlineage]",
 ]
 
 [dependency-groups]
