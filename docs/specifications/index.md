@@ -118,4 +118,4 @@ default. Under kwargs construction the merge degrades to "override always wins" 
 left a dataset in the catalogue.
 
 Behaviour: [unknown keys](../governance.md#unknown-keys),
-[knowledge](../../.agents/knowledge/adding-a-governance-field-touches-three-places.md).
+the companion's knowledge.
