@@ -287,21 +287,68 @@ def run_meltano(
         raise typer.Exit(1)
 
 
-@pipeline_run_app.command("dbt")
-def run_dbt(
-    tag: str = typer.Argument(
-        ..., help="dbt selector/tag (e.g. staging, silver, gold, test)"
-    )
-):
+def _run_dbt_spec(spec: str):
     runner = _build_runner()
     try:
-        res = runner.run_dbt(tag)
+        res = runner.run_dbt(spec)
         if res.status == "failed":
             raise typer.Exit(1)
         return res
     except Exception as e:
         logger.exception("dbt run failed")
         typer.echo(f"dbt execution failed: {e}")
+        raise typer.Exit(1)
+
+
+@pipeline_run_app.command("dbt")
+def run_dbt(
+    tag: str = typer.Argument(
+        ...,
+        help=(
+            "dbt selector spec, optionally led by a subcommand: 'silver', "
+            "'-s gold,tag:wind', 'build -s silver', 'test -s tag:meters'. "
+            "Without a leading subcommand the spec is a selector for 'dbt run'."
+        ),
+    )
+):
+    """Run one dbt stage in the app's dbt/ project."""
+    return _run_dbt_spec(tag)
+
+
+@pipeline_run_app.command("build")
+def run_build(
+    select: str = typer.Argument(
+        None,
+        help="Selector for the models to build. Omit to build the whole project.",
+    )
+):
+    """Run `dbt build` — each model followed immediately by its own tests.
+
+    The right verb for populating a database rather than iterating on one model:
+    a layer that populated badly fails where it broke rather than several layers
+    downstream, which `dbt run` followed by a separate `dbt test` cannot tell you.
+    """
+    return _run_dbt_spec(f"build {select}" if select else "build")
+
+
+@pipeline_run_app.command("seed")
+def run_seed():
+    """Load the app's dbt seeds into the database.
+
+    Runs before any model that reads one. A missing seed is not a parse error when
+    the model reads it through `ref()` on a committed CSV — it is an empty or absent
+    relation discovered at run time, several stages after the omission.
+    """
+    runner = _build_runner()
+
+    try:
+        res = runner.run_dbt_seed()
+        if res.status == "failed":
+            raise typer.Exit(1)
+        return res
+    except Exception as e:
+        logger.exception("dbt seed failed")
+        typer.echo(f"dbt seed failed: {e}")
         raise typer.Exit(1)
 
 

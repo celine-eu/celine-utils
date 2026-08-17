@@ -6,7 +6,7 @@ celine-utils
 │   └── generate marquez
 └── pipeline
     ├── init app
-    └── run  (envs | meltano | dbt | prefect)
+    └── run  (envs | meltano | seed | dbt | build | prefect)
 ```
 
 Installed as the `celine-utils` entry point. From a checkout of this repository,
@@ -111,7 +111,9 @@ these from inside the app.
 |---|---|
 | `pipeline run envs` | Print the pipeline run environment as `export` lines |
 | `pipeline run meltano [command]` | Run a Meltano command in the app's `meltano/`. Default: `run import` |
-| `pipeline run dbt <tag>` | `dbt run` then `dbt test`, both `--select tag:<tag>`, in the app's `dbt/` |
+| `pipeline run seed` | `dbt seed` in the app's `dbt/` |
+| `pipeline run dbt <spec>` | One dbt stage in the app's `dbt/` — see the spec grammar below |
+| `pipeline run build [select]` | `dbt build` — every model followed immediately by its own tests |
 | `pipeline run prefect` | Load and execute a `@flow` function from `flows/` |
 
 ```bash
@@ -121,12 +123,40 @@ source <(celine-utils pipeline run envs)
 celine-utils pipeline run meltano
 celine-utils pipeline run meltano "run import --select my_stream"
 
+celine-utils pipeline run seed
 celine-utils pipeline run dbt staging
-celine-utils pipeline run dbt gold
+celine-utils pipeline run dbt "test -s tag:meters"
+celine-utils pipeline run build silver
 
 celine-utils pipeline run prefect
 celine-utils pipeline run prefect --flow pipeline --function om_flow
 ```
+
+#### The dbt spec grammar
+
+`pipeline run dbt` takes **one string**, not a bare tag, and the same string that a
+flow passes to `dbt_run()`. It may open with a dbt subcommand — `run`, `build`,
+`test`, `seed`, `snapshot` — and defaults to `run` when it does not:
+
+| Spec | Runs |
+|---|---|
+| `silver` | `dbt run --select silver` |
+| `staging --exclude tag:meters` | `dbt run --select staging --exclude tag:meters` |
+| `-s gold,tag:wind` | `dbt run -s gold,tag:wind` |
+| `build -s silver` | `dbt build -s silver` |
+| `test` | `dbt test` |
+| `test -s tag:meters` | `dbt test -s tag:meters` |
+
+`--select` is injected only when the spec names nodes without a selection flag of
+its own. A consequence of the leading-subcommand rule: a model actually *named*
+`run`, `build`, `test`, `seed` or `snapshot` is shadowed, and has to be named
+through an explicit `-s`.
+
+**Which verb.** `build` is the one to use when the point is to populate the
+database: it interleaves each model's tests with the model, so a layer that
+populated badly fails where it broke rather than several layers downstream. `run`
+is for iterating on a single model, where the tests are noise until the model is
+right.
 
 `pipeline run prefect` auto-detects both the flow module and the decorated function
 when `--flow` / `--function` are omitted. Pass them explicitly when a module holds

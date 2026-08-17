@@ -1,4 +1,3 @@
-import shlex
 import traceback
 import re
 import subprocess, os, datetime
@@ -23,6 +22,7 @@ from openlineage.client.generated.environment_variables_run import (
 from openlineage.client.generated.processing_engine_run import ProcessingEngineRunFacet
 
 from celine.utils.common.logger import get_logger
+from celine.utils.pipelines.dbt_command import build_dbt_command
 from celine.utils.pipelines.pipeline_config import PipelineConfig
 from celine.utils.pipelines.lineage.meltano import MeltanoLineage
 from celine.utils.pipelines.lineage.dbt import DbtLineage
@@ -350,13 +350,7 @@ class PipelineRunner:
         if not project_dir:
             return self._task_result(False, tag, "DBT_PROJECT_DIR not set")
 
-        parts = shlex.split(tag)
-        if parts[0] == "test":
-            command = ["dbt", "--no-use-colors", "test"] + parts[1:]
-        elif "--select" in parts or "-s" in parts:
-            command = ["dbt", "--no-use-colors", "run"] + parts
-        else:
-            command = ["dbt", "--no-use-colors", "run", "--select"] + parts
+        command = build_dbt_command(tag)
 
         return self._run_dbt(
             job_name=job_name,
