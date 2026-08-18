@@ -28,7 +28,7 @@ from typing import Any, Dict, List
 
 import yaml
 
-from celine.governance.models import KNOWN_KEYS
+from celine.governance.models import KNOWN_KEYS, KNOWN_ROOT_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -71,14 +71,26 @@ def schema_errors(data: Dict[str, Any], schema_name: str = GOVERNANCE_SCHEMA) ->
 
 
 def unknown_keys(data: Dict[str, Any]) -> List[str]:
-    """Report keys the grammar does not define, per block.
+    """Report keys the grammar does not define, at the root and per block.
 
     Separate from :func:`schema_errors` because the schema cannot catch these —
     ``governanceBlock`` permits additional properties, and tightening it is a
     breaking change to seventeen files that have never been checked. This gives
     the warning without the breakage.
+
+    The **root** scan exists for the same reason one layer up. The root object
+    also permits additional properties, and the parser reads its three keys by
+    name, so a misspelled ``depends-on:`` is accepted by the schema, ignored by
+    the parser, and reported by nobody — the file validates, the dependency graph
+    comes out empty, and nothing connects the two. Two key sets rather than one,
+    because they guard different scopes: :data:`KNOWN_ROOT_KEYS` the document,
+    :data:`KNOWN_KEYS` a block within it.
     """
     found: List[str] = []
+
+    for key in data:
+        if key not in KNOWN_ROOT_KEYS:
+            found.append(f"<root>: {key}")
 
     def scan(block: Any, where: str) -> None:
         if not isinstance(block, dict):

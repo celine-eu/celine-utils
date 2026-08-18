@@ -192,6 +192,34 @@
             },
             "additionalProperties": true
         },
+        "dependency": {
+            "type": "object",
+            "description": "One dataset this pipeline consumes. Names a DATASET, never a pipeline: several producers may satisfy one dataset through a shared alias (the weather__* contract tables), and a deployment may substitute its own producer. The producing pipeline is resolved by matching this pattern against the `sources` keys of every governance file in the scanned set, so nothing here ever names a repository.",
+            "required": [
+                "dataset"
+            ],
+            "properties": {
+                "dataset": {
+                    "type": "string",
+                    "description": "Dataset name in the same vocabulary as a `sources` key \u2014 `<database>.<schema>.<table>`, literal or fnmatch glob. Prefer a glob over the schema segment: `ds_dev_*` is the platform default and stays the default everywhere, since environments are separated by infrastructure rather than by renaming schemas, but a consumer resolves the schema through CELINE_SILVER_SCHEMA / CELINE_GOLD_SCHEMA and a deployment may point those anywhere. `datasets.*_gold.pv_overture_buildings` is the form that does not depend on that choice."
+                },
+                "external": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "No pipeline in this set produces it; it is satisfied elsewhere. States the author's expectation, so that an entry which resolves to nothing AND is not marked external can be reported as a typo rather than being indistinguishable from a genuine external upstream. Never name the producing repository \u2014 the role is the identification."
+                },
+                "optional": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "A soft edge: run after the producer when it exists, but do not require it. For a consumer that degrades rather than fails, as pv_estimation does when pv_detection has not run."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Why this pipeline needs it."
+                }
+            },
+            "additionalProperties": false
+        },
         "governanceBlock": {
             "type": "object",
             "properties": {
@@ -353,6 +381,18 @@
         "defaults": {
             "$ref": "#/$defs/governanceBlock",
             "description": "Default governance applied to all datasets unless overridden"
+        },
+        "active": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether this pipeline is on a schedule anywhere. `false` covers both retired (superseded by another pipeline) and local-only (run on demand against a local database); the two are not distinguished because for the graph they are the same statement \u2014 its datasets stay catalogued, but nothing new arrives unless someone acts. App-level, and that is a real limit: one app can host several flows on independent schedules and a deployment can pause one of them, which this cannot express. Per-flow state lives in the deployment, which is the only thing that knows it."
+        },
+        "depends_on": {
+            "description": "Datasets this pipeline CONSUMES, as `sources` names what it produces. Optional, and absent is not the same as empty: absent means the pipeline has not declared its inputs, `[]` means it declares that it has none. A pipeline with no upstream in this repository omits it.",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/dependency"
+            }
         },
         "sources": {
             "description": "Map of dataset name patterns \u2192 governance rules (exact match or fnmatch glob)",

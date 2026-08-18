@@ -141,11 +141,26 @@ def merge_configs(base: GovernanceConfig, override: GovernanceConfig) -> Governa
 
     Defaults merge with defaults; a source present in both merges rule-wise; a
     source only the overlay declares is added as-is.
+
+    ``depends_on`` is **whole replacement when the overlay states one**, the same
+    rule as ``ownership``, ``row_filters`` and ``ontology``, and for the same
+    reason: a partial input list is not a meaningful statement. Union would be
+    worse than merely wrong here — substituting a producer is the thing a
+    deployment overlay exists to do, and under a union an upstream the deployment
+    satisfies another way could never be withdrawn.
+
+    Unstated inherits, which is why this reads ``is not None`` and not
+    truthiness: ``depends_on: []`` in an overlay declares *no inputs* and must
+    survive, exactly as ``expose: false`` must. Truthiness would silently restore
+    the base's list — the bug this merge layer was written to remove.
     """
     sources = dict(base.sources)
     for key, rule in override.sources.items():
         sources[key] = merge_rules(sources[key], rule) if key in sources else rule
     return GovernanceConfig(
         defaults=merge_rules(base.defaults, override.defaults),
+        depends_on=(
+            override.depends_on if override.depends_on is not None else base.depends_on
+        ),
         sources=sources,
     )

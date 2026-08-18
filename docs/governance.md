@@ -40,19 +40,135 @@ Discovery order, as implemented by `GovernanceResolver.auto_discover`:
 
 ## Shape
 
-Two top-level sections, both optional:
+Four top-level keys, all optional:
 
 ```yaml
+active: true         # whether this pipeline is meant to run at all
+
 defaults:            # baseline applied to every dataset
   <field>: <value>
 
-sources:             # per-dataset or per-pattern overrides
+depends_on:          # datasets this pipeline CONSUMES
+  - dataset: <dataset-name-or-glob>
+
+sources:             # per-dataset or per-pattern overrides — what it PRODUCES
   <dataset-name-or-glob>:
     <field>: <value>
 ```
 
 A `sources` entry may also nest its fields under a `governance:` key; the parser
 accepts both spellings and treats them identically.
+
+Nothing else may appear at the root. A key that is not one of the four is reported
+by `validate`, on the same terms as an unknown key inside a block — otherwise a
+misspelled `depends-on:` validates against the schema, is skipped by the parser, and
+the graph comes out empty with nothing connecting the two.
+
+---
+
+## `depends_on` — what a pipeline consumes
+
+`sources` says what a pipeline produces. `depends_on` says what it reads, and the two
+together are what make the ordering *between* pipelines derivable. Each app is its own
+dbt project, so `ref()` never crosses an app boundary and `dbt build` can only order
+models within one pipeline; across pipelines there is otherwise no graph at all.
+
+```yaml
+depends_on:
+  - dataset: datasets.*_gold.weather__forecast_hourly
+    description: >
+      Provider-neutral contract table. Any provider pipeline publishing this alias
+      satisfies it, and adding a provider needs no change here.
+
+  - dataset: datasets.*_silver.meters_data_normalized
+    external: true
+
+  - dataset: datasets.*_gold.pv_detected_installations
+    optional: true
+```
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `dataset` | string, **required** | — | The dataset, in the same `<database>.<schema>.<table>` vocabulary as a `sources` key. Literal or glob |
+| `external` | bool | `false` | No pipeline in the scanned set produces it; it is satisfied elsewhere |
+| `optional` | bool | `false` | A soft edge — order after the producer where it exists, but do not require it |
+| `description` | string | — | Why this pipeline needs it |
+
+Unlike a governance block, an entry rejects any other key outright. This part of the
+grammar has no files predating validation, so there is no migration to trade against.
+
+### It names datasets, not pipelines
+
+Deliberately, and it matters in three places. Several producers can satisfy one dataset
+through a shared alias — `weather` reads `weather__forecast_hourly` precisely so that it
+need not know which provider pipeline ran. A deployment may substitute its own producer
+for a contract table. And an entry that resolves to nothing is simply satisfied
+somewhere that was not scanned, which lets an open-source file declare an upstream
+without naming the repository that provides it.
+
+### Glob the schema segment
+
+`ds_dev_*` is the platform default and stays the default everywhere — environments
+are separated by infrastructure, not by renaming schemas. But a consumer resolves the
+schema through `CELINE_SILVER_SCHEMA` / `CELINE_GOLD_SCHEMA`, which a deployment may
+point anywhere. Matching is applied in **both** directions, so writing
+
+```yaml
+- dataset: datasets.*_gold.pv_overture_buildings
+```
+
+resolves against a producer whichever schema either side names, instead of binding
+the declaration to one deployment's configuration. A missing edge is worse than missing
+metadata: metadata falls back to a default, an ordering is read as an instruction.
+
+### Absent is not empty
+
+Omitting `depends_on` means *this file has not declared its inputs*. Writing
+`depends_on: []` means *this pipeline has no upstream*. Keeping the two apart is what
+lets a report separate a genuine root — an ingestion pipeline fed by its own extractors
+— from a file that has not yet adopted the field, so declare `[]` explicitly where it
+is true.
+
+In a deployer overlay, `depends_on` is **whole replacement** where the overlay states
+one, on the same rule as `ownership` and `row_filters`: a partial input list is not a
+meaningful statement, and substituting a producer is exactly what an overlay is for. An
+overlay that does not mention it inherits; one that says `[]` withdraws.
+
+### Reading the graph
+
+```bash
+celine-utils governance graph 'apps/*'
+```
+
+See [the CLI reference](cli.md#governance-graph) for the output formats and what each
+finding means.
+
+---
+
+## `active` — whether the pipeline is meant to run
+
+```yaml
+active: false
+```
+
+Defaults to `true`. `false` says the pipeline is not on a schedule anywhere — either
+**retired**, superseded by another pipeline, or **local only**, run on demand against a
+local database. The two are not distinguished, because for the graph they are the same
+statement: the datasets it already produced stay catalogued, and nothing new arrives
+unless someone acts.
+
+An active pipeline reading from an inactive one is reported, because whatever it reads is
+as old as the last time that pipeline ran.
+
+**App-level, and that is a real limit rather than an oversight.** One app can host
+several flows on independent schedules, and a deployment can pause one of them — `om`
+deploys four flows and its observations flow is paused while the other three run. This
+field cannot express that and must not be read as if it could. What it does say honestly
+is that an app has no deployed flow at all, which is the case that leaves a whole subtree
+of the graph dormant with nothing recording why.
+
+Whether a pipeline runs *in one deployment* is that deployment's fact, so a deployer
+overlay is the place to withdraw one. This key states the repository's own intent.
 
 ---
 

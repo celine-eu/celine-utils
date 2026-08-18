@@ -3,7 +3,8 @@
 ```text
 celine-utils
 ├── governance
-│   └── generate marquez
+│   ├── generate marquez
+│   └── graph
 └── pipeline
     ├── init app
     └── run  (envs | meltano | seed | dbt | build | prefect)
@@ -71,6 +72,92 @@ it.
 Reads `OPENLINEAGE_URL`, `OPENLINEAGE_NAMESPACE`, `PIPELINES_ROOT`, and the
 `KEYCLOAK_*` variables when Marquez requires authentication — see
 [environment](environment.md).
+
+---
+
+### `governance graph`
+
+Show which pipelines feed which, resolved from the `depends_on` and `sources` blocks of
+every `governance.yaml` matched.
+
+```bash
+celine-utils governance graph [PATHS...] [--format tree|order|json|mermaid]
+                              [--schedules FILE] [--strict]
+```
+
+`PATHS` are shell globs naming pipelines or governance files. A directory contributes
+the `governance.yaml` inside it, so `apps/*` and `apps/*/governance.yaml` are
+equivalent; `governance.<name>.yaml` is a deployer overlay and is skipped with a note.
+The default is `apps/*`.
+
+```bash
+# one repository
+celine-utils governance graph 'apps/*'
+
+# a deployment and the open-source pipelines together
+celine-utils governance graph 'apps/*' '/path/to/deployment/pipelines/apps/*'
+
+# the run order, flattened — what to run, in sequence
+celine-utils governance graph 'apps/*' --format order
+
+# a diagram, or something to feed a scheduler
+celine-utils governance graph 'apps/*' --format mermaid
+celine-utils governance graph 'apps/*' --format json
+```
+
+The tree output is a topological ordering: everything in tier *N* may run in parallel
+once tier *N-1* is done. Findings and the summary go to **stderr**, so the graph itself
+stays pipeable.
+
+**Which trees you glob is a judgement, not a detail.** A deployment repository may hold
+unmaintained copies of open-source apps, and including them reports every dataset those
+copies declare as having two producers.
+
+#### Findings
+
+| Finding | Meaning |
+|---|---|
+| `unresolved` | No scanned pipeline produces the dataset and it is not marked `external: true` — a typo, or a tree you did not glob |
+| `multiple-producers` | Two governance files declare the same dataset: two answers to who owns it, and an ambiguous producer for anything depending on it |
+| `cycle` | No run order exists for the pipelines named |
+| `self-dependency` | A pipeline depends on a dataset it also declares as its own output |
+| `inactive-producer` | An active pipeline reads from one marked `active: false` — whatever it reads is as old as the last time that pipeline ran |
+| `external-satisfied` | An entry marked `external: true` that a producer in this scan satisfies. Informational — it means a wider scan closed the graph |
+
+`--strict` exits 1 when anything other than `external-satisfied` or
+`schedule-unverified` is reported, which is the form for CI.
+
+#### Checking the deployed schedules
+
+Pass a deployment's scheduled flows and the crons are checked against the graph:
+
+```bash
+celine-utils governance graph 'apps/*' --schedules staging-flows.yaml
+```
+
+```yaml
+flows:
+  - name: weather
+    path: /pipelines/apps/weather/flows/pipeline.py   # or: app: weather
+    schedule:
+      cron: "15 * * * *"
+```
+
+`app` may be given directly or derived from `path`, which is the shape a Prefect
+deployment manifest already has. An entry with no cron is skipped — a flow triggered by
+hand has no ordering to check.
+
+| Finding | Meaning |
+|---|---|
+| `schedule-inversion` | Both fire hourly, never in the same minute, and the consumer is always earlier in the hour. It succeeds every time, on the previous run's output |
+| `schedule-collision` | Producer and consumer can start in the same minute; which run the consumer sees depends on which starts first |
+| `schedule-unverified` | The same two problems, on a pair where an app deploys several flows. Governance is per app and cannot say which flow produces which dataset, so the pairing may not be the one that moves the data. Advisory, and excluded from `--strict` |
+| `not-deployed` | A pipeline marked active that no scheduled flow in this deployment runs |
+
+**Schedules are not read from `governance.yaml`, deliberately.** A cron is a deployment
+fact: one app runs several flows on independent schedules, and the same pipeline runs on
+different schedules in different deployments. A governance file is one per app and is
+shared by every deployment that installs it, so it is the wrong place for either.
 
 ---
 

@@ -25,6 +25,8 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0003 | The package works on every Python version it claims | `tests/test_supported_python_range.py`, `.github/workflows/test.yaml` |
 | REQ-0004 | The published facet schema URL keeps resolving | `tests/test_governance_contract.py` |
 | REQ-0005 | An unknown key never silently changes a dataset's governance | `tests/test_governance_contract.py` |
+| REQ-0006 | A declared dependency resolves to a producer, or is reported | `tests/test_governance_graph.py` |
+| REQ-0007 | A schedule contradicting the graph is reported, and an uncertain one is not asserted | `tests/test_governance_graph.py` |
 
 ---
 
@@ -119,3 +121,72 @@ left a dataset in the catalogue.
 
 Behaviour: [unknown keys](../governance.md#unknown-keys),
 the companion's knowledge.
+
+## REQ-0006 — A declared dependency resolves to a producer, or is reported
+
+`depends_on` MUST name **datasets**, never pipelines, and the producing pipeline MUST
+be resolved by matching each entry against the `sources` keys of every governance file
+in the scanned set.
+
+- Matching MUST be case-sensitive `fnmatch` applied in **both** directions, so either
+  the dependency or the `sources` key may be the glob.
+- An entry resolving to no producer MUST be reported, unless it declares
+  `external: true`. An entry declaring `external: true` that *does* resolve MUST be
+  reported as informational rather than as a fault.
+- A dataset declared by two governance files MUST be reported.
+- A pipeline that cannot be placed in a run order MUST be reported and MUST NOT be
+  emitted in a tier.
+- Absent `depends_on` MUST remain distinct from `depends_on: []`: the first states that
+  a pipeline has not declared its inputs, the second that it has none.
+- An unknown key at the **root** of a governance document MUST be reported by
+  `validate`, on the same terms as an unknown key inside a block.
+- The graph MUST be computable within the dependencies of REQ-0001.
+- `active: false` MUST mark a pipeline as not meant to run, and an active pipeline
+  reading from an inactive one MUST be reported.
+
+**Consequence if violated:** each app is its own dbt project, so `ref()` never crosses
+an app boundary and nothing else in the platform can see the ordering across pipelines
+— it lives in cron offsets and hand-maintained tier tables. A dependency that resolves
+to nothing and is not reported produces a graph that looks authoritative and is
+silently incomplete, which is worse than no graph: an ordering is read as an
+instruction. The both-directions rule is what keeps this from happening per
+deployment: `ds_dev_*` is the default everywhere, but a consumer resolves the schema
+through `CELINE_SILVER_SCHEMA` / `CELINE_GOLD_SCHEMA`, which a deployment may point
+anywhere.
+
+Behaviour: [`depends_on`](../governance.md#depends_on--what-a-pipeline-consumes),
+[the CLI](../cli.md#governance-graph).
+
+## REQ-0007 — A schedule contradicting the graph is reported, and an uncertain one is not asserted
+
+Given a deployment's scheduled flows, the graph MUST report a producer/consumer pair
+whose crons contradict the declared edge:
+
+- **Collision** — the two can start in the same minute, so which run the consumer sees
+  depends on which container starts first.
+- **Inversion** — both fire hourly, never in the same minute, and the consumer is always
+  earlier in the hour, so it always reads the previous run's output.
+
+Two things it MUST NOT do:
+
+- **Assert an ordering it cannot know.** Governance is per app; a deployment schedules
+  *flows*, and one app can deploy several on independent crons. Where either side
+  deploys more than one, the pairing may not be the one that moves the data, and the
+  finding MUST be reported as advisory and excluded from `--strict`.
+- **Compare minutes across periods.** Pairs on different periods MUST be reported only
+  on an identical cron expression; reasoning about a real offset between an hourly and a
+  daily flow needs the run duration, which is in no file.
+
+Schedules MUST NOT be read from `governance.yaml`. A cron is a deployment fact — one app
+runs several flows, and the same pipeline runs on different schedules in different
+deployments — while a governance file is one per app and is shared across every
+deployment that installs it.
+
+**Consequence if violated:** the failure this catches is silent by construction. A
+consumer that runs before its producer succeeds every time, on stale data, and no test
+or alert fires — the ordering was only ever expressed as a cron offset, which is a
+convention nothing enforces. The advisory split matters just as much: a check that
+reports a pairing it cannot verify as though it were certain gets ignored, and then so
+does the one that was right.
+
+Behaviour: [`governance graph`](../cli.md#governance-graph).

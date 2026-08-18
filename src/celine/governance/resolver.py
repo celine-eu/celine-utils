@@ -13,6 +13,7 @@ import yaml
 from celine.governance.merge import merge_configs, merge_rules
 from celine.governance.models import (
     KNOWN_KEYS,
+    Dependency,
     GovernanceConfig,
     GovernanceRule,
 )
@@ -78,7 +79,26 @@ class GovernanceResolver:
             pattern: parse_rule(rule_data or {})
             for pattern, rule_data in (raw.get("sources") or {}).items()
         }
-        return cls(GovernanceConfig(defaults=defaults, sources=sources))
+
+        # `if "depends_on" in raw`, not `raw.get(...) or None`: absent and `[]`
+        # are different statements — "has not declared its inputs" versus
+        # "declares it has none" — and only the first is a file awaiting
+        # migration. See `GovernanceConfig.depends_on`.
+        depends_on = (
+            [Dependency.model_validate(d) for d in (raw.get("depends_on") or [])]
+            if "depends_on" in raw
+            else None
+        )
+
+        payload: Dict[str, Any] = {
+            "defaults": defaults,
+            "depends_on": depends_on,
+            "sources": sources,
+        }
+        if "active" in raw:
+            payload["active"] = raw["active"]
+
+        return cls(GovernanceConfig.model_validate(payload))
 
     @classmethod
     def from_file_with_override(

@@ -1,5 +1,16 @@
 version: "3"
 
+# A task that would have to name a private checkout to be useful lives in
+# taskfile.local.yaml, which is gitignored and optional: this file works without
+# it. `graph:all` — the dependency graph across the open-source pipelines and a
+# deployment's — is the one that needs it. Same arrangement as celine-policies
+# and celine-dashboards.
+includes:
+  local:
+    taskfile: taskfile.local.yaml
+    optional: true
+    flatten: true
+
 tasks:
   setup:
     desc: Setup environment
@@ -40,6 +51,21 @@ tasks:
     cmds:
       - task: clean-pycache
       - cmd: DEBUGGER=1 DEBUGGER_WAIT=0 uv run -m celine.utils.cli.main {{.CLI_ARGS}}
+
+  graph:
+    desc: Dependency graph of the open-source pipelines
+    summary: |
+      Resolves each app's `depends_on` against every app's `sources`, and prints
+      the tiers plus anything inconsistent. Sibling checkout, so this works from
+      any clone with the workspace layout; override with PIPELINES=<glob>.
+
+      The deployment's pipelines are not in this scan and their datasets show up
+      under "satisfied outside this scan". `graph:all` includes them and lives in
+      taskfile.local.yaml, because that path may not be committed.
+    vars:
+      PIPELINES: '{{.PIPELINES | default "../celine-pipelines/apps/*"}}'
+    cmds:
+      - uv run -m celine.utils.cli.main governance graph '{{.PIPELINES}}' {{.CLI_ARGS}}
 
   clean-pycache:
     cmds:

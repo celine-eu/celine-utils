@@ -216,3 +216,7 @@ logs/*.log
 .dumpster
 
 .agents/
+
+# Task definitions that would have to name a private checkout to be useful.
+# The committed taskfile.yaml works without it; see the store's playbooks.
+taskfile.local.yaml

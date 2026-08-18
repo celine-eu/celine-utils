@@ -181,8 +181,71 @@ class GovernanceRule(BaseModel):
         ]
 
 
+class Dependency(BaseModel):
+    """One dataset a pipeline consumes.
+
+    Names a **dataset**, never a pipeline. Several producers can satisfy one
+    dataset through a shared alias — ``mt`` and ``owm`` both publish
+    ``weather__forecast_hourly``, and the whole point of that contract is that
+    ``weather`` does not know which one ran — and a deployment may substitute its
+    own producer entirely. The producing pipeline is *resolved*, by matching this
+    pattern against the ``sources`` keys of every governance file in the scanned
+    set (:mod:`celine.governance.graph`), which is also why nothing here ever
+    names a repository.
+
+    Prefer a glob over the schema segment. ``ds_dev_*`` is the platform default
+    and stays the default everywhere — environments are separated by
+    infrastructure, not by renaming schemas — but a consumer resolves the schema
+    through ``CELINE_SILVER_SCHEMA`` / ``CELINE_GOLD_SCHEMA``, which a deployment
+    may point anywhere. ``datasets.*_gold.pv_overture_buildings`` is therefore the
+    form that does not depend on that choice.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    dataset: str
+
+    # Distinguishes a genuine outside producer from a typo. Both resolve to
+    # nothing in a single-repository scan and nothing else can tell them apart:
+    # unresolved *and* unmarked is a mistake, unresolved *and* marked is the
+    # documented case. Marked-but-resolved is reported too — as information, since
+    # it means a wider scan closed the graph.
+    external: bool = False
+
+    # A soft edge: order after the producer where it exists, do not require it.
+    # `pv_estimation` degrades rather than fails when `pv_detection` has not run,
+    # and today that fact lives in `flows/config.yaml` as `require_detection`.
+    optional: bool = False
+
+    description: Optional[str] = None
+
+
 class GovernanceConfig(BaseModel):
     defaults: GovernanceRule = Field(default_factory=GovernanceRule)
+
+    # Whether this pipeline is on a schedule anywhere. `False` covers two cases
+    # and does not distinguish them, because for the graph they are the same:
+    # *retired* — `copernicus`, `dwd` and `owm`, each superseded by another
+    # pipeline — and *local only* — the PV apps and `overture`, run on demand
+    # against a local database. Either way nothing arrives unless someone acts,
+    # and until this field existed nothing in the files said so.
+    #
+    # **App-level, and that is a real limit.** One app can host several flows on
+    # independent schedules, and a deployment can pause one of them: `om` runs
+    # four flows and its observations flow is paused while the other three run.
+    # This field cannot express that, and must not be read as if it could —
+    # per-flow state lives in the deployment, which is also the only place that
+    # knows it. What it does express honestly is an app with no deployed flow at
+    # all, which is the case that leaves a whole subtree of the graph dormant
+    # with nothing saying why.
+    active: bool = True
+
+    # `None`, not `[]`, and the difference is load-bearing: absent means the
+    # pipeline has not declared its inputs, `[]` means it declares it has none.
+    # Collapsing the two would make a tier-0 pipeline and an un-migrated file
+    # indistinguishable, which is the one thing an adoption checker needs to see.
+    depends_on: Optional[List[Dependency]] = None
+
     sources: Dict[str, GovernanceRule] = Field(default_factory=dict)
 
 
@@ -192,6 +255,14 @@ class GovernanceConfig(BaseModel):
 #: :class:`GovernanceRule` and *not* added here, the key parses into ``extra``
 #: and the field reads as absent — silently, with the schema still validating it.
 #: That is exactly how the ``ontology`` block failed on introduction.
+#:
+#: **``depends_on`` is deliberately not here, and adding it would be a bug.** This
+#: set splits one governance *block* — ``defaults``, or one entry under
+#: ``sources`` — and ``depends_on`` is a root key of the document, a sibling of
+#: both. Listing it would make ``depends_on:`` inside a dataset block parse as a
+#: rule field that no model declares. Root keys are checked by
+#: :func:`celine.governance.validation.unknown_keys` against
+#: :data:`KNOWN_ROOT_KEYS` instead.
 KNOWN_KEYS: frozenset[str] = frozenset(
     {
         "title",
@@ -212,5 +283,21 @@ KNOWN_KEYS: frozenset[str] = frozenset(
         "dcat",
         "ontology",
         "dataspace",
+    }
+)
+
+#: Keys the grammar defines at the **root** of a governance document.
+#:
+#: Separate from :data:`KNOWN_KEYS` because the two are checked against different
+#: things: that one splits a block, this one guards the document. A misspelled
+#: ``depends-on:`` at the root is invisible to a schema that permits additional
+#: root properties and to a parser that reads three keys by name — the file
+#: validates, the graph is empty, and nothing says why.
+KNOWN_ROOT_KEYS: frozenset[str] = frozenset(
+    {
+        "active",
+        "defaults",
+        "depends_on",
+        "sources",
     }
 )
