@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v2.4.0 (2026-08-18)
+
+### Features
+
+- Add cli pipeline run seed|build
+  ([`a0c9d0c`](https://github.com/celine-eu/celine-utils/commit/a0c9d0cf108ef3d9a67f3e2afbaaaa9aeabdc743))
+
+- Add depends_on and active flags to governance schema
+  ([`044f7ac`](https://github.com/celine-eu/celine-utils/commit/044f7ac0d588dd7e116960d1810e25de88ce2a20))
+
+
 ## v2.3.0 (2026-08-15)
 
 ### Chores
