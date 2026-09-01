@@ -244,6 +244,12 @@ def _unique(paths: Iterable[Path]) -> List[Path]:
 def load_pipelines(paths: Iterable[Path]) -> List[Pipeline]:
     """Read each file into a :class:`Pipeline`.
 
+    A path that is not there raises ``FileNotFoundError``, through
+    :meth:`GovernanceResolver.from_file`. The paths normally come from
+    :func:`discover`, which globs — so they exist by construction — and a graph
+    silently one pipeline short is the kind of quiet wrong answer this whole
+    module reports rather than produces.
+
     A pipeline is identified by the directory holding its ``governance.yaml``,
     which is the same identity ``GovernanceResolver.auto_discover`` and the
     ``pipeline run`` CLI use. Where two scanned trees hold a directory of the same

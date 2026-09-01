@@ -8,7 +8,7 @@ reaching different conclusions is the defect this package exists to remove.
 
 from __future__ import annotations
 
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, cast
 
 from pydantic import BaseModel
 
@@ -20,6 +20,47 @@ from celine.governance.models import (
 )
 
 M = TypeVar("M", bound=BaseModel)
+R = TypeVar("R", bound=GovernanceRule)
+D = TypeVar("D", bound=DataspaceConfig)
+C = TypeVar("C", bound=GovernanceConfig)
+
+
+def _operand_cls(
+    base: Optional[BaseModel],
+    override: Optional[BaseModel],
+    default: type[BaseModel],
+    explicit: Optional[type[BaseModel]] = None,
+) -> type[BaseModel]:
+    """Which class the merged instance is validated into.
+
+    The models here are ``extra="ignore"`` **so that a consumer can subclass
+    them** — ``ds`` carries its ODRL ``policy`` block and its richer
+    ``DataspaceSpec`` that way. That same setting is what made every merge in
+    this module lossy for such a consumer: validating a subclass instance into
+    the hardcoded base class returned a smaller object with the subclass's
+    fields dropped, silently. A model narrower than its input throwing the rest
+    away is the defect this package exists to remove; it was doing it itself.
+
+    So the class follows the operands. ``explicit`` wins when given, for the
+    caller who means something the operands do not say.
+
+    **Operands of different classes raise.** Picking the more derived one would
+    be a silent choice about which fields survive, which is the same failure in
+    a new place; picking the base would reintroduce the old one. A caller who
+    genuinely means to mix two shapes passes ``explicit`` and says so.
+    """
+    if explicit is not None:
+        return explicit
+
+    classes = {type(o) for o in (base, override) if o is not None}
+    if len(classes) > 1:
+        names = ", ".join(sorted(c.__name__ for c in classes))
+        raise TypeError(
+            f"cannot merge operands of different model classes ({names}); "
+            f"validate both into one class first, or pass model_cls to say "
+            f"which one the result is"
+        )
+    return classes.pop() if classes else default
 
 
 def _deep_merge(a: dict, b: dict) -> dict:
@@ -77,8 +118,11 @@ def merge_models(base: Optional[M], override: Optional[M], model_cls: type[M]) -
 
 
 def merge_dataspace(
-    base: Optional[DataspaceConfig], override: Optional[DataspaceConfig]
-) -> Optional[DataspaceConfig]:
+    base: Optional[D],
+    override: Optional[D],
+    *,
+    model_cls: Optional[type[D]] = None,
+) -> Optional[D]:
     """Field-wise overlay, then two rules that are not "override wins".
 
     - ``purpose`` is a **union**. An overlay adds a reason for processing; it
@@ -91,8 +135,13 @@ def merge_dataspace(
     offered, always offered* — a loosening, and the precise bug this merge
     replaces. It follows the ordinary ``exclude_unset`` rule so that an overlay
     can withdraw a dataset.
+
+    The result is the operands' own class — ``ds``'s ``DataspaceSpec`` carries
+    the EDC sub-objects through instead of losing them. See :func:`_operand_cls`,
+    including what happens when the two operands disagree about their class.
     """
-    merged = merge_models(base, override, DataspaceConfig)
+    cls = cast("type[D]", _operand_cls(base, override, DataspaceConfig, model_cls))
+    merged = merge_models(base, override, cls)
     if merged is None or base is None or override is None:
         return merged
     merged.purpose = sorted(set(base.purpose) | set(override.purpose))
@@ -101,7 +150,9 @@ def merge_dataspace(
     return merged
 
 
-def merge_rules(base: GovernanceRule, override: GovernanceRule) -> GovernanceRule:
+def merge_rules(
+    base: R, override: R, *, model_cls: Optional[type[R]] = None
+) -> R:
     """Overlay ``override`` onto ``base``.
 
     Generic ``exclude_unset`` merge, then the fields whose semantics are not
@@ -122,8 +173,15 @@ def merge_rules(base: GovernanceRule, override: GovernanceRule) -> GovernanceRul
                    the mapping resolver rejects as "two answers to what one
                    column means"
     ============== ==========================================================
+
+    The result is the operands' own class, and the nested ``dcat`` and
+    ``dataspace`` merges follow their own — see :func:`_operand_cls`. ``ds``
+    subclasses this model to carry its ODRL ``policy`` block; before that the
+    merge validated it back into :class:`GovernanceRule` and dropped the block
+    without saying so.
     """
-    merged = merge_models(base, override, GovernanceRule)
+    cls = cast("type[R]", _operand_cls(base, override, GovernanceRule, model_cls))
+    merged = merge_models(base, override, cls)
     assert merged is not None  # both operands are non-None by signature
 
     merged.tags = sorted(set(base.tags or []) | set(override.tags or []))
@@ -131,12 +189,21 @@ def merge_rules(base: GovernanceRule, override: GovernanceRule) -> GovernanceRul
     merged.row_filters = override.row_filters or base.row_filters
     merged.extra = {**base.extra, **override.extra}
     merged.ontology = override.ontology if override.ontology is not None else base.ontology
-    merged.dcat = merge_models(base.dcat, override.dcat, DcatConfig)
+    # The nested classes follow their own operands rather than the rule's: a
+    # subclass may replace one sub-object and inherit the others, and reading
+    # them off `cls` would put that back the way it was.
+    merged.dcat = merge_models(
+        base.dcat,
+        override.dcat,
+        cast("type[DcatConfig]", _operand_cls(base.dcat, override.dcat, DcatConfig)),
+    )
     merged.dataspace = merge_dataspace(base.dataspace, override.dataspace)
     return merged
 
 
-def merge_configs(base: GovernanceConfig, override: GovernanceConfig) -> GovernanceConfig:
+def merge_configs(
+    base: C, override: C, *, model_cls: Optional[type[C]] = None
+) -> C:
     """Overlay a whole governance file onto another — a deployer override.
 
     Defaults merge with defaults; a source present in both merges rule-wise; a
@@ -154,13 +221,23 @@ def merge_configs(base: GovernanceConfig, override: GovernanceConfig) -> Governa
     survive, exactly as ``expose: false`` must. Truthiness would silently restore
     the base's list — the bug this merge layer was written to remove.
     """
+    cls = cast("type[C]", _operand_cls(base, override, GovernanceConfig, model_cls))
+
     sources = dict(base.sources)
     for key, rule in override.sources.items():
         sources[key] = merge_rules(sources[key], rule) if key in sources else rule
-    return GovernanceConfig(
-        defaults=merge_rules(base.defaults, override.defaults),
-        depends_on=(
-            override.depends_on if override.depends_on is not None else base.depends_on
-        ),
-        sources=sources,
+
+    # The generic overlay first, so a subclass's own root-level fields survive
+    # with `exclude_unset` semantics rather than being dropped by a constructor
+    # that names three keys. The three below are then assigned over it, because
+    # their rules are not "override wins" — assignment marks them set, which is
+    # what the previous keyword construction did for every field.
+    merged = merge_models(base, override, cls)
+    assert merged is not None  # both operands are non-None by signature
+
+    merged.defaults = merge_rules(base.defaults, override.defaults)
+    merged.depends_on = (
+        override.depends_on if override.depends_on is not None else base.depends_on
     )
+    merged.sources = sources
+    return merged

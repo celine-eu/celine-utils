@@ -72,9 +72,16 @@ rule.access_level      # 'restricted'
 rule.tags              # ['gold', 'weather']
 ```
 
-A missing file is **not** an error: `from_file` logs a warning and returns a resolver
-over an empty configuration, so every dataset resolves to empty defaults. Check the
-path yourself if absence should fail.
+A missing file **is** an error: `from_file` raises `FileNotFoundError`. Handing over a
+path is already a statement about which file you mean, so absence is *what you asked
+for is not there* — not *nothing was asked for*, which is `auto_discover`'s case and
+still returns an empty configuration.
+
+It used to warn and return that empty configuration instead. A connector whose
+`governance/` directory had been renamed then started clean, served an empty dataset
+list and empty sharing offers, and said nothing while the files sat on disk; the first
+symptom was an unrelated end-to-end test failing on a fixture that was right there in
+the file. Catch `FileNotFoundError` if a missing file is a state your caller supports.
 
 ### Constructors
 
@@ -90,10 +97,15 @@ consolidated genuinely disagreed: one inferred the overlay name from the parent
 directory, the other returned the base unchanged. Neither default would have been
 correct for both, so each passes what it means.
 
+A **missing overlay** is not an error, unlike a missing base: the overlay is located by
+convention rather than named by the caller, so its absence is the "nothing was asked
+for" case.
+
 ### `parse_rule`
 
 `parse_rule(block)` builds a single `GovernanceRule` from one raw block, accepting
-either a bare block or one nested under a `governance:` key.
+either a bare block or one nested under a `governance:` key. `parse_rule(block, MyRule)`
+builds a subclass of one — see [extending the models](#extending-the-models).
 
 It goes through `model_validate` on a dict containing only the keys the block
 actually declared. **That is load-bearing.** Pydantic records those keys in
@@ -116,9 +128,9 @@ config   = merge_configs(base_config, overlay_config)
 
 | Function | Combines |
 |---|---|
-| `merge_rules(base, override)` | two `GovernanceRule`s, with the per-field rules below |
-| `merge_configs(base, override)` | two whole documents — defaults with defaults, sources rule-wise, overlay-only sources added as-is |
-| `merge_dataspace(base, override)` | two `DataspaceConfig`s |
+| `merge_rules(base, override, *, model_cls=None)` | two `GovernanceRule`s, with the per-field rules below |
+| `merge_configs(base, override, *, model_cls=None)` | two whole documents — defaults with defaults, sources rule-wise, overlay-only sources added as-is |
+| `merge_dataspace(base, override, *, model_cls=None)` | two `DataspaceConfig`s |
 | `merge_models(base, override, cls)` | the generic `exclude_unset` overlay |
 
 The overlay uses `exclude_unset` — not `exclude_defaults`, and never truthiness.
@@ -241,11 +253,18 @@ Every model sets `extra="ignore"`, so a file carrying fields this package does n
 know — the EDC sub-objects `ds` adds, a new field from a newer release — parses
 rather than failing. Unknown keys at block level are preserved in `rule.extra`.
 
-`KNOWN_KEYS` is the frozenset deciding which keys reach the model and which land in
-`extra`. **Adding a field to `GovernanceRule` without adding it to `KNOWN_KEYS`
-makes that field read as permanently absent** — the key parses into `extra`, the
-schema still validates the file, and nothing reports it. That is exactly how the
-`ontology` block failed on introduction.
+`KNOWN_KEYS` is the frozenset stating which keys the base grammar defines. It is what
+`validate` checks a block against when reporting unknown keys.
+
+**It is no longer what decides the split.** `parse_rule` reads that off the model class
+it is given, so a consumer's subclass keeps its own fields instead of watching them land
+in `extra`. For `GovernanceRule` the two sets are identical, and a contract test holds
+them there.
+
+The difference matters when they do drift: a field added to the model and forgotten in
+`KNOWN_KEYS` now parses correctly and is *reported* as an unknown key by `validate` —
+noisy and wrong, rather than the silent permanent absence it used to be. That silence is
+how the `ontology` block failed on introduction; it can no longer happen that way.
 
 ---
 
@@ -255,3 +274,34 @@ schema still validates the file, and nothing reports it. That is exactly how the
 rather than adding fields here: what belongs in this package is the surface *every*
 consumer shares. A field only one component reads is a field the other three carry
 without meaning.
+
+```python
+class SpecRule(GovernanceRule):
+    policy: dict | None = None
+
+base     = parse_rule(base_block, SpecRule)
+override = parse_rule(override_block, SpecRule)
+
+merged = merge_rules(base, override)   # -> SpecRule, policy and all
+```
+
+`parse_rule`, `merge_rules`, `merge_dataspace` and `merge_configs` all follow the class
+they are given: `parse_rule` from its `model_cls` argument, the merges from their
+operands. Nothing needs `model_cls` in the ordinary case.
+
+**Both operands must be the same class.** Mixing them raises `TypeError` rather than
+picking one, because picking the more derived class invents fields the other operand
+never had and picking the base drops the ones it did — either way a silent decision
+about which half of the input survives. Validate both into one class first, or pass
+`model_cls` to say deliberately what the result is:
+
+```python
+merge_rules(base, override, model_cls=GovernanceRule)   # narrow on purpose
+```
+
+Until 3.0 these functions named their class instead. A subclass handed to any of them
+came back as a base-class instance with the subclass's fields dropped — no error, just
+a smaller object.
+
+The package ships a PEP 561 `py.typed` marker, so a subclass is type-checkable rather
+than a subclass of `Any`.

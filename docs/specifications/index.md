@@ -24,7 +24,7 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0002 | Catalogue and dataspace exposure are separate gates, ANDed | `tests/test_governance_exposure.py` |
 | REQ-0003 | The package works on every Python version it claims | `tests/test_supported_python_range.py`, `.github/workflows/test.yaml` |
 | REQ-0004 | The published facet schema URL keeps resolving | `tests/test_governance_contract.py` |
-| REQ-0005 | An unknown key never silently changes a dataset's governance | `tests/test_governance_contract.py` |
+| REQ-0005 | An unknown key never silently changes a dataset's governance | `tests/test_governance_contract.py`, `tests/test_governance_subclassing.py` |
 | REQ-0006 | A declared dependency resolves to a producer, or is reported | `tests/test_governance_graph.py` |
 | REQ-0007 | A schedule contradicting the graph is reported, and an uncertain one is not asserted | `tests/test_governance_graph.py` |
 
@@ -106,18 +106,24 @@ A key the grammar does not define MUST be preserved in `rule.extra` rather than
 dropped, and MUST be reported by `validate` — as a warning by default, and as an
 error under `strict=True`.
 
-`KNOWN_KEYS` MUST list every field of `GovernanceRule` that a file may declare. A
-field present in the model and absent from `KNOWN_KEYS` parses into `extra` and reads
-as permanently absent.
+The split between a field and `extra` MUST follow the model class being parsed into,
+including a consumer's subclass. A subclass split against the base grammar's key set
+has the same failure as a forgotten `KNOWN_KEYS` entry once had: the field reads as its
+default forever, and nothing warns.
+
+`KNOWN_KEYS` MUST list every field of `GovernanceRule` that a file may declare. It is
+what `validate` reports unknown keys against, so a field present in the model and absent
+from it is reported as unknown — a legitimate field called a mistake.
 
 Parsing MUST go through `model_validate` on the keys a file actually declared, so
 `model_fields_set` distinguishes *unset* from *set to a falsy value*.
 
 **Consequence if violated:** a misspelled key — `access_levl: open` — validates
 against the schema, is discarded by the model, and the dataset silently takes the
-default. Under kwargs construction the merge degrades to "override always wins" and
-`expose: false` becomes inexpressible, which is how a withdrawal that validated clean
-left a dataset in the catalogue.
+default. A model class narrower than the file it is handed does the same thing to
+fields that are spelled correctly. Under kwargs construction the merge degrades to
+"override always wins" and `expose: false` becomes inexpressible, which is how a
+withdrawal that validated clean left a dataset in the catalogue.
 
 Behaviour: [unknown keys](../governance.md#unknown-keys),
 the companion's knowledge.

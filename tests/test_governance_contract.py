@@ -84,11 +84,13 @@ def test_governance_imports_no_heavy_dependency():
 
 # @verifies REQ-0005
 def test_known_keys_matches_the_model_fields():
-    """A field on the model but missing from KNOWN_KEYS parses into `extra` and
-    reads as absent — silently, with the schema still validating the file.
+    """The two statements of the base grammar must not drift.
 
-    That is exactly how the `ontology` block failed when it was introduced. This
-    test is the thing that would have caught it.
+    `parse_rule` splits a block against the model class it parses into, so a
+    field missing from `KNOWN_KEYS` no longer reads as absent — the silence that
+    hid the `ontology` block on introduction is gone. `validate` still reports
+    unknown keys against this constant, so a drift now calls a legitimate field
+    a mistake instead. Noisy rather than silent, and still wrong.
     """
     model_fields = set(GovernanceRule.model_fields) - {"extra"}
     assert model_fields == set(KNOWN_KEYS), (
@@ -211,14 +213,62 @@ def test_facet_dataspace_projection_is_opt_out():
 # ---------------------------------------------------------------------------
 
 
+def test_the_package_declares_that_it_is_typed():
+    """PEP 561. Without the marker every name here is `Any` to a consumer.
+
+    The models invite subclassing, and a subclass of `Any` is an error mypy
+    reports three times over before it gets to `no-any-return` at each merge
+    call. `ds` worked around that with `follow_untyped_imports`, which is a
+    workaround for a missing declaration rather than for anything wrong with the
+    types.
+
+    Both halves are asserted because either alone ships nothing: the marker
+    beside the package is what mypy reads from an installed wheel, and the
+    `package-data` entry is what puts it in the wheel. A marker that exists only
+    in the checkout is invisible to exactly the consumer it is for.
+    """
+    assert (Path(gov.__file__).parent / "py.typed").is_file()
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    if not pyproject.is_file():
+        pytest.skip("running outside a source checkout — no pyproject.toml")
+    try:
+        import tomllib
+    except ImportError:  # Python 3.10 has no tomllib and this package supports it.
+        pytest.skip("tomllib is unavailable below Python 3.11")
+
+    package_data = tomllib.loads(pyproject.read_text(encoding="utf-8"))["tool"][
+        "setuptools"
+    ]["package-data"]
+    assert "py.typed" in package_data["celine.governance"]
+
+
 def test_everything_exported_actually_exists():
     missing = [name for name in gov.__all__ if not hasattr(gov, name)]
     assert not missing
 
 
-def test_deprecated_shim_still_resolves(recwarn):
-    """A pipeline pinning an older import path must not break on upgrade."""
-    import importlib
+def test_the_governance_shim_is_gone():
+    """`celine.utils.pipelines.governance` was deleted, not merely deprecated.
 
-    mod = importlib.import_module("celine.utils.pipelines.governance")
-    assert mod.GovernanceResolver is GovernanceResolver
+    It re-exported this package under the pre-2.0 import path, for pipelines that
+    had not moved. A survey on 2026-09-01 found no importer anywhere — not in
+    `celine-dev/repositories/`, `demo3`, `demo3.deployment`, `demo3.dataspace`,
+    `infra` or `ds` — so the only thing keeping it alive was the test that
+    protected it.
+
+    Asserted rather than left implicit because deleting a module is invisible in
+    a diff of the modules that remain, and because `celine.utils.pipelines.owners`
+    is a sibling shim that deliberately **stays**: it was not surveyed and no
+    change here reaches it.
+    """
+    import importlib
+    import importlib.util
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("celine.utils.pipelines.governance")
+
+    # The sibling is still there on purpose. `find_spec`, not `import_module`:
+    # importing it fires its DeprecationWarning, and a test that shouts about a
+    # module it is only counting teaches the suite to ignore that warning.
+    assert importlib.util.find_spec("celine.utils.pipelines.owners") is not None

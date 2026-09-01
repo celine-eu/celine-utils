@@ -111,6 +111,7 @@ container. Nothing walks up from `__file__`.
   them. A schema change must be **released** before any downstream repository can
   consume it.
 - Adding a field means adding it in three places — the JSON Schema, the pydantic
-  model, and `KNOWN_KEYS`. Omitting the third makes the field parse into `extra` and
-  read as permanently absent, with the schema still validating the file and nothing
-  reporting the problem.
+  model, and `KNOWN_KEYS`. Omitting the third no longer makes the field read as
+  permanently absent — `parse_rule` splits a block against the model's own fields —
+  but `validate` then reports the new field as an unknown key, and a contract test
+  fails because the two statements of the grammar have drifted.

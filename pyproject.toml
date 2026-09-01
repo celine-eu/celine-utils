@@ -127,6 +127,23 @@ include = ["celine.utils*", "celine.governance*"]
 [tool.setuptools.package-data]
 "celine.governance.schema" = ["*.json"]
 
+# PEP 561. Without it a consumer running mypy gets `Any` for every name in
+# `celine.governance` — and a consumer that subclasses the models, which their
+# docstrings invite, gets `Class cannot subclass "DataspaceConfig" (has type
+# "Any")` on top. `ds` worked around that with `follow_untyped_imports`, which
+# is a workaround for a missing declaration rather than for anything wrong with
+# the types.
+#
+# `celine/governance/py.typed`, NOT `celine/py.typed`: `celine` is a namespace
+# shared with `celine.dataset`, `celine.sdk` and others, and a marker there would
+# claim typing on behalf of distributions this wheel does not ship.
+#
+# `celine.utils` is deliberately left unmarked. Marking the fat side would push
+# its annotation gaps into every downstream mypy run, and no consumer imports it
+# for types — dataset-api, celine-superset and ds all import `celine.governance`
+# alone.
+"celine.governance" = ["py.typed"]
+
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
 

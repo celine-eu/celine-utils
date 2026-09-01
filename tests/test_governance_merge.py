@@ -180,3 +180,33 @@ def test_exact_match_beats_glob_and_longest_glob_wins():
     assert resolve(raw, "ds.gold.metrics_other").access_level == "open"
     assert resolve(raw, "ds.gold.anything").access_level == "restricted"
     assert resolve(raw, "ds.silver.x").access_level == "internal"
+
+
+# ---------------------------------------------------------------------------
+# Root-level fields, which an overlay used to reset by omission
+# ---------------------------------------------------------------------------
+
+
+def test_an_overlay_that_says_nothing_does_not_reactivate_a_pipeline():
+    """`active` survives an overlay that never mentions it.
+
+    `merge_configs` used to build its result with three keyword arguments —
+    `defaults`, `depends_on`, `sources` — so every other root field was dropped
+    on the floor and `active` came back as its default `True`. A deployment
+    overlay is exactly where `active: false` is declared, and the graph reads it
+    to report a producer that nothing schedules, so the field was reset by the
+    one file most likely to set it.
+
+    It now overlays through `merge_models` first, with `exclude_unset` deciding
+    what the overlay actually said.
+    """
+    from celine.governance import GovernanceConfig, merge_configs
+
+    base = GovernanceConfig.model_validate({"active": False})
+
+    assert merge_configs(base, GovernanceConfig.model_validate({})).active is False
+    # And an overlay that does mention it still wins, in both directions.
+    assert (
+        merge_configs(base, GovernanceConfig.model_validate({"active": True})).active
+        is True
+    )
