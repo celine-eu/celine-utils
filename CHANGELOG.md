@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.5.0 (2026-09-01)
+
+### Features
+
+- Improve typed handling, review resolver load_file behaviours
+  ([`f2ddd4c`](https://github.com/celine-eu/celine-utils/commit/f2ddd4cc438f0119bdb7cb4268c1b0ad94ef43a5))
+
+
 ## v2.4.0 (2026-08-18)
 
 ### Features
