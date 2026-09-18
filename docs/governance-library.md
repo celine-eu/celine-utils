@@ -87,9 +87,9 @@ the file. Catch `FileNotFoundError` if a missing file is a state your caller sup
 
 | Call | Use |
 |---|---|
-| `GovernanceResolver.from_file(path)` | a known path |
-| `GovernanceResolver.from_dict(raw)` | a document already parsed, e.g. from an API response |
-| `GovernanceResolver.from_file_with_override(base, overlay_name=None, *, infer_from_dir=False)` | base plus a deployer overlay beside it |
+| `GovernanceResolver.from_file(path, *, owners=None, strict_owners=None, placeholders=None)` | a known path |
+| `GovernanceResolver.from_dict(raw, *, owners=None, strict_owners=None, placeholders=None)` | a document already parsed, e.g. from an API response |
+| `GovernanceResolver.from_file_with_override(base, overlay_name=None, *, infer_from_dir=False, owners=None, strict_owners=None, placeholders=None)` | base plus a deployer overlay beside it |
 | `GovernanceResolver.auto_discover(app_name=None, project_dir=None)` | convention-based lookup — see [discovery order](governance.md#where-the-file-lives) |
 
 `infer_from_dir` is opt-in rather than default because the two callers this
@@ -100,6 +100,12 @@ correct for both, so each passes what it means.
 A **missing overlay** is not an error, unlike a missing base: the overlay is located by
 convention rather than named by the caller, so its absence is the "nothing was asked
 for" case.
+
+`owners=` replaces every `ownership[].name` with the id of the owner it resolves to —
+see [resolving ownership names](governance-owners.md#resolving-ownership-names). It is
+applied **after** the overlay is merged, and `strict_owners` must then be stated.
+`placeholders=` is the deployment's own map of generic names to owner ids.
+Without `owners` names are kept as written, as before.
 
 ### `parse_rule`
 

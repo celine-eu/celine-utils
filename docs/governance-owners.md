@@ -49,7 +49,7 @@ owners:
 | `role` | no | The party's role **with respect to the data** — `publisher`, `controller`, … Declared but not yet consumed |
 | `did` | no | `did:web:` URI, for owners operating a dataspace connector |
 | `url` | no | Canonical homepage, emitted as `foaf:homepage`, and used as publisher URI when no DID is set |
-| `aliases` | no | Alternative lookup keys resolving to this owner |
+| `aliases` | no | Alternative lookup keys resolving to this owner. Being retired — pass a deployment placeholder map instead, see [resolving ownership names](#resolving-ownership-names) |
 | `organization` | no | Keycloak provisioning block |
 
 `type` is a closed enum: `schema:Organization` (generic fallback),
@@ -127,6 +127,60 @@ load_owners_yaml(path, missing_ok=False, validate=False)
 - `validate` — check against `owners.schema.json` before parsing. Off by default so
   adopting this loader cannot turn an existing warning into a crash. **Callers that
   provision real identities should turn it on.**
+
+---
+
+## Resolving ownership names
+
+A placeholder such as `dso` is a lookup key, not an owner. Anything downstream that
+uses the name as written — an asset's owner label, an ODRL assigner, a recipient —
+publishes a string that matches no organisation. Resolve the names before handing
+rules on:
+
+```python
+from pathlib import Path
+from celine.governance import GovernanceResolver, load_owners_yaml
+
+owners = load_owners_yaml(Path("owners.yaml"), validate=True)
+placeholders = {"rec": "example-rec", "dso": "example-dso"}  # the deployment's local config
+resolver = GovernanceResolver.from_file_with_override(
+    Path("governance.yaml"),
+    "deploy",
+    owners=owners,
+    strict_owners=True,
+    placeholders=placeholders,
+)
+rule = resolver.resolve("datasets.ds_dev_gold.grid_substations")
+rule.ownership[0].name                         # -> 'example-dso', not 'dso'
+owners.canonical_uri(rule.ownership[0].name)   # -> its DID, else its URL
+```
+
+| Call | Does |
+|---|---|
+| `resolve_ownership(rule, owners, *, strict, placeholders=None)` | one rule, returned as a copy; the input is not modified |
+| `resolve_config_ownership(config, owners, *, strict, placeholders=None)` | `defaults` and every `sources` rule |
+| `unresolved_owners(config, owners, *, placeholders=None)` | `{name: [where, ...]}` for every name that resolves to nothing — reports, never raises |
+| `from_file*(…, owners=, strict_owners=, placeholders=)` | resolves after the overlay is merged |
+
+- Each name is looked up in order: an owner id, then the **placeholder map**, then the
+  registry's `aliases`. It is replaced by the entry's `id`; `type` is kept as written.
+  A name that is already an id stays, and an id wins over a placeholder of the same
+  name.
+- **The placeholder map is the deployment's, not the owners file's.** Public governance
+  files keep generic names (`rec`, `dso`); each deployment maps them to its own
+  organisation ids in its local configuration and passes the map as `placeholders`.
+  The owners file then lists organisations only. `aliases:` still resolves while
+  files carry it, and is being retired in favour of the map.
+- `owners` is anything with `by_id(name)` returning an object with an `id`, or
+  `None` (`OwnerLookup`); `OwnersRegistry` is one.
+- **After the merge, never per file.** An overlay may replace `ownership` outright, and
+  resolving the base alone would fail on a placeholder the deployment has already
+  withdrawn.
+- `strict=True` raises `UnresolvedOwnerError` (a `ValueError`) listing **every**
+  unresolved name and where it was declared. `strict=False` keeps the name as written
+  and logs a warning. There is no default yet: the caller says which it means.
+- A placeholder listed beside the id it stands for collapses to one owner; the same
+  organisation under two different `type`s is kept twice.
 
 ---
 

@@ -23,10 +23,10 @@ from celine.governance import (
 OWNERS_YAML = textwrap.dedent(
     """
     owners:
-      - id: greenland
+      - id: example-rec
         type: schema:NGO
-        name: Greenland Soc. Coop.
-        url: https://www.greenland.it
+        name: Example REC Soc. Coop.
+        url: https://www.rec.example.org
         organization:
           create: true
           role: rec
@@ -34,11 +34,11 @@ OWNERS_YAML = textwrap.dedent(
             country: IT
         aliases: [rec]
 
-      - id: set-distribuzione
+      - id: example-dso
         type: schema:Corporation
-        name: SET Distribuzione S.p.A.
-        url: https://www.setdistribuzione.it
-        did: did:web:set.dataspaces.localhost
+        name: Example DSO S.p.A.
+        url: https://www.dso.example.org
+        did: did:web:dso.dataspaces.localhost
         organization:
           create: true
           role: dso
@@ -71,12 +71,12 @@ def test_alias_resolves_to_the_deployments_owner(registry: OwnersRegistry) -> No
     the caller fell back to a synthetic `urn:owner:rec` — which is not a
     resolvable identifier and never matched the DCAT formatter's URI index.
     """
-    assert registry.canonical_uri("rec") == "https://www.greenland.it"
-    assert registry.by_id("rec").id == "greenland"
+    assert registry.canonical_uri("rec") == "https://www.rec.example.org"
+    assert registry.by_id("rec").id == "example-rec"
 
 
 def test_did_outranks_url(registry: OwnersRegistry) -> None:
-    assert registry.canonical_uri("dso") == "did:web:set.dataspaces.localhost"
+    assert registry.canonical_uri("dso") == "did:web:dso.dataspaces.localhost"
 
 
 def test_an_id_is_never_shadowed_by_someone_elses_alias() -> None:
@@ -122,7 +122,7 @@ def test_conflicting_alias_is_resolved_by_first_claim_not_silently() -> None:
 
 
 def test_aliases_map_is_reported_for_diagnostics(registry: OwnersRegistry) -> None:
-    assert registry.aliases() == {"rec": "greenland", "dso": "set-distribuzione"}
+    assert registry.aliases() == {"rec": "example-rec", "dso": "example-dso"}
 
 
 # ---------------------------------------------------------------------------
@@ -138,11 +138,11 @@ def test_len_counts_owners_not_lookup_keys(registry: OwnersRegistry) -> None:
     """
     assert len(registry) == 3
     assert len(registry.all()) == 3
-    assert {e.id for e in registry.all()} == {"greenland", "set-distribuzione", "spxl"}
+    assert {e.id for e in registry.all()} == {"example-rec", "example-dso", "spxl"}
 
 
 def test_membership_covers_ids_and_aliases(registry: OwnersRegistry) -> None:
-    assert "greenland" in registry
+    assert "example-rec" in registry
     assert "rec" in registry
     assert "nobody" not in registry
 
@@ -154,7 +154,7 @@ def test_membership_covers_ids_and_aliases(registry: OwnersRegistry) -> None:
 
 def test_organization_block_survives_loading(registry: OwnersRegistry) -> None:
     """`extra="ignore"` used to drop it, leaving policies with nothing to read."""
-    org = registry.by_id("greenland").organization
+    org = registry.by_id("example-rec").organization
     assert org is not None
     assert org.create is True
     assert org.role == "rec"
@@ -162,7 +162,7 @@ def test_organization_block_survives_loading(registry: OwnersRegistry) -> None:
 
 
 def test_owner_without_organization_has_no_kc_org(registry: OwnersRegistry) -> None:
-    assert registry.by_id("greenland").has_kc_org is True
+    assert registry.by_id("example-rec").has_kc_org is True
     assert registry.by_id("spxl").has_kc_org is False
 
 
@@ -174,7 +174,7 @@ def test_identity_registry_spelling_is_accepted() -> None:
     loaded a YAML.
     """
     entry = OwnerEntry.model_validate(
-        {"id": "greenland", "organization_config": {"create": True, "role": "rec"}}
+        {"id": "example-rec", "organization_config": {"create": True, "role": "rec"}}
     )
     assert entry.has_kc_org is True
     assert entry.organization.role == "rec"
@@ -196,7 +196,7 @@ def test_role_is_distinct_from_the_keycloak_role() -> None:
     """
     entry = OwnerEntry.model_validate(
         {
-            "id": "greenland",
+            "id": "example-rec",
             "role": "controller",
             "organization": {"create": True, "role": "rec"},
         }
@@ -216,9 +216,9 @@ def test_role_defaults_to_unset() -> None:
 
 def test_by_uri_finds_both_did_and_url(registry: OwnersRegistry) -> None:
     """The DCAT formatter looks up whatever URI was persisted on the entry."""
-    assert registry.by_uri("https://www.greenland.it").id == "greenland"
-    assert registry.by_uri("did:web:set.dataspaces.localhost").id == "set-distribuzione"
-    assert registry.by_uri("https://www.setdistribuzione.it").id == "set-distribuzione"
+    assert registry.by_uri("https://www.rec.example.org").id == "example-rec"
+    assert registry.by_uri("did:web:dso.dataspaces.localhost").id == "example-dso"
+    assert registry.by_uri("https://www.dso.example.org").id == "example-dso"
     assert registry.by_uri("urn:owner:rec") is None
 
 
@@ -245,15 +245,15 @@ def test_validate_on_load_catches_what_the_model_tolerates(tmp_path: Path) -> No
     path = tmp_path / "owners.yaml"
     path.write_text(
         "owners:\n"
-        "  - id: greenland\n"
+        "  - id: example-rec\n"
         "    type: schema:NGO\n"
-        "    name: Greenland Soc. Coop.\n"
-        "    urls: https://www.greenland.it\n",
+        "    name: Example REC Soc. Coop.\n"
+        "    urls: https://www.rec.example.org\n",
         encoding="utf-8",
     )
 
     lenient = load_owners_yaml(path)
-    assert lenient.canonical_uri("greenland") is None  # silently identifier-less
+    assert lenient.canonical_uri("example-rec") is None  # silently identifier-less
 
     with pytest.raises(GovernanceValidationError) as exc:
         load_owners_yaml(path, validate=True)

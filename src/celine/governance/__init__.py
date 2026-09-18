@@ -86,6 +86,13 @@ from celine.governance.owners import (
     OwnersRegistry,
     load_owners_yaml,
 )
+from celine.governance.ownership import (
+    OwnerLookup,
+    UnresolvedOwnerError,
+    resolve_config_ownership,
+    resolve_ownership,
+    unresolved_owners,
+)
 from celine.governance.resolver import GovernanceResolver, parse_rule
 from celine.governance.validation import (
     GovernanceValidationError,
@@ -154,6 +161,12 @@ __all__ = [
     "OwnerEntry",
     "OwnerOrganization",
     "load_owners_yaml",
+    # ownership resolution
+    "OwnerLookup",
+    "UnresolvedOwnerError",
+    "resolve_ownership",
+    "resolve_config_ownership",
+    "unresolved_owners",
     # levels
     "AccessRequirement",
     "GovernanceAccessLevel",

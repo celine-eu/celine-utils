@@ -27,6 +27,7 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0005 | An unknown key never silently changes a dataset's governance | `tests/test_governance_contract.py`, `tests/test_governance_subclassing.py` |
 | REQ-0006 | A declared dependency resolves to a producer, or is reported | `tests/test_governance_graph.py` |
 | REQ-0007 | A schedule contradicting the graph is reported, and an uncertain one is not asserted | `tests/test_governance_graph.py` |
+| REQ-0008 | An ownership name leaves the library as an organisation id | `tests/test_governance_ownership.py` |
 
 ---
 
@@ -196,3 +197,30 @@ reports a pairing it cannot verify as though it were certain gets ignored, and t
 does the one that was right.
 
 Behaviour: [`governance graph`](../cli.md#governance-graph).
+
+## REQ-0008 — An ownership name leaves the library as an organisation id
+
+Given an owners registry, resolution MUST replace every `ownership[].name` with the `id`
+of the owner it resolves to, so a resolved rule names organisations and never a
+placeholder such as `rec` or `dso`.
+
+- A name that is already an owner id MUST resolve to itself. An owner id MUST win over a
+  placeholder or alias of the same name.
+- A placeholder map MUST be accepted separately from the owners file. It belongs to the
+  deployment's local configuration, so public governance files keep generic placeholders
+  and an owners file lists organisations only.
+- Resolution MUST run **after** a deployer overlay is merged, never per file.
+- Whether an unresolved name raises or is kept with a warning MUST be stated by the
+  caller; there is no default. Under the raising mode every unresolved name MUST be
+  reported, with where it was declared. A report-only check MUST exist that never raises.
+- Resolution MUST NOT modify its input, MUST keep a consumer's subclass, and MUST NOT
+  mark as set any field the file did not declare, so a resolved rule still merges as
+  declared (REQ-0005).
+- Without an owners registry, names MUST be kept as written.
+
+**Consequence if violated:** consumers use the name as written — as an asset's owner
+label, an ODRL assigner or a recipient — so a placeholder reaches the wire, matches no
+organisation, and the dataset is unreachable while every file validates. Resolving
+before the overlay fails a load on a placeholder the deployment has already withdrawn.
+
+Behaviour: [resolving ownership names](../governance-owners.md#resolving-ownership-names).

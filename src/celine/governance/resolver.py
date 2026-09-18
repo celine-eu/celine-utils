@@ -6,7 +6,7 @@ import fnmatch
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, TypeVar, overload
+from typing import Any, Dict, Mapping, Optional, Tuple, TypeVar, overload
 
 import yaml
 
@@ -16,6 +16,7 @@ from celine.governance.models import (
     GovernanceConfig,
     GovernanceRule,
 )
+from celine.governance.ownership import OwnerLookup, resolve_config_ownership
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +98,50 @@ class GovernanceResolver:
         self.config = config
 
     @classmethod
-    def from_file(cls, path: Path) -> "GovernanceResolver":
+    def _with_owners(
+        cls,
+        config: GovernanceConfig,
+        owners: Optional[OwnerLookup],
+        strict_owners: Optional[bool],
+        placeholders: Optional[Mapping[str, str]] = None,
+    ) -> "GovernanceResolver":
+        """Resolve ``ownership`` names against ``owners``, if one was given.
+
+        ``strict_owners`` must be stated whenever ``owners`` is: whether an
+        unresolved name fails the load or is kept with a warning is not decided
+        for everyone yet, so the caller says which it means. See
+        :mod:`celine.governance.ownership`.
+        """
+        if owners is None:
+            if placeholders:
+                raise TypeError("placeholders= needs owners= to resolve against")
+            return cls(config)
+        if strict_owners is None:
+            raise TypeError(
+                "owners= requires strict_owners=True (raise on an unresolved "
+                "ownership name) or strict_owners=False (keep it and warn)"
+            )
+        return cls(
+            resolve_config_ownership(
+                config, owners, strict=strict_owners, placeholders=placeholders
+            )
+        )
+
+    @classmethod
+    def from_file(
+        cls,
+        path: Path,
+        *,
+        owners: Optional[OwnerLookup] = None,
+        strict_owners: Optional[bool] = None,
+        placeholders: Optional[Mapping[str, str]] = None,
+    ) -> "GovernanceResolver":
         """Load one named governance file.
+
+        With ``owners``, every ``ownership[].name`` is replaced by the id of the
+        owner it resolves to (:mod:`celine.governance.ownership`);
+        ``strict_owners`` is then required, and ``placeholders`` — the
+        deployment's generic-name-to-owner-id map — may be given beside it.
 
         **Raises :class:`FileNotFoundError` when the path is not there.** It used
         to log a warning and return an empty config, and that is a different
@@ -124,10 +167,19 @@ class GovernanceResolver:
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
 
-        return cls.from_dict(raw)
+        return cls.from_dict(
+            raw, owners=owners, strict_owners=strict_owners, placeholders=placeholders
+        )
 
     @classmethod
-    def from_dict(cls, raw: Dict[str, Any]) -> "GovernanceResolver":
+    def from_dict(
+        cls,
+        raw: Dict[str, Any],
+        *,
+        owners: Optional[OwnerLookup] = None,
+        strict_owners: Optional[bool] = None,
+        placeholders: Optional[Mapping[str, str]] = None,
+    ) -> "GovernanceResolver":
         defaults = parse_rule(raw.get("defaults") or {})
         sources = {
             pattern: parse_rule(rule_data or {})
@@ -152,7 +204,9 @@ class GovernanceResolver:
         if "active" in raw:
             payload["active"] = raw["active"]
 
-        return cls(GovernanceConfig.model_validate(payload))
+        return cls._with_owners(
+            GovernanceConfig.model_validate(payload), owners, strict_owners, placeholders
+        )
 
     @classmethod
     def from_file_with_override(
@@ -161,6 +215,9 @@ class GovernanceResolver:
         overlay_name: Optional[str] = None,
         *,
         infer_from_dir: bool = False,
+        owners: Optional[OwnerLookup] = None,
+        strict_owners: Optional[bool] = None,
+        placeholders: Optional[Mapping[str, str]] = None,
     ) -> "GovernanceResolver":
         """Load ``governance.yaml`` and overlay ``governance.<name>.yaml`` beside it.
 
@@ -184,22 +241,30 @@ class GovernanceResolver:
         start honouring overlays it deliberately ignores; defaulting to off would
         make ``dataset-api`` silently stop applying them. Both keep their
         behaviour by passing what they mean.
+
+        ``owners`` resolves ownership names **after** the overlay is merged, never
+        per file: an overlay may replace ``ownership`` outright, and resolving the
+        base first would fail on a placeholder the overlay has already withdrawn.
         """
         base = cls.from_file(base_path)
 
         name = overlay_name or os.getenv("GOVERNANCE_OVERLAY_NAME")
         if not name and infer_from_dir:
             name = base_path.parent.name
-        if not name:
-            return base
-
-        overlay_path = base_path.parent / f"governance.{name}.yaml"
-        if not overlay_path.is_file():
-            return base
+        overlay_path = (
+            base_path.parent / f"governance.{name}.yaml" if name else None
+        )
+        if overlay_path is None or not overlay_path.is_file():
+            return cls._with_owners(base.config, owners, strict_owners, placeholders)
 
         logger.info("Merging deployer override %s", overlay_path)
         overlay = cls.from_file(overlay_path)
-        return cls(merge_configs(base.config, overlay.config))
+        return cls._with_owners(
+            merge_configs(base.config, overlay.config),
+            owners,
+            strict_owners,
+            placeholders,
+        )
 
     @classmethod
     def auto_discover(
