@@ -49,7 +49,8 @@ default set means the behaviour changes with which class happens to read it.
 | `DBT_PROJECT_DIR` | *(discovered)* | Overrides the dbt project directory |
 | `DBT_PROFILES_DIR` | *(discovered)* | Overrides the dbt profiles directory |
 | `DBT_SCHEMA` | `public` | Schema written into a scaffolded app's dbt profile |
-| `PREFECT_MODE` | `dev` | Anything other than `dev` disables development behaviour |
+| `PREFECT_MODE` | `dev` | Scheduling only (`DEV_MODE`): `dev` lets a celine-pipelines flow `serve()` on its cron, anything else runs it once. Not a security posture |
+| `CELINE_ENV` | *(unset: hardened)* | Security posture (`celine.sdk.posture`, then `ENVIRONMENT`). Only `dev` accepts the `svc-pipelines` secret fallback ([REQ-0009](specifications/index.md#req-0009--outside-dev-a-pipeline-config-never-falls-back-to-the-client-id-as-its-secret)) |
 
 When `MELTANO_PROJECT_ROOT`, `DBT_PROJECT_DIR` and `DBT_PROFILES_DIR` are unset, the
 runner discovers them by walking upward from the working directory looking for
@@ -129,7 +130,7 @@ Published through `celine-sdk`, and configured with its `CELINE_*` names:
 |---|---|
 | `MQTT_EVENTS_ENABLED` | Master switch for pipeline event publishing (default `true`) |
 | `CELINE_MQTT_HOST`, `CELINE_MQTT_PORT`, `CELINE_MQTT_USE_TLS`, … | Broker connection, read by `celine-sdk` |
-| `CELINE_OIDC_BASE_URL`, `CELINE_OIDC_CLIENT_ID`, `CELINE_OIDC_CLIENT_SECRET` | OIDC client credentials for authenticating to the broker |
+| `CELINE_OIDC_BASE_URL`, `CELINE_OIDC_CLIENT_ID`, `CELINE_OIDC_CLIENT_SECRET` | OIDC client credentials for authenticating to the broker. `PipelineConfig` fixes the client id to `svc-pipelines`; the secret falls back to it, and building the config refuses that fallback unless `CELINE_ENV=dev` |
 
 Events are published to `celine/pipelines/runs/{namespace}`. Every failure in this
 path is logged and swallowed — a broker that is down or misconfigured never fails a

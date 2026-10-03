@@ -28,6 +28,7 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0006 | A declared dependency resolves to a producer, or is reported | `tests/test_governance_graph.py` |
 | REQ-0007 | A schedule contradicting the graph is reported, and an uncertain one is not asserted | `tests/test_governance_graph.py` |
 | REQ-0008 | An ownership name leaves the library as an organisation id | `tests/test_governance_ownership.py` |
+| REQ-0009 | Outside dev a pipeline config never falls back to the client id as its secret | `tests/test_pipeline_config_posture.py` |
 
 ---
 
@@ -224,3 +225,19 @@ organisation, and the dataset is unreachable while every file validates. Resolvi
 before the overlay fails a load on a placeholder the deployment has already withdrawn.
 
 Behaviour: [resolving ownership names](../governance-owners.md#resolving-ownership-names).
+
+## REQ-0009 — Outside dev a pipeline config never falls back to the client id as its secret
+
+Building a `PipelineConfig` MUST raise `celine.sdk.posture.InsecureConfiguration` when the
+OIDC client secret is empty or equal to the client id (`svc-pipelines`, the value
+`CELINE_OIDC_CLIENT_SECRET` falls back to), unless the posture signal is exactly `dev`:
+`CELINE_ENV`, then `ENVIRONMENT`. Unset, `prod`, `staging`, `test` or a typo is hardened. In
+`dev` the fallback MUST be accepted with a warning. `PREFECT_MODE` MUST NOT influence it: it
+selects how a flow is scheduled, not what it may authenticate with.
+
+The secret MUST be read when the config is built, not when the module is imported.
+
+**Consequence if violated:** a deployed pipeline authenticates to the broker with a credential
+anyone can derive from the client list, and nothing downstream objects.
+
+Behaviour: [environment](../environment.md#pipeline-execution).

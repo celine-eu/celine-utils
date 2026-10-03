@@ -21,6 +21,10 @@ from celine.utils.pipelines.context import flow_hooks
 
 import os
 
+# Scheduling switch, not a security posture: pipelines in celine-pipelines
+# `serve()` their flow on its cron when true and run it once otherwise (the
+# chart sets PREFECT_MODE=prod). It relaxes nothing, so it keeps its unset ⇒ dev
+# default; the security posture is CELINE_ENV (see PipelineConfig).
 DEV_MODE = os.getenv("PREFECT_MODE", "dev").lower() == "dev"
 
 

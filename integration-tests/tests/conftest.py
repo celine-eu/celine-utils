@@ -34,6 +34,8 @@ def set_envs():
         "DBT_PROJECT_DIR": str(demo_app_path / "dbt"),
         "DBT_PROFILES_DIR": str(demo_app_path / "dbt"),
         "OPENLINEAGE_URL": "http://host.docker.internal:5003",
+        # Local stack: accept the svc-pipelines secret fallback (REQ-0009).
+        "CELINE_ENV": "dev",
     }
 
     for key, value in env_defaults.items():

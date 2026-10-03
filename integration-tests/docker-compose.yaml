@@ -53,6 +53,9 @@ services:
         required: false
     environment:
       APP_NAME: demo_app
+      # Posture (REQ-0009), no default: unset is hardened and refuses the
+      # svc-pipelines secret fallback. `CELINE_ENV=dev docker compose up` locally.
+      CELINE_ENV: ${CELINE_ENV:-}
 
       POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}

@@ -1,9 +1,32 @@
 import os
 from typing import Optional
-from pydantic import Field
+
+# TODO: celine.sdk.posture ships in the next celine-sdk release; raise the
+# `celine-sdk` floor of the `pipelines` extra to that version when it is published.
+from celine.sdk.posture import PostureGuard
+from celine.sdk.settings import OidcSettings, SdkSettings
+from pydantic import Field, model_validator
 
 from celine.utils.common.config.settings import AppBaseSettings
-from celine.sdk.settings import OidcSettings, SdkSettings
+
+#: The OIDC client every pipeline authenticates as (MQTT run events).
+PIPELINES_CLIENT_ID = "svc-pipelines"
+
+
+def _default_sdk_settings() -> SdkSettings:
+    """SDK settings read when the config is built, not when this module is imported.
+
+    The client secret falls back to the client id — the local realm's dev
+    default. :meth:`PipelineConfig._check_posture` refuses that fallback outside
+    ``CELINE_ENV=dev``.
+    """
+    return SdkSettings(
+        oidc=OidcSettings(
+            audience=PIPELINES_CLIENT_ID,
+            client_id=PIPELINES_CLIENT_ID,
+            client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", PIPELINES_CLIENT_ID),
+        )
+    )
 
 
 class PipelineConfig(AppBaseSettings):
@@ -54,13 +77,33 @@ class PipelineConfig(AppBaseSettings):
         description="Enable MQTT pipeline event publishing",
     )
 
-    sdk: SdkSettings = SdkSettings(
-        oidc=OidcSettings(
-            audience="svc-pipelines",
-            client_id="svc-pipelines",
-            client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-pipelines"),
+    sdk: SdkSettings = Field(default_factory=_default_sdk_settings)
+
+    @model_validator(mode="after")
+    def _check_posture(self) -> "PipelineConfig":
+        """Refuse a client secret that is empty or equal to the client id outside dev.
+
+        Only ``CELINE_ENV=dev`` (then ``ENVIRONMENT``; ``celine.sdk.posture``)
+        accepts it, with a warning. Anywhere else — unset included — building the
+        config raises :class:`celine.sdk.posture.InsecureConfiguration`, before a
+        pipeline authenticates with a credential derivable from its client id.
+        ``PREFECT_MODE`` is a scheduling switch and plays no part in this.
+        """
+        oidc = self.sdk.oidc if self.sdk is not None else None
+        if oidc is None:
+            return self
+        guard = PostureGuard("celine-utils pipelines")
+        guard.forbid_secret_equal_to_client_id(
+            "CELINE_OIDC_CLIENT_SECRET",
+            oidc.client_id,
+            oidc.client_secret,
+            remediation=(
+                f"Export CELINE_OIDC_CLIENT_SECRET with the {oidc.client_id} client's "
+                "real secret, or CELINE_ENV=dev on a local stack."
+            ),
         )
-    )
+        guard.enforce()
+        return self
 
     @staticmethod
     def get_as_envs(cfg: "PipelineConfig") -> dict[str, str]:
