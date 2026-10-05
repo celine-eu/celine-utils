@@ -1,8 +1,6 @@
 import os
 from typing import Optional
 
-# TODO: celine.sdk.posture ships in the next celine-sdk release; raise the
-# `celine-sdk` floor of the `pipelines` extra to that version when it is published.
 from celine.sdk.posture import PostureGuard
 from celine.sdk.settings import OidcSettings, SdkSettings
 from pydantic import Field, model_validator

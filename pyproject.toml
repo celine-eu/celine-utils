@@ -55,11 +55,10 @@ pipelines = [
     "prefect-dbt>=0.7.6",
     "meltano>=4.2.0",
     "prefect>=3.6.26",
-    # >=1.15.0, not >=1.13.0: 1.15.0 is the first release supporting the Python
-    # range this package now declares. Under the looser pin uv forks the
-    # resolution — 1.13.0 on 3.12+, 1.15.0 below — so the interpreter would
-    # decide which SDK you get. This is the dependency that held the platform at
-    # 3.12; the floor has to move with it.
+    # 2.0.0 is the first release with celine.sdk.posture, which pipeline_config
+    # imports. It also supports the Python range this package declares (1.15.0
+    # was the first that did); a floor below that let uv fork the resolution by
+    # interpreter.
     "celine-sdk>=2.0.0",
 ]
 # Just the attrs GovernanceDatasetFacet class. `celine.governance.build_facet`
