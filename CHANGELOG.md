@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v2.6.0 (2026-10-06)
+
+### Chores
+
+- Drop the celine-sdk release TODOs now that 2.0.0 ships them
+  ([`330c4c0`](https://github.com/celine-eu/celine-utils/commit/330c4c064b76e8b343d512d34aebad25fab19fae))
+
+- Upgrade celine-sdk to 2.0.0
+  ([`64d3e27`](https://github.com/celine-eu/celine-utils/commit/64d3e27c4a2f67517de597735bb6fb602a4375d4))
+
+### Features
+
+- Add governance owner shared merging methods
+  ([`ed6c9ae`](https://github.com/celine-eu/celine-utils/commit/ed6c9ae9b4639fea260354777abe4972ee1d08b5))
+
+- **governance**: A row filter declares whether it binds a person or an organization
+  ([`0500812`](https://github.com/celine-eu/celine-utils/commit/050081218174acf13df02ed409651fbb067af282))
+
+
 ## v2.5.0 (2026-09-01)
 
 ### Features
