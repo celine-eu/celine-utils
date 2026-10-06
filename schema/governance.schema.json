@@ -338,11 +338,20 @@
                             "args": {
                                 "type": "object",
                                 "description": "Handler-specific arguments (e.g. {column: device_id})"
+                            },
+                            "binds": {
+                                "type": "string",
+                                "enum": [
+                                    "person",
+                                    "organization"
+                                ],
+                                "default": "person",
+                                "description": "What the filter narrows rows to: a person (per-subject access control; the rows are personal data) or an organization (who may read an organization's rows). Absent means person."
                             }
                         },
                         "additionalProperties": false
                     },
-                    "description": "Row filter specs for row-level access control. Each entry selects a handler and its args."
+                    "description": "Row filter specs for row-level access control. Each entry selects a handler, its args, and what it binds rows to (person or organization)."
                 },
                 "dcat": {
                     "oneOf": [

@@ -29,6 +29,7 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0007 | A schedule contradicting the graph is reported, and an uncertain one is not asserted | `tests/test_governance_graph.py` |
 | REQ-0008 | An ownership name leaves the library as an organisation id | `tests/test_governance_ownership.py` |
 | REQ-0009 | Outside dev a pipeline config never falls back to the client id as its secret | `tests/test_pipeline_config_posture.py` |
+| REQ-0010 | A row filter says whether it binds a person or an organization; undeclared is a person, anything else is refused | `tests/test_governance_row_filter_binds.py` |
 
 ---
 
@@ -241,3 +242,17 @@ The secret MUST be read when the config is built, not when the module is importe
 anyone can derive from the client list, and nothing downstream objects.
 
 Behaviour: [environment](../environment.md#pipeline-execution).
+
+---
+
+## REQ-0010 — A row filter says whether it binds a person or an organization
+
+Each `row_filters` entry MAY carry `binds: person | organization`. An entry without it
+MUST read as `person` (`row_filter_binds`, `DEFAULT_ROW_FILTER_BINDS`). Any other value
+MUST be refused: by `governance.schema.json` (an enum) and by `GovernanceRule` at parse
+time, naming the entry. The value MUST survive a merge and reach the facet unchanged.
+
+**Consequence.** Consumers decide on it: `ds` gates a dataset on consent only for a
+filter binding a person, and `dataset-api` checks it against the handler. A misspelled
+value read as the default would silently change what gates a dataset, which is why it
+fails instead; an absent one errs towards gating.

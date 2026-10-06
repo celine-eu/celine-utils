@@ -69,8 +69,10 @@ from celine.governance.merge import (
     merge_rules,
 )
 from celine.governance.models import (
+    DEFAULT_ROW_FILTER_BINDS,
     KNOWN_KEYS,
     KNOWN_ROOT_KEYS,
+    ROW_FILTER_BINDS,
     DataspaceConfig,
     DcatConfig,
     Dependency,
@@ -79,6 +81,7 @@ from celine.governance.models import (
     GovernanceRule,
     OntologyConfig,
     TemporalCoverage,
+    row_filter_binds,
 )
 from celine.governance.owners import (
     OwnerEntry,
@@ -108,6 +111,9 @@ from celine.governance.validation import (
 __all__ = [
     # models
     "GovernanceRule",
+    "ROW_FILTER_BINDS",
+    "DEFAULT_ROW_FILTER_BINDS",
+    "row_filter_binds",
     "GovernanceConfig",
     "GovernanceOwner",
     "DcatConfig",

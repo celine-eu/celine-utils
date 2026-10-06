@@ -126,10 +126,11 @@
                 "required": ["handler"],
                 "properties": {
                     "handler": { "type": "string" },
-                    "args": { "type": "object" }
+                    "args": { "type": "object" },
+                    "binds": { "type": "string", "enum": ["person", "organization"] }
                 }
             },
-            "description": "Row filter specs [{handler, args}] for row-level access control"
+            "description": "Row filter specs [{handler, args, binds}] for row-level access control; an absent binds means person"
         },
         "medallion": {
             "type": ["string", "null"],

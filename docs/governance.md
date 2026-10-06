@@ -330,7 +330,26 @@ row_filters:
 ```
 
 A list of independent gates. Each names a `handler` — the filter strategy — and
-`args` for it. Used for per-subject and consent-based filtering.
+`args` for it, and says what it **binds** rows to:
+
+| `binds` | the rows belong to | consequence |
+|---|---|---|
+| `person` (default) | people | per-subject access control; the dataset holds personal data, and `ds` gates it on consent |
+| `organization` | organizations (a community, a grid operator) | says which organization's members may read which rows inside the platform; no person is behind a row, so it is not a consent signal |
+
+```yaml
+row_filters:
+  - handler: organization_match
+    binds: organization
+    args:
+      column: rec_id
+```
+
+An absent `binds` reads as `person`, the safe direction: forgetting it on an
+organization filter over-gates the dataset — visibly — and never under-gates one.
+Any other value is refused by the schema and by `GovernanceRule` (REQ-0010). Read it
+with `celine.governance.row_filter_binds`, never with `.get("binds")`, so the default
+is applied in one place.
 
 `user_filter_column` is the **legacy** single-column form, carried only for
 backward compatibility with deployed `ds` files. `row_filters` supersedes it: a bare

@@ -104,6 +104,44 @@ class DataspaceConfig(BaseModel):
     expose: bool = False  # offered into the dataspace
 
 
+#: What a row filter may bind its rows to (``row_filters[].binds``).
+#:
+#: - ``person``: the rows belong to people. Narrowing them is per-subject access
+#:   control, and a dataset carrying such a filter holds personal data — the
+#:   consent gate reads it so.
+#: - ``organization``: the rows belong to organizations (a community, a grid
+#:   operator). Narrowing them says who may read them; no person is behind a row.
+ROW_FILTER_BINDS: tuple[str, ...] = ("person", "organization")
+
+#: What an undeclared ``binds`` means. The safe direction: a filter whose author
+#: did not say otherwise is treated as narrowing people's rows, so forgetting the
+#: flag over-gates a dataset — visibly — and never under-gates one.
+DEFAULT_ROW_FILTER_BINDS = "person"
+
+
+def row_filter_binds(row_filter: Any) -> str:
+    """What one row filter binds its rows to: ``person`` or ``organization``.
+
+    Accepts the dict the grammar parses into, or a model carrying a ``binds``
+    attribute (``ds`` types its filters). Undeclared reads as
+    :data:`DEFAULT_ROW_FILTER_BINDS`. A value outside :data:`ROW_FILTER_BINDS`
+    raises ``ValueError`` — :class:`GovernanceRule` refuses it at parse time, so
+    reaching this with one means the rule was built around the model.
+    """
+    value = (
+        row_filter.get("binds")
+        if isinstance(row_filter, dict)
+        else getattr(row_filter, "binds", None)
+    )
+    if value is None:
+        return DEFAULT_ROW_FILTER_BINDS
+    if value not in ROW_FILTER_BINDS:
+        raise ValueError(
+            f"row filter binds {value!r}; expected one of {', '.join(ROW_FILTER_BINDS)}"
+        )
+    return value
+
+
 class GovernanceRule(BaseModel):
     """One resolved governance block.
 
@@ -142,7 +180,11 @@ class GovernanceRule(BaseModel):
     retention_days: Optional[int] = None
     documentation_url: Optional[str] = None
     source_system: Optional[str] = None
-    row_filters: List[dict] = Field(default_factory=list)  # [{handler, args}]
+    # [{handler, args, binds}]. `binds` says what one filter narrows rows to — a
+    # `person` (the rows are someone's: consent and per-subject access apply) or
+    # an `organization` (the rows are an organization's: who may read them inside
+    # the platform). Absent means `person`. See `row_filter_binds`.
+    row_filters: List[dict] = Field(default_factory=list)
 
     # Legacy, carried for `ds` backward compatibility with deployed files.
     # `row_filters` supersedes it: a filter names its handler, and a bare column
@@ -179,6 +221,28 @@ class GovernanceRule(BaseModel):
             item if isinstance(item, (dict, BaseModel)) else {"name": str(item)}
             for item in v
         ]
+
+    @field_validator("row_filters", mode="before")
+    @classmethod
+    def _check_row_filter_binds(cls, v: Any) -> Any:
+        """Refuse a ``binds`` outside :data:`ROW_FILTER_BINDS`, naming the filter.
+
+        ``before`` mode and dicts only: a subclass that types its filters (``ds``)
+        gets the same check on the YAML it parses, and its own model then carries
+        the value. A misspelled ``binds`` must fail here, loudly — read as the
+        default it would silently change what gates the dataset.
+        """
+        if not isinstance(v, list):
+            return v
+        for index, item in enumerate(v):
+            if not isinstance(item, dict) or "binds" not in item:
+                continue
+            if item["binds"] not in ROW_FILTER_BINDS:
+                raise ValueError(
+                    f"row_filters[{index}] ({item.get('handler', '?')}) binds "
+                    f"{item['binds']!r}; expected one of {', '.join(ROW_FILTER_BINDS)}"
+                )
+        return v
 
 
 class Dependency(BaseModel):
