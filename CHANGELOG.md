@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.6.1 (2026-10-11)
+
+### Bug Fixes
+
+- **cli**: Pipeline run errors go to stderr, so a refused envs leaves nothing to source
+  ([`2649db6`](https://github.com/celine-eu/celine-utils/commit/2649db67ddaa944c501a6d90cae3296e5b70de03))
+
+
 ## v2.6.0 (2026-10-06)
 
 ### Chores
