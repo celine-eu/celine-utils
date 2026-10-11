@@ -75,7 +75,7 @@ def test_prefect_missing_flow(monkeypatch, temp_project, celine_cli):
     )
 
     assert proc.returncode != 0
-    assert "Failed loading flow" in proc.stdout
+    assert "Failed loading flow" in proc.stderr
 
 
 def test_prefect_missing_function(monkeypatch, temp_project, celine_cli):
@@ -104,4 +104,4 @@ def test_prefect_missing_function(monkeypatch, temp_project, celine_cli):
     )
 
     assert proc.returncode != 0
-    assert "not found" in proc.stdout
+    assert "not found" in proc.stderr

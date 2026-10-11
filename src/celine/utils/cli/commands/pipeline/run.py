@@ -182,7 +182,7 @@ def _build_runner() -> PipelineRunner:
 
     except Exception as e:
         logger.exception("Failed to build pipeline context")
-        typer.echo(f"Failed to build pipeline context: {e}")
+        typer.echo(f"Failed to build pipeline context: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -283,7 +283,7 @@ def run_meltano(
         return res
     except Exception as e:
         logger.exception("Meltano run failed")
-        typer.echo(f"Meltano execution failed: {e}")
+        typer.echo(f"Meltano execution failed: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -296,7 +296,7 @@ def _run_dbt_spec(spec: str):
         return res
     except Exception as e:
         logger.exception("dbt run failed")
-        typer.echo(f"dbt execution failed: {e}")
+        typer.echo(f"dbt execution failed: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -348,7 +348,7 @@ def run_seed():
         return res
     except Exception as e:
         logger.exception("dbt seed failed")
-        typer.echo(f"dbt seed failed: {e}")
+        typer.echo(f"dbt seed failed: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -375,7 +375,7 @@ def run_prefect(
             logger.info(f"Loaded flow 'flows/{flow}.py'")
         except Exception as e:
             logger.exception("Flow loading failed")
-            typer.echo(f"Failed loading flow: {e}")
+            typer.echo(f"Failed loading flow: {e}", err=True)
             raise typer.Exit(1)
 
         # Auto-detect function if not provided
@@ -386,14 +386,15 @@ def run_prefect(
 
             if function is None:
                 typer.echo(
-                    f"No @flow decorated function found in '{flow}.py'. Use --function to specify."
+                    f"No @flow decorated function found in '{flow}.py'. Use --function to specify.",
+                    err=True,
                 )
                 raise typer.Exit(1)
 
             logger.debug(f"Auto-detected @flow function: {function}")
 
         if not hasattr(module, function):
-            typer.echo(f"Function '{function}' not found in flow '{flow}'.")
+            typer.echo(f"Function '{function}' not found in flow '{flow}'.", err=True)
             raise typer.Exit(1)
 
         func = getattr(module, function)
@@ -407,7 +408,7 @@ def run_prefect(
             return result
         except Exception as e:
             logger.exception("Flow function execution failed")
-            typer.echo(f"Flow execution failed: {e}")
+            typer.echo(f"Flow execution failed: {e}", err=True)
             raise typer.Exit(1)
     finally:
         shutil.rmtree(prefect_home, ignore_errors=True)
