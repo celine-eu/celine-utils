@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.6.2 (2026-10-12)
+
+### Bug Fixes
+
+- Skip conditionally the test that needs typer
+  ([`0787bc8`](https://github.com/celine-eu/celine-utils/commit/0787bc86b5b4122b3b04ecdd59f9378d17a262b8))
+
+
 ## v2.6.1 (2026-10-11)
 
 ### Bug Fixes
