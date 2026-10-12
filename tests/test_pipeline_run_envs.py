@@ -10,9 +10,11 @@ from __future__ import annotations
 import os
 
 import pytest
-from typer.testing import CliRunner
 
+pytest.importorskip("typer", reason="[pipelines] extra not installed")
 pytest.importorskip("celine.sdk.posture")
+
+from typer.testing import CliRunner
 
 from celine.utils.cli.commands.pipeline.run import pipeline_run_app
 
