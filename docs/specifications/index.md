@@ -30,6 +30,10 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0008 | An ownership name leaves the library as an organisation id | `tests/test_governance_ownership.py` |
 | REQ-0009 | Outside dev a pipeline config never falls back to the client id as its secret | `tests/test_pipeline_config_posture.py` |
 | REQ-0010 | A row filter says whether it binds a person or an organization; undeclared is a person, anything else is refused | `tests/test_governance_row_filter_binds.py` |
+| REQ-0011 | A governance tree is checked as it will be served, and any failure fails the run | `tests/test_governance_check.py` |
+| REQ-0012 | Every exposed, non-open dataset states both row-policy layers, with known handlers | `tests/test_governance_check.py` |
+| REQ-0013 | A dataspace offer's consent declarations agree with its person layer | `tests/test_governance_check.py` |
+| REQ-0014 | The owners registry is validated strictly, and every ownership name resolves | `tests/test_governance_check.py` |
 
 ---
 
@@ -256,3 +260,58 @@ time, naming the entry. The value MUST survive a merge and reach the facet uncha
 filter binding a person, and `dataset-api` checks it against the handler. A misspelled
 value read as the default would silently change what gates a dataset, which is why it
 fails instead; an absent one errs towards gating.
+
+## REQ-0011 — A governance tree is checked as it will be served, and any failure fails the run
+
+`celine-governance validate` MUST check every `governance.yaml` its arguments name,
+each **materialized** with its deployer overlay by the resolver the exporter uses. An
+overlay MUST NOT be validated alone against the root's `required` keys; it MUST be
+type- and key-checked and then checked as part of its base. Exactly one overlay MAY
+apply to a base: the same name found in two places MUST be refused. Every finding MUST
+be collected, and the command MUST exit non-zero if any error remains — including a
+file that does not load and an argument that matches no file. The command MUST run on
+the core dependencies alone (REQ-0001).
+
+**Consequence if violated:** a file that fails to load is skipped, a missing checkout
+checks fewer files, and the run passes — the catalogue then serves fewer datasets, or
+more permissively, with nothing to say why.
+
+## REQ-0012 — Every exposed, non-open dataset states both row-policy layers
+
+A dataset listed in the catalogue (`expose`) whose access level is neither `open` nor
+`secret` MUST declare at least one row filter in each layer, `person` and
+`organization` (its `binds`). `allow_all` and `deny_all` MUST state `binds` — refused
+by the schema and by `GovernanceRule` otherwise — and MUST NOT both appear in one
+layer. Every handler MUST be a built-in or named by the caller, and a built-in MUST be
+declared in the layer it binds. An `open` dataset with an undeclared layer MUST be
+reported as a note, not a failure.
+
+**Consequence if violated:** the serving deployment's default — deny — refuses the
+dataset at query time, or, under the report-only default, serves the layer whole.
+Caught here, it is a line in a governance file; caught there, it is an outage or a
+leak.
+
+## REQ-0013 — A dataspace offer's consent declarations agree with its person layer
+
+For a dataset offered into the dataspace (`dataspace.expose`, not `secret`): a person
+filter other than `allow_all`/`deny_all` MUST come with `dataspace.consent_required` or
+`classification: pii`; personal data narrowed only by organization filters MUST be
+refused; a person filter MUST name its column. A person layer of `deny_all` admits no
+row and is coherent with any declaration. Ported from `ds`' `check_consent_coherence`
+(D-3b).
+
+**Consequence if violated:** the dataspace serves a dataset on an agreement alone
+that the producer meant to gate on consent, or gates on a filter that binds nobody.
+
+## REQ-0014 — The owners registry is validated strictly, and every ownership name resolves
+
+Each owners file passed to the check MUST validate against `owners.schema.json` before
+it is merged, later files shadowing earlier by `id`. The schema MUST define the
+dataspace identity registry's keys as optional properties and keep
+`additionalProperties: false`. Every `ownership` name MUST resolve to an owner; with
+`--dataspace`, every owner of a dataspace offer narrowed by an organization filter MUST
+have a DID.
+
+**Consequence if violated:** a mistyped key or a missing owner produces a smaller
+registry that loads cleanly, and the missing organization surfaces later as an
+authorization failure with nothing to connect it to.

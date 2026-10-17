@@ -54,16 +54,29 @@ def load_schema(name: str = GOVERNANCE_SCHEMA) -> Dict[str, Any]:
     return json.loads(text)
 
 
-def schema_errors(data: Dict[str, Any], schema_name: str = GOVERNANCE_SCHEMA) -> List[str]:
+def schema_errors(
+    data: Dict[str, Any],
+    schema_name: str = GOVERNANCE_SCHEMA,
+    *,
+    overlay: bool = False,
+) -> List[str]:
     """Return every schema violation in ``data``, sorted by document position.
 
     Every error, not the first: a governance file is edited by hand and reporting
     one problem per run turns a five-minute fix into five round trips.
+
+    ``overlay`` checks a deployer overlay (``governance.<name>.yaml``): every
+    constraint applies except the root's ``required``. An overlay states what
+    differs, so it has no ``sources`` of its own to declare; what it produces is
+    checked as part of the base it is merged into, never alone.
     """
     import jsonschema
 
-    validator_cls = jsonschema.validators.validator_for(load_schema(schema_name))
-    validator = validator_cls(load_schema(schema_name))
+    schema = load_schema(schema_name)
+    if overlay:
+        schema = {k: v for k, v in schema.items() if k != "required"}
+    validator_cls = jsonschema.validators.validator_for(schema)
+    validator = validator_cls(schema)
     return [
         f"{'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}"
         for e in sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))

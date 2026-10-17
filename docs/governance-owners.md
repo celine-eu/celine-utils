@@ -51,6 +51,7 @@ owners:
 | `url` | no | Canonical homepage, emitted as `foaf:homepage`, and used as publisher URI when no DID is set |
 | `aliases` | no | Alternative lookup keys resolving to this owner. Being retired — pass a deployment placeholder map instead, see [resolving ownership names](#resolving-ownership-names) |
 | `organization` | no | Keycloak provisioning block |
+| `status`, `verified_by`, `evidence_ref`, `collects_consent`, `dataspace` | no | The dataspace identity registry's keys — see [below](#dataspace-identity-registry-keys) |
 
 `type` is a closed enum: `schema:Organization` (generic fallback),
 `schema:Corporation` (for-profit company), `schema:GovernmentOrganization` (public
@@ -79,12 +80,35 @@ The key is also accepted as `organization_config`, which is the column name in t
 identity-registry database and therefore the key in its API responses, while YAML
 seed files say `organization`. One model reads both.
 
-### Two fields named `role`, and they are not the same thing
+### Fields that read alike, and are not the same thing
 
+- `type` — the schema.org **class** of the legal entity (`schema:NGO`), for DCAT
+  metadata.
 - `role` at entry level — the party's role with respect to the **data**.
-- `organization.role` — the **Keycloak** organization role.
+- `organization.role` — the organization's **platform** role (`rec`, `dso`): the
+  Keycloak organization's `attributes.type`, which `organization_match`'s `org_type`
+  compares against, and the `organizationType` the dataspace issues in an
+  `OrganizationCredential`.
+- `dataspace.roles` — the **dataspace participant** roles (`Provider`, `Consumer`),
+  issued as the credential's `roles`.
 
-Setting one does not set the other.
+Setting one does not set another.
+
+### Dataspace identity registry keys
+
+The dataspace identity registry (`ds`) keeps its own state for an owner in the same
+file: `status` (`pending` · `verified` · `suspended` · `revoked`), `verified_by`,
+`evidence_ref`, `collects_consent`, and a `dataspace:` block — legal identity
+(`legal_name`, `registration_number`, `registration_type`, `hq_country_code`,
+`legal_country_code`, `parent_organizations`, `sub_organizations`), connector (`did`,
+`dsp_address`, `roles`, `scopes`, `credential_ttl_days`), verification (`verified_by`,
+`evidence_ref`) and the legal-terms acceptance (`accepted: {agreement, version, locale,
+accepted_by}`).
+
+They are **optional and defined**: the schema declares each one, so a deployment's
+merged registry validates strictly as one document and a typo inside them is refused
+like any other. The identity registry stays their owner — what they mean, and the
+rules between them (`verified` needs `verified_by`), are checked by its own models.
 
 ---
 

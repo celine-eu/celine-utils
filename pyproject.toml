@@ -103,6 +103,8 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 celine-utils = "celine.utils.cli.main:main"
+# Thin core: runs on the governance dependencies alone (no `pipelines` extra).
+celine-governance = "celine.governance.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

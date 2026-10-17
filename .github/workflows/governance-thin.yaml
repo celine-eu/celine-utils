@@ -90,5 +90,28 @@ jobs:
           print('thin core OK')
           "
 
+      # The entry point a deployment gates on must start without the heavy stack:
+      # the suite calls `main()` directly and would not notice a broken script.
+      - name: Run celine-governance on core dependencies alone
+        run: |
+          mkdir -p /tmp/gov/apps/a
+          printf '%s\n' \
+            'defaults: {}' \
+            'sources:' \
+            '  ds.gold.a:' \
+            '    expose: true' \
+            '    access_level: internal' \
+            '    row_filters:' \
+            '      - {handler: allow_all, binds: person}' \
+            '      - {handler: organization_match, binds: organization, args: {column: org_id}}' \
+            > /tmp/gov/apps/a/governance.yaml
+          .venv/bin/celine-governance validate --strict /tmp/gov/apps
+          printf '%s\n' 'defaults: {}' 'sources:' '  ds.gold.b: {expose: true, access_level: internal}' \
+            > /tmp/gov/apps/a/governance.yaml
+          if .venv/bin/celine-governance validate /tmp/gov/apps; then
+            echo "::error::an undeclared row policy passed the gate"
+            exit 1
+          fi
+
       - name: Run the governance suite
         run: .venv/bin/python -m pytest tests/ -q

@@ -10,7 +10,9 @@ celine-utils
     └── run  (envs | meltano | seed | dbt | build | prefect)
 ```
 
-Installed as the `celine-utils` entry point. From a checkout of this repository,
+Installed as the `celine-utils` entry point (it needs the `pipelines` extra). The
+governance checks have their own, thinner entry point — see
+[`celine-governance validate`](#celine-governance-validate--the-gate-before-an-import). From a checkout of this repository,
 `task cli -- <args>` runs the same CLI from the working tree.
 
 **This page describes what each command is for and the traps in using it. For the
@@ -22,6 +24,48 @@ celine-utils <command> --help
 
 An option table copied into a document is stale the next time an option is added,
 with nothing to detect it. The tables below are orientation, not the source of truth.
+
+---
+
+## `celine-governance validate` — the gate before an import
+
+A second entry point, `celine-governance`, ships beside `celine-utils` and runs on the
+**thin core**: `pydantic`, `pyyaml` and `jsonschema`, no `pipelines` extra. It is the
+command a repository, a CI job or a deployment task runs before anything imports a
+catalogue.
+
+```bash
+celine-governance validate apps/                       # every governance.yaml under apps/
+celine-governance validate apps/ ../deployment/apps/ \
+    --overlay-dir ../deployment/governance \
+    --owners ../deployment/owners.yaml --strict         # as a deployment will serve it
+celine-governance validate apps/ --handlers my_plugin --format json
+```
+
+Each `governance.yaml` is **materialized** before it is checked: merged with its
+deployer overlay `governance.<app>.yaml`, found beside it or in an `--overlay-dir`, by
+the same resolver the exporter uses. An overlay alone is never the unit — it has no
+`sources` of its own — so it is checked for types and unknown keys and then as part of
+its base. One overlay per base: the same name in two places is an error.
+
+| Rule | Finding |
+|---|---|
+| `schema` | each file against `governance.schema.json`; unknown keys warn |
+| `row-policy` | an exposed, non-`secret`, non-`open` dataset that does not declare both layers, `person` and `organization`. `open` datasets relying on being open are listed as notes |
+| `handler` | a handler that is neither built in nor named with `--handlers`; a built-in in the wrong layer |
+| `layer-verdict` | `allow_all` and `deny_all` in one layer |
+| `consent-coherence` | on dataspace offers: a person filter without `consent_required` or `pii`, and personal data without a person filter |
+| `owners` | an owners file that is not strictly valid; an ownership name that resolves to no owner; with `--dataspace`, an owner of an organization-bound offer without a DID |
+| `input` | a path matching no `governance.yaml`, a missing overlay directory, an overlay that applies to no checked base (a warning) |
+
+Every finding is collected — never only the first. Exit **1** if any error remains
+(`--strict`: or any warning), **0** otherwise, **2** on a usage error. Several
+`--owners` files merge with later ones shadowing earlier by `id`, each validated
+before it is merged, exactly as `celine-policies keycloak sync-orgs` loads them: a
+partial per-environment owners file is refused — pass the materialized registry.
+
+The same checks are a library call, `celine.governance.check.check_governance`, for a
+loader that wants to refuse before it writes anything.
 
 ---
 

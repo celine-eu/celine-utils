@@ -6,7 +6,17 @@ import fnmatch
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple, TypeVar, overload
+from typing import (
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    overload,
+)
 
 import yaml
 
@@ -215,6 +225,7 @@ class GovernanceResolver:
         overlay_name: Optional[str] = None,
         *,
         infer_from_dir: bool = False,
+        overlay_dirs: Sequence[Path] = (),
         owners: Optional[OwnerLookup] = None,
         strict_owners: Optional[bool] = None,
         placeholders: Optional[Mapping[str, str]] = None,
@@ -242,19 +253,24 @@ class GovernanceResolver:
         make ``dataset-api`` silently stop applying them. Both keep their
         behaviour by passing what they mean.
 
+        ``overlay_dirs`` are searched for the same ``governance.<name>.yaml`` as well
+        as the base's own directory: a deployment keeps its overlays in a tree of
+        its own, and staging them beside each base by copying is how they were
+        applied until this argument existed. **One overlay per base** — the same
+        name found in two places raises :class:`ValueError` rather than picking
+        one, because which of two overlays applies is not something a search
+        order should decide.
+
         ``owners`` resolves ownership names **after** the overlay is merged, never
         per file: an overlay may replace ``ownership`` outright, and resolving the
         base first would fail on a placeholder the overlay has already withdrawn.
         """
         base = cls.from_file(base_path)
 
-        name = overlay_name or os.getenv("GOVERNANCE_OVERLAY_NAME")
-        if not name and infer_from_dir:
-            name = base_path.parent.name
-        overlay_path = (
-            base_path.parent / f"governance.{name}.yaml" if name else None
+        overlay_path = cls.overlay_path_for(
+            base_path, overlay_name, infer_from_dir=infer_from_dir, overlay_dirs=overlay_dirs
         )
-        if overlay_path is None or not overlay_path.is_file():
+        if overlay_path is None:
             return cls._with_owners(base.config, owners, strict_owners, placeholders)
 
         logger.info("Merging deployer override %s", overlay_path)
@@ -265,6 +281,38 @@ class GovernanceResolver:
             strict_owners,
             placeholders,
         )
+
+    @staticmethod
+    def overlay_path_for(
+        base_path: Path,
+        overlay_name: Optional[str] = None,
+        *,
+        infer_from_dir: bool = False,
+        overlay_dirs: Sequence[Path] = (),
+    ) -> Optional[Path]:
+        """The deployer overlay :meth:`from_file_with_override` would merge, or ``None``.
+
+        Public so a checker can name the file it validated as part of a base,
+        and so the name resolution is written once.
+        """
+        name = overlay_name or os.getenv("GOVERNANCE_OVERLAY_NAME")
+        if not name and infer_from_dir:
+            name = base_path.parent.name
+        if not name:
+            return None
+        found: List[Path] = []
+        for directory in (base_path.parent, *overlay_dirs):
+            candidate = Path(directory) / f"governance.{name}.yaml"
+            if candidate.is_file() and candidate.resolve() not in {
+                f.resolve() for f in found
+            }:
+                found.append(candidate)
+        if len(found) > 1:
+            raise ValueError(
+                f"{base_path}: overlay governance.{name}.yaml found in more than one "
+                f"place ({', '.join(str(f) for f in found)}) — exactly one may apply"
+            )
+        return found[0] if found else None
 
     @classmethod
     def auto_discover(

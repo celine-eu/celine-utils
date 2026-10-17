@@ -228,6 +228,11 @@ caller passes `infer_from_dir=True` — the name of the directory holding the fi
 Overlay blocks combine by the same rules as above, so an overlay can withdraw as
 well as add.
 
+A deployment that keeps its overlays in a tree of its own passes that directory as
+`overlay_dirs=[...]`: the same `governance.<name>.yaml` is looked for there too. Exactly
+one overlay applies to a base — found in two places, the load raises rather than pick
+one. `celine-governance validate --overlay-dir` uses the same lookup.
+
 ---
 
 ## Exposure — two gates, not one
@@ -350,6 +355,37 @@ organization filter over-gates the dataset — visibly — and never under-gates
 Any other value is refused by the schema and by `GovernanceRule` (REQ-0010). Read it
 with `celine.governance.row_filter_binds`, never with `.get("binds")`, so the default
 is applied in one place.
+
+#### Two layers, and what an undeclared one means
+
+`binds` is also the filter's **layer**. A dataset's row policy has two, checked
+separately and ANDed: the `person` layer (whose rows — per subject) and the
+`organization` layer (which organization's rows). Filters within a layer AND.
+
+A layer with nothing declared is not "no filter". On an `open` dataset it admits
+every row (to an authenticated caller); on any other, it falls to the serving
+deployment's default, which is **deny**. So an exposed, non-`open` dataset states
+both layers, and two built-in handlers exist to state a layer without narrowing by a
+column:
+
+```yaml
+row_filters:
+  - handler: allow_all          # the person layer admits every row
+    binds: person
+  - handler: organization_match
+    binds: organization
+    args:
+      column: community_id
+```
+
+| handler | the layer admits |
+|---|---|
+| `allow_all` | every row |
+| `deny_all` | no row |
+
+Both **must** state `binds` — it is what names the layer they decide — and both in one
+layer are a contradiction. `celine-governance validate` checks all of this
+([CLI](cli.md#celine-governance-validate--the-gate-before-an-import)).
 
 `user_filter_column` is the **legacy** single-column form, carried only for
 backward compatibility with deployed `ds` files. `row_filters` supersedes it: a bare

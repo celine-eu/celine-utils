@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "CELINE Owner Registry",
-    "description": "Schema for owners.yaml and owners.local.yaml — the CELINE-side owner registry. It resolves the ownership blocks in governance.yaml to canonical foaf:Agent metadata (dataset-api), to Keycloak organizations (celine-policies), and to Superset groups and roles (celine-superset).\n\nScope note: this describes the CELINE registry, not the dataspace identity registry. The `ds` identity-registry models a strictly larger entity — Gaia-X LegalParticipant identity (registration_number, registration_type, hq_country_code, legal_country_code, parent_organizations, sub_organizations) and a verification lifecycle (status, verified_by, evidence_ref) held together by a database CHECK constraint. Its seed files therefore do not validate against this schema, and that is correct rather than drift: the two describe different things that happen to share a file shape. Do not paste those fields in here to make a seed validate — validate IR seeds against the IR's own models. The shared core is what appears below, and celine.governance.OwnerEntry parses both (unknown keys are ignored, so an IR record loads fine for URI resolution).",
+    "description": "Schema for owners.yaml and owners.local.yaml — the CELINE-side owner registry. It resolves the ownership blocks in governance.yaml to canonical foaf:Agent metadata (dataset-api), to Keycloak organizations (celine-policies), and to Superset groups and roles (celine-superset).\n\nScope note: this describes the CELINE registry. The dataspace identity registry (ds) models a larger entity — a Gaia-X LegalParticipant and a verification lifecycle — and carries it in the same file shape. Its keys (status, verified_by, evidence_ref, collects_consent and the dataspace block) are defined here as optional properties, so a merged deployment registry validates strictly as one document; the identity registry stays their owner and checks their semantics (for example, verified requires verified_by) in its own models. celine.governance.OwnerEntry parses both shapes (unknown keys are ignored, so an IR record loads fine for URI resolution).",
     "type": "object",
     "required": ["owners"],
     "additionalProperties": false,
@@ -71,7 +71,7 @@
                         },
                         "role": {
                             "type": "string",
-                            "description": "Keycloak organization role. Emitted as attributes.type on the KC organization. Common values: 'rec' (Renewable Energy Community), 'dso' (Distribution System Operator), 'org' (generic organization).",
+                            "description": "The organization's platform role: what kind of party it is on the platform. Emitted as attributes.type on the Keycloak organization, which organization_match's org_type compares against, and issued as organizationType in the dataspace OrganizationCredential. Common values: 'rec' (Renewable Energy Community), 'dso' (Distribution System Operator), 'org' (generic organization). Not the owner's type (a schema.org class for DCAT metadata) and not the credential's roles (Provider/Consumer, the dataspace participant role).",
                             "minLength": 1
                         },
                         "attributes": {
@@ -79,6 +79,66 @@
                             "description": "Free-form key/value attributes set on the Keycloak organization alongside the role.",
                             "additionalProperties": {
                                 "type": "string"
+                            }
+                        }
+                    }
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Dataspace identity registry: the owner's verification state. Owned by the identity registry, which enforces its transitions.",
+                    "enum": ["pending", "verified", "suspended", "revoked"]
+                },
+                "verified_by": {
+                    "type": "string",
+                    "description": "Dataspace identity registry: who verified the owner. Required by the identity registry when status is verified.",
+                    "minLength": 1
+                },
+                "evidence_ref": {
+                    "type": "string",
+                    "description": "Dataspace identity registry: a reference to the evidence the verification rests on.",
+                    "minLength": 1
+                },
+                "collects_consent": {
+                    "type": "boolean",
+                    "description": "Dataspace identity registry: the owner collects data-sharing consent from its members.",
+                    "default": false
+                },
+                "dataspace": {
+                    "type": "object",
+                    "description": "Dataspace identity registry: the organization's dataspace onboarding — legal identity, connector, legal-terms acceptance. Read by the identity registry's org commands; an owner without it does not operate in the dataspace.",
+                    "additionalProperties": false,
+                    "properties": {
+                        "legal_name": {"type": "string", "minLength": 1},
+                        "registration_number": {"type": "string", "minLength": 1},
+                        "registration_type": {"type": "string", "minLength": 1},
+                        "hq_country_code": {"type": "string", "minLength": 1},
+                        "legal_country_code": {"type": "string", "minLength": 1},
+                        "parent_organizations": {"type": "array", "items": {"type": "string"}},
+                        "sub_organizations": {"type": "array", "items": {"type": "string"}},
+                        "did": {
+                            "type": "string",
+                            "description": "The participant DID, when it differs per environment from the owner's top-level did.",
+                            "pattern": "^did:web:.+"
+                        },
+                        "dsp_address": {"type": "string", "format": "uri"},
+                        "roles": {
+                            "type": "array",
+                            "description": "Dataspace participant roles (e.g. Provider, Consumer), issued as the credential's roles. Not organization.role.",
+                            "items": {"type": "string"}
+                        },
+                        "scopes": {"type": "array", "items": {"type": "string"}},
+                        "credential_ttl_days": {"type": "integer", "minimum": 1},
+                        "verified_by": {"type": "string", "minLength": 1},
+                        "evidence_ref": {"type": "string", "minLength": 1},
+                        "accepted": {
+                            "type": "object",
+                            "description": "The legal-terms acceptance, registered by an operator.",
+                            "additionalProperties": false,
+                            "properties": {
+                                "agreement": {"type": "string", "minLength": 1},
+                                "version": {"type": ["string", "number"]},
+                                "locale": {"type": "string", "minLength": 1},
+                                "accepted_by": {"type": "string", "minLength": 1}
                             }
                         }
                     }

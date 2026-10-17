@@ -333,7 +333,7 @@
                         "properties": {
                             "handler": {
                                 "type": "string",
-                                "description": "Row filter handler name (e.g. rec_registry, direct_user_match, http_in_list)"
+                                "description": "Row filter handler name (e.g. rec_registry, direct_user_match, http_in_list). allow_all and deny_all decide a whole layer — every row, or none — and must state binds."
                             },
                             "args": {
                                 "type": "object",
@@ -346,12 +346,30 @@
                                     "organization"
                                 ],
                                 "default": "person",
-                                "description": "What the filter narrows rows to: a person (per-subject access control; the rows are personal data) or an organization (who may read an organization's rows). Absent means person."
+                                "description": "What the filter narrows rows to: a person (per-subject access control; the rows are personal data) or an organization (who may read an organization's rows). It is also the filter's layer. Absent means person, except for allow_all and deny_all, which require it."
                             }
+                        },
+                        "if": {
+                            "properties": {
+                                "handler": {
+                                    "enum": [
+                                        "allow_all",
+                                        "deny_all"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "handler"
+                            ]
+                        },
+                        "then": {
+                            "required": [
+                                "binds"
+                            ]
                         },
                         "additionalProperties": false
                     },
-                    "description": "Row filter specs for row-level access control. Each entry selects a handler, its args, and what it binds rows to (person or organization)."
+                    "description": "Row filter specs for row-level access control, in two layers: person and organization, named by each entry's binds. Filters within a layer AND, and the layers AND. A layer with nothing declared falls to the deployment's default unless the dataset is open."
                 },
                 "dcat": {
                     "oneOf": [

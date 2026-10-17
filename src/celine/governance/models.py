@@ -118,6 +118,38 @@ ROW_FILTER_BINDS: tuple[str, ...] = ("person", "organization")
 #: flag over-gates a dataset — visibly — and never under-gates one.
 DEFAULT_ROW_FILTER_BINDS = "person"
 
+#: The two layer-wide verdicts. Neither narrows by a column: ``allow_all`` says the
+#: layer admits every row, ``deny_all`` that it admits none. They exist so a
+#: dataset can *state* what a layer does — an undeclared layer falls to the
+#: deployment's default, which is deny.
+ALLOW_ALL = "allow_all"
+DENY_ALL = "deny_all"
+
+#: The handlers the platform's data plane ships, and the layer each one binds.
+#: ``None`` for the two verdicts: they belong to whichever layer their ``binds``
+#: names, which is why they must state it (:data:`LAYER_HANDLERS`).
+#:
+#: Kept here rather than read from ``dataset-api`` because the validator runs
+#: where the data plane is not installed. A deployment's own plugin handlers are
+#: not listed — nothing coordinates them — and are named to the validator
+#: instead.
+BUILTIN_ROW_FILTER_HANDLERS: Dict[str, Optional[str]] = {
+    ALLOW_ALL: None,
+    DENY_ALL: None,
+    "direct_user_match": "person",
+    "http_in_list": "person",
+    "member_wide": "organization",
+    "organization_match": "organization",
+    "rec_registry": "person",
+    "subject_key_match": "person",
+    "table_pointer": "person",
+}
+
+#: Handlers whose layer is whatever ``binds`` says, so ``binds`` is required.
+#: Read as the default it would put a dataset-wide verdict on the person layer
+#: by accident.
+LAYER_HANDLERS: frozenset[str] = frozenset({ALLOW_ALL, DENY_ALL})
+
 
 def row_filter_binds(row_filter: Any) -> str:
     """What one row filter binds its rows to: ``person`` or ``organization``.
@@ -231,11 +263,21 @@ class GovernanceRule(BaseModel):
         gets the same check on the YAML it parses, and its own model then carries
         the value. A misspelled ``binds`` must fail here, loudly — read as the
         default it would silently change what gates the dataset.
+
+        ``allow_all`` / ``deny_all`` must state ``binds`` at all: the handler
+        decides a whole layer, and only ``binds`` says which.
         """
         if not isinstance(v, list):
             return v
         for index, item in enumerate(v):
-            if not isinstance(item, dict) or "binds" not in item:
+            if not isinstance(item, dict):
+                continue
+            if item.get("handler") in LAYER_HANDLERS and item.get("binds") is None:
+                raise ValueError(
+                    f"row_filters[{index}] ({item['handler']}) must state binds: "
+                    f"{' or '.join(ROW_FILTER_BINDS)} — it names the layer it decides"
+                )
+            if "binds" not in item:
                 continue
             if item["binds"] not in ROW_FILTER_BINDS:
                 raise ValueError(
