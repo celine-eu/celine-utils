@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.7.0 (2026-10-17)
+
+### Features
+
+- Add `celine-governance validate` validation cli
+  ([`1e7f974`](https://github.com/celine-eu/celine-utils/commit/1e7f9749ee3c8fa57350e72f35e6783e033543d8))
+
+
 ## v2.6.2 (2026-10-12)
 
 ### Bug Fixes
