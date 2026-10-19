@@ -62,7 +62,7 @@ class OwnerEntry(BaseModel):
 
     Fields
     ------
-    id      : alias used in governance.yaml ``ownership`` blocks (e.g. ``spxl``)
+    id      : alias used in governance.yaml ``ownership`` blocks (e.g. ``example-org``)
     type    : Schema.org type CURIE — governs the ``@type`` emitted in JSON-LD
     name    : human-readable display name
     role    : the party's role with respect to the data (``publisher``,

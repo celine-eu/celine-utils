@@ -47,8 +47,8 @@ def test_ownership_forms_are_interchangeable_through_parse_rule() -> None:
 
 
 def test_ownership_preserves_order_and_multiplicity() -> None:
-    rule = parse_rule({"ownership": ["rec", {"name": "dso"}, "spxl"]})
-    assert [o.name for o in rule.ownership] == ["rec", "dso", "spxl"]
+    rule = parse_rule({"ownership": ["rec", {"name": "dso"}, "example-org"]})
+    assert [o.name for o in rule.ownership] == ["rec", "dso", "example-org"]
 
 
 def test_absent_ownership_is_an_empty_list_not_none() -> None:

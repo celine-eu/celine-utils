@@ -1,6 +1,9 @@
 # CLI reference
 
 ```text
+celine-governance
+└── validate
+
 celine-utils
 ├── governance
 │   ├── generate marquez
@@ -50,11 +53,12 @@ its base. One overlay per base: the same name in two places is an error.
 
 | Rule | Finding |
 |---|---|
+| `parse` | a file that cannot be read, or is not a YAML mapping |
 | `schema` | each file against `governance.schema.json`; unknown keys warn |
 | `row-policy` | an exposed, non-`secret`, non-`open` dataset that does not declare both layers, `person` and `organization`. `open` datasets relying on being open are listed as notes |
 | `handler` | a handler that is neither built in nor named with `--handlers`; a built-in in the wrong layer |
 | `layer-verdict` | `allow_all` and `deny_all` in one layer |
-| `consent-coherence` | on dataspace offers: a person filter without `consent_required` or `pii`, and personal data without a person filter |
+| `consent-coherence` | on dataspace offers: a person filter without `consent_required` or `pii`; personal data (`consent_required` or `pii`) narrowed only by organization filters (an error); personal data with neither a person nor an organization filter (a warning); a person filter with an empty `column`. `allow_all` / `deny_all` are not person filters, and a person layer of `deny_all` is coherent with any declaration |
 | `owners` | an owners file that is not strictly valid; an ownership name of a dataspace offer that resolves to no owner (catalogue-only datasets are not checked); with `--dataspace`, an owner of an organization-bound offer without a DID |
 | `input` | a path matching no `governance.yaml`, a missing overlay directory, an overlay that applies to no checked base (a warning) |
 

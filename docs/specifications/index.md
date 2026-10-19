@@ -297,8 +297,7 @@ For a dataset offered into the dataspace (`dataspace.expose`, not `secret`): a p
 filter other than `allow_all`/`deny_all` MUST come with `dataspace.consent_required` or
 `classification: pii`; personal data narrowed only by organization filters MUST be
 refused; a person filter MUST name its column. A person layer of `deny_all` admits no
-row and is coherent with any declaration. Ported from `ds`' `check_consent_coherence`
-(D-3b).
+row and is coherent with any declaration. Ported from `ds`' `check_consent_coherence`.
 
 **Consequence if violated:** the dataspace serves a dataset on an agreement alone
 that the producer meant to gate on consent, or gates on a filter that binds nobody.

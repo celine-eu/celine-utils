@@ -169,6 +169,27 @@ unknown = validate_file(Path("governance.yaml"), strict=True) # raises
 | `load_schema(name)` | a packaged JSON Schema as a dict |
 | `validate_owners(data)` / `validate_owners_file(path)` | strict always — see [owners](governance-owners.md) |
 
+A whole tree, as it will be served, is one call — the library side of
+[`celine-governance validate`](cli.md#celine-governance-validate--the-gate-before-an-import):
+
+```python
+from celine.governance.check import check_governance
+
+report = check_governance(
+    ["apps/"], overlay_dirs=["deploy/governance"], owners_files=["owners.yaml"]
+)
+if not report.ok(strict=True):
+    for f in report.failures(strict=True):
+        print(f.severity, f.rule, f.source, f.dataset, f.detail)
+```
+
+| Name | Behaviour |
+|---|---|
+| `check_governance(paths, *, overlay_dirs=(), owners_files=(), handlers=(), dataspace=False)` | every `governance.yaml` under `paths`, each merged with its overlay, checked by every rule. **Never raises**: findings are collected into a `CheckReport` |
+| `CheckReport` | `findings` (each a `CheckFinding`: `severity`, `rule`, `source`, `detail`, `dataset`), `files` (base, overlay) pairs, `datasets` count; `ok(strict=)`, `failures(strict=)`, `as_dict(strict=)` — `strict` makes warnings fail |
+
+It is imported from `celine.governance.check`, not the package root.
+
 `schema_errors` reports **every** error rather than the first: a governance file is
 edited by hand, and one problem per run turns a five-minute fix into five round
 trips.

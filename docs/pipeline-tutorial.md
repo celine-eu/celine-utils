@@ -161,7 +161,7 @@ celine-utils pipeline run envs
 
 ## Meltano (Ingestion / Bronze)
 
-Configure ingestion in `meltano/meltano.yml`.
+Configure ingestion in `apps/<app>/meltano/meltano.yml`.
 
 Example job:
 
@@ -256,7 +256,7 @@ overlay mechanism for per-environment differences.
 
 ## Python / Prefect Flows
 
-Example `flows/pipeline.py`:
+Example `apps/<app>/flows/pipeline.py`:
 
 ```python
 from prefect import flow

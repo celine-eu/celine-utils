@@ -253,7 +253,7 @@ def test_the_governance_shim_is_gone():
 
     It re-exported this package under the pre-2.0 import path, for pipelines that
     had not moved. A survey on 2026-09-01 found no importer anywhere — not in
-    `celine-dev/repositories/`, `demo3`, `demo3.deployment`, `demo3.dataspace`,
+    `celine-dev/repositories/`, the deployment repositories,
     `infra` or `ds` — so the only thing keeping it alive was the test that
     protected it.
 

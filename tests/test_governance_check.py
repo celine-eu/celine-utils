@@ -334,6 +334,38 @@ def test_consent_is_checked_only_on_dataspace_offers(tmp_path):
     assert check_governance([tmp_path / "apps"]).ok(strict=True)
 
 
+# @verifies REQ-0013
+@pytest.mark.parametrize(
+    "declared",
+    [{"classification": "pii"}, {"dataspace": {"consent_required": True}}],
+    ids=["pii", "consent_required"],
+)
+def test_personal_data_narrowed_only_by_organization_filters_is_refused(
+    tmp_path, declared
+):
+    """An organization filter cannot enforce consent per subject — refused, not warned.
+
+    The person layer is declared (``allow_all``), so the row policy is complete and
+    the only finding is the incoherence: ``allow_all`` narrows nobody."""
+    _app(tmp_path, "a", {"ds.a": _offer(ALLOW_PERSON, ORGANIZATION, **declared)})
+    report = check_governance([tmp_path / "apps"])
+    assert _kinds(report, ERROR) == [("consent-coherence", "ds.a")]
+    assert "every row filter binds an organization" in report.failures()[0].detail
+
+
+# @verifies REQ-0013
+@pytest.mark.parametrize(
+    "args", [{"column": ""}, {"column": "  "}, {}], ids=["empty", "blank", "absent"]
+)
+def test_a_person_filter_must_name_its_column(tmp_path, args):
+    unnamed = {"handler": "rec_registry", "args": args}
+    consented = {"dataspace": {"consent_required": True}}
+    _app(tmp_path, "a", {"ds.a": _offer(unnamed, ORGANIZATION, **consented)})
+    [finding] = check_governance([tmp_path / "apps"]).failures()
+    assert (finding.rule, finding.dataset) == ("consent-coherence", "ds.a")
+    assert "empty column" in finding.detail
+
+
 # --- REQ-0014: the owners registry -------------------------------------------------
 
 
@@ -440,3 +472,34 @@ def test_an_organization_bound_offer_needs_its_owner_did(tmp_path):
     assert finding.rule == "owners" and "no did" in finding.detail
     assert check_governance(apps, owners_files=[with_did], dataspace=True).ok(strict=True)
     assert not check_governance(apps, dataspace=True).ok()
+
+
+# @verifies REQ-0014
+def test_a_later_owners_file_shadows_an_earlier_one_by_id(tmp_path):
+    """The later entry replaces the earlier one whole: each file is complete on its
+    own (strict), so shadowing is per id, not a field-by-field merge."""
+    from celine.governance.check import _Collector, load_owners_files
+
+    base = _write(tmp_path / "owners.yaml", OWNERS)
+    renamed = {**OWNERS["owners"][0], "name": "Example REC (renamed)"}
+    with_did = {**OWNERS["owners"][0], "did": "did:web:rec.example.org"}
+    override = _write(tmp_path / "owners.env.yaml", {"owners": [renamed]})
+    did_file = _write(tmp_path / "owners.did.yaml", {"owners": [with_did]})
+
+    out = _Collector()
+    registry, raw = load_owners_files([base, override], out)
+    assert out.findings == []
+    assert len(registry) == 1
+    assert registry.by_id("rec").name == "Example REC (renamed)"
+    assert raw["example-rec"]["name"] == "Example REC (renamed)"
+
+    # Whole-entry shadowing: the DID arrives with the later file and leaves
+    # with it — an entry without one, later, drops it.
+    owned = {"ownership": [{"name": "rec", "type": "DATA_OWNER"}]}
+    _app(tmp_path, "a", {"ds.a": {**_offer(ALLOW_PERSON, ORGANIZATION), **owned}})
+    apps = [tmp_path / "apps"]
+    assert check_governance(apps, owners_files=[base, did_file], dataspace=True).ok()
+    [finding] = check_governance(
+        apps, owners_files=[did_file, override], dataspace=True
+    ).failures()
+    assert finding.rule == "owners" and "no did" in finding.detail

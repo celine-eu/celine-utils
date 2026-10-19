@@ -562,17 +562,17 @@ def build_pair(tmp_path: Path, producer_cron: str, consumer_cron: str, extra: st
     return check_schedules(graph, load_flows(path))
 
 
+# @verifies REQ-0007
 def test_a_consumer_scheduled_before_its_producer_is_reported(tmp_path: Path):
     """The live case: `weather` at :15 reading `mt`, which runs at :27.
 
     It succeeds every hour on the previous hour's data, so nothing reports it.
-
-    @verifies REQ-0006
     """
     found = build_pair(tmp_path, producer_cron="27 * * * *", consumer_cron="15 * * * *")
     assert [f.kind for f in found] == [SCHEDULE_INVERSION]
 
 
+# @verifies REQ-0007
 def test_the_same_minute_is_reported_as_a_collision(tmp_path: Path):
     found = build_pair(tmp_path, producer_cron="0 2 * * *", consumer_cron="0 2 * * *")
     assert [f.kind for f in found] == [SCHEDULE_COLLISION]
@@ -583,11 +583,13 @@ def test_the_same_minute_is_reported_as_a_collision(tmp_path: Path):
     assert [f.kind for f in overlapping] == [SCHEDULE_COLLISION]
 
 
+# @verifies REQ-0007
 def test_a_correctly_ordered_pair_reports_nothing(tmp_path: Path):
     found = build_pair(tmp_path, producer_cron="5 * * * *", consumer_cron="15 * * * *")
     assert found == []
 
 
+# @verifies REQ-0007
 def test_different_periods_are_not_compared_on_minutes(tmp_path: Path):
     """Reasoning about an offset between hourly and daily needs the run duration,
     which is in no file. Only an identical expression is reported."""
@@ -595,12 +597,12 @@ def test_different_periods_are_not_compared_on_minutes(tmp_path: Path):
     assert found == []
 
 
+# @verifies REQ-0007
 def test_a_multi_flow_app_downgrades_the_finding_to_advisory(tmp_path: Path):
-    """`demo3` deploys a five-minute meters flow and a monthly batch flow, and only
-    the batch writes what `grid` reads. Comparing the wrong pair is arithmetically
-    true and means nothing, so it must not be indistinguishable from a real one.
-
-    @verifies REQ-0006
+    """A deployment may run a five-minute meters flow and a monthly batch flow, and
+    only the batch writes what `grid` reads. Comparing the wrong pair is
+    arithmetically true and means nothing, so it must not be indistinguishable
+    from a real one.
     """
     found = build_pair(
         tmp_path,

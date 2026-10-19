@@ -44,10 +44,10 @@ OWNERS_YAML = textwrap.dedent(
           role: dso
         aliases: [dso]
 
-      - id: spxl
+      - id: example-org
         type: schema:Corporation
-        name: Spindox Labs srl
-        url: https://spindoxlabs.com/en
+        name: Example Org srl
+        url: https://example.net
     """
 )
 
@@ -80,14 +80,14 @@ def test_did_outranks_url(registry: OwnersRegistry) -> None:
 
 
 def test_an_id_is_never_shadowed_by_someone_elses_alias() -> None:
-    """`spxl` stays itself even though another entry claims it as an alias."""
+    """`example-org` stays itself even though another entry claims it as an alias."""
     reg = OwnersRegistry(
         [
-            OwnerEntry(id="impostor", url="https://impostor.example", aliases=["spxl"]),
-            OwnerEntry(id="spxl", url="https://spindoxlabs.com/en"),
+            OwnerEntry(id="impostor", url="https://impostor.example", aliases=["example-org"]),
+            OwnerEntry(id="example-org", url="https://example.net"),
         ]
     )
-    assert reg.canonical_uri("spxl") == "https://spindoxlabs.com/en"
+    assert reg.canonical_uri("example-org") == "https://example.net"
 
 
 def test_alias_precedence_does_not_depend_on_file_order() -> None:
@@ -97,12 +97,12 @@ def test_alias_precedence_does_not_depend_on_file_order() -> None:
     after the entry that claims its name is still safe.
     """
     entries = [
-        OwnerEntry(id="spxl", url="https://spindoxlabs.com/en"),
-        OwnerEntry(id="impostor", url="https://impostor.example", aliases=["spxl"]),
+        OwnerEntry(id="example-org", url="https://example.net"),
+        OwnerEntry(id="impostor", url="https://impostor.example", aliases=["example-org"]),
     ]
-    assert OwnersRegistry(entries).canonical_uri("spxl") == "https://spindoxlabs.com/en"
-    assert OwnersRegistry(list(reversed(entries))).canonical_uri("spxl") == (
-        "https://spindoxlabs.com/en"
+    assert OwnersRegistry(entries).canonical_uri("example-org") == "https://example.net"
+    assert OwnersRegistry(list(reversed(entries))).canonical_uri("example-org") == (
+        "https://example.net"
     )
 
 
@@ -138,7 +138,7 @@ def test_len_counts_owners_not_lookup_keys(registry: OwnersRegistry) -> None:
     """
     assert len(registry) == 3
     assert len(registry.all()) == 3
-    assert {e.id for e in registry.all()} == {"example-rec", "example-dso", "spxl"}
+    assert {e.id for e in registry.all()} == {"example-rec", "example-dso", "example-org"}
 
 
 def test_membership_covers_ids_and_aliases(registry: OwnersRegistry) -> None:
@@ -163,7 +163,7 @@ def test_organization_block_survives_loading(registry: OwnersRegistry) -> None:
 
 def test_owner_without_organization_has_no_kc_org(registry: OwnersRegistry) -> None:
     assert registry.by_id("example-rec").has_kc_org is True
-    assert registry.by_id("spxl").has_kc_org is False
+    assert registry.by_id("example-org").has_kc_org is False
 
 
 def test_identity_registry_spelling_is_accepted() -> None:
@@ -206,7 +206,7 @@ def test_role_is_distinct_from_the_keycloak_role() -> None:
 
 
 def test_role_defaults_to_unset() -> None:
-    assert OwnerEntry(id="spxl").role is None
+    assert OwnerEntry(id="example-org").role is None
 
 
 # ---------------------------------------------------------------------------

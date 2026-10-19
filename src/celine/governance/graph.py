@@ -165,7 +165,7 @@ class DependencyGraph:
         """Topological levels: everything in tier N may run in parallel.
 
         This is the generated replacement for the tier tables maintained by hand
-        in ``celine-pipelines/docs/local-runtime.md`` and demo3's playbook.
+        in ``celine-pipelines/docs/local-runtime.md`` and a deployment's playbook.
 
         Pipelines caught in a cycle are omitted here and reported as a ``cycle``
         finding instead. Emitting them in an arbitrary tier would be worse than
@@ -602,7 +602,7 @@ def check_schedules(graph: "DependencyGraph", flows: Sequence[Flow]) -> List[Fin
         seen.add((edge.producer, edge.consumer))
 
         # One flow each side means the pairing is the one that moves the data.
-        # More than one and it may not be: `demo3` deploys a five-minute meters
+        # More than one and it may not be: a deployment may run a five-minute meters
         # flow and a monthly batch flow, and only the batch writes the grid
         # tables `grid` reads. Comparing the meters flow against `grid-nowcast`
         # produces a collision that is arithmetically true and means nothing.

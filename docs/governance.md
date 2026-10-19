@@ -301,7 +301,7 @@ catalogue never advertised, withholding drops an offer someone deliberately made
 
 ```yaml
 ownership:
-  - name: spxl
+  - name: example-org
     type: DATA_OWNER
   - rec            # equivalent to {name: rec, type: OWNER}
 ```
@@ -494,7 +494,7 @@ sources:
     attribution: >
       Weather data derived from OpenWeatherMap One Call API 3.0 © OpenWeather Ltd.
     ownership:
-      - name: spxl
+      - name: example-org
         type: DATA_OWNER
     access_level: restricted
     access_requirements: contract

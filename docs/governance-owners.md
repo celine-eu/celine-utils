@@ -4,11 +4,11 @@ A `governance.yaml` `ownership` block names owners by **short alias**:
 
 ```yaml
 ownership:
-  - name: spxl
+  - name: example-org
     type: DATA_OWNER
 ```
 
-`owners.yaml` is what turns `spxl` into a canonical, machine-readable identity — a
+`owners.yaml` is what turns `example-org` into a canonical, machine-readable identity — a
 DID or a URL — plus the metadata the catalogue and Keycloak need. The indirection is
 the point: an open-source pipeline can say `dso`, and each deployment's registry
 decides who that is.
@@ -19,13 +19,13 @@ decides who that is.
 
 ```yaml
 owners:
-  - id: spxl
+  - id: example-org
     type: schema:Corporation
-    name: Spindox Labs S.r.l.
+    name: Example Org S.r.l.
     role: publisher
-    did: did:web:spindoxlabs.example
-    url: https://spindoxlabs.example
-    aliases: [spindox, labs]
+    did: did:web:org.example.net
+    url: https://example.net
+    aliases: [org, example]
     organization:
       create: true
       role: technology-provider
@@ -120,8 +120,8 @@ from celine.governance import load_owners_yaml
 
 registry = load_owners_yaml(Path("owners.yaml"), validate=True)
 
-registry.by_id("spindox")          # -> OwnerEntry(id='spxl', ...) via alias
-registry.canonical_uri("spxl")     # -> 'did:web:spindoxlabs.example'
+registry.by_id("org")              # -> OwnerEntry(id='example-org', ...) via alias
+registry.canonical_uri("example-org")  # -> 'did:web:org.example.net'
 registry.by_uri("https://rec.example")
 len(registry)                      # owners, not lookup keys
 ```
@@ -247,3 +247,20 @@ authorization failure with no obvious cause.
 Note the schema requires `id`, `type` **and** `name`, while the Python model defaults
 `type` and leaves `name` optional. A file that parses is not necessarily a file that
 validates — run validation.
+
+### With the governance tree: `celine-governance validate --owners`
+
+[`celine-governance validate`](cli.md#celine-governance-validate--the-gate-before-an-import)
+checks the registry together with the governance files that name it:
+
+- **Several `--owners` files merge, each validated strictly first.** Later files
+  shadow earlier ones by `id`, and the later entry replaces the earlier one whole —
+  there is no field-by-field merge. A partial per-environment owners file therefore
+  fails the schema; pass the materialized registry.
+- **Ownership names are checked on dataspace offers only.** Every `ownership` name of
+  a dataset with `dataspace.expose` must resolve, by id or alias. A dataset only
+  listed in the catalogue is not checked: its owners are attribution, not dataspace
+  parties.
+- **`--dataspace` requires a DID** — top-level `did` or `dataspace.did` — for every
+  owner of a dataspace offer narrowed by an organization filter, since that offer
+  binds its rows to a participant. `--dataspace` needs `--owners`.

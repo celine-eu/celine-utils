@@ -311,7 +311,7 @@ def _check_row_policy(
 def _check_consent(
     rule: GovernanceRule, source: Path, dataset: str, out: _Collector
 ) -> None:
-    """``ds``' ``check_consent_coherence`` (D-3b), on what the dataspace offers."""
+    """``ds``' ``check_consent_coherence``, on what the dataspace offers."""
     if not dataspace_expose(rule) or _access(rule) == "secret":
         return
     filters = _filters(rule)

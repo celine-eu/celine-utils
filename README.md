@@ -99,6 +99,7 @@ callers. Provisioning lives in `celine-policies`.
 ## CLI
 
 ```bash
+celine-governance validate apps/ [--owners owners.yaml] [--strict]  # check governance before an import
 celine-utils governance generate marquez --app <app>   # scaffold governance.yaml from Marquez
 celine-utils pipeline init app <name>                  # scaffold a new pipeline app
 celine-utils pipeline run (meltano | dbt | prefect)    # run a pipeline stage
