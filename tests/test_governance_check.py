@@ -104,7 +104,7 @@ def test_a_file_that_does_not_load_fails_the_run(tmp_path):
 
 # @verifies REQ-0011
 def test_an_overlay_is_validated_as_part_of_the_materialized_result(tmp_path):
-    """D13: an overlay has no `sources`, so alone it fails the schema; merged it passes."""
+    """An overlay has no `sources`, so alone it fails the schema; merged it passes."""
     _app(tmp_path, "a", {"ds.a": _rule("internal", PERSON)})
     _write(
         tmp_path / "apps" / "a" / "governance.a.yaml",
@@ -137,7 +137,7 @@ def test_an_unknown_key_warns_and_fails_under_strict(tmp_path):
 
 # @verifies REQ-0011
 def test_an_overlay_dir_is_searched_like_the_base_directory(tmp_path):
-    """D18: the deployment keeps its overlays in a tree of its own."""
+    """A deployment keeps its overlays in a tree of its own."""
     _app(tmp_path, "grid", {"ds.g": _rule("internal", ORGANIZATION)})
     overlays = tmp_path / "deployment" / "governance"
     _write(
@@ -366,7 +366,7 @@ def test_each_owners_file_is_strict(tmp_path):
 
 # @verifies REQ-0014
 def test_the_dataspace_keys_validate_when_well_formed():
-    """D19: optional, but defined — a typo inside them is still refused."""
+    """Optional, but defined — a typo inside them is still refused."""
     entry = {
         **OWNERS["owners"][0],
         "did": "did:web:rec.example.org",
