@@ -33,7 +33,7 @@ documentation of behaviour, which lives in the pages these link to.
 | REQ-0011 | A governance tree is checked as it will be served, and any failure fails the run | `tests/test_governance_check.py` |
 | REQ-0012 | Every exposed, non-open dataset states both row-policy layers, with known handlers | `tests/test_governance_check.py` |
 | REQ-0013 | A dataspace offer's consent declarations agree with its person layer | `tests/test_governance_check.py` |
-| REQ-0014 | The owners registry is validated strictly, and every ownership name resolves | `tests/test_governance_check.py` |
+| REQ-0014 | The owners registry is validated strictly, and every dataspace offer's ownership names resolve | `tests/test_governance_check.py` |
 
 ---
 
@@ -303,12 +303,14 @@ row and is coherent with any declaration. Ported from `ds`' `check_consent_coher
 **Consequence if violated:** the dataspace serves a dataset on an agreement alone
 that the producer meant to gate on consent, or gates on a filter that binds nobody.
 
-## REQ-0014 — The owners registry is validated strictly, and every ownership name resolves
+## REQ-0014 — The owners registry is validated strictly, and every dataspace offer's ownership names resolve
 
 Each owners file passed to the check MUST validate against `owners.schema.json` before
 it is merged, later files shadowing earlier by `id`. The schema MUST define the
 dataspace identity registry's keys as optional properties and keep
-`additionalProperties: false`. Every `ownership` name MUST resolve to an owner; with
+`additionalProperties: false`. Every `ownership` name of a dataspace offer
+(`dataspace.expose`) MUST resolve to an owner; a dataset only listed in the catalogue is
+not checked, its owners being attribution rather than dataspace parties. With
 `--dataspace`, every owner of a dataspace offer narrowed by an organization filter MUST
 have a DID.
 

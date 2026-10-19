@@ -36,8 +36,10 @@ The rules:
    ``consent_required`` or ``pii``, and personal data needs a person filter.
    ``allow_all`` / ``deny_all`` are not person filters.
 6. **owners** — each owners file strictly against ``owners.schema.json``; every
-   ``ownership`` name resolves; with ``dataspace``, every owner of a dataspace
-   offer narrowed by an organization filter has a DID.
+   ``ownership`` name of a dataspace offer resolves (a dataset only listed in the
+   catalogue is not checked: its owners are attribution, not connector parties);
+   with ``dataspace``, every owner of a dataspace offer narrowed by an
+   organization filter has a DID.
 """
 
 from __future__ import annotations
@@ -59,7 +61,6 @@ from celine.governance.models import (
     row_filter_binds,
 )
 from celine.governance.owners import OwnerEntry, OwnersRegistry
-from celine.governance.ownership import unresolved_owners
 from celine.governance.resolver import GovernanceResolver
 from celine.governance.validation import OWNERS_SCHEMA, schema_errors, unknown_keys
 
@@ -473,24 +474,27 @@ def check_governance(
             out.add(ERROR, "schema", base, f"does not load as governance: {exc}")
             continue
 
-        if registry is not None:
-            for name, where in sorted(unresolved_owners(config, registry).items()):
-                out.add(
-                    ERROR,
-                    "owners",
-                    base,
-                    f"ownership name {name!r} resolves to no owner ({', '.join(where)})",
-                )
-
         resolver = GovernanceResolver(config)
+        unresolved: Dict[str, List[str]] = {}
         for dataset in config.sources:
             report.datasets += 1
             rule = resolver.resolve(dataset)
             _check_handlers(rule, known, base, dataset, out)
             _check_row_policy(rule, base, dataset, out)
             _check_consent(rule, base, dataset, out)
+            if registry is not None and dataspace_expose(rule):
+                for owner in rule.ownership:
+                    if registry.by_id(owner.name) is None:
+                        unresolved.setdefault(owner.name, []).append(dataset)
             if dataspace and registry is not None:
                 _check_dids(rule, raw_owners, registry, base, dataset, out)
+        for name, where in sorted(unresolved.items()):
+            out.add(
+                ERROR,
+                "owners",
+                base,
+                f"ownership name {name!r} resolves to no owner ({', '.join(where)})",
+            )
 
     for d in dirs:
         if not d.is_dir():

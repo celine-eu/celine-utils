@@ -55,7 +55,7 @@ its base. One overlay per base: the same name in two places is an error.
 | `handler` | a handler that is neither built in nor named with `--handlers`; a built-in in the wrong layer |
 | `layer-verdict` | `allow_all` and `deny_all` in one layer |
 | `consent-coherence` | on dataspace offers: a person filter without `consent_required` or `pii`, and personal data without a person filter |
-| `owners` | an owners file that is not strictly valid; an ownership name that resolves to no owner; with `--dataspace`, an owner of an organization-bound offer without a DID |
+| `owners` | an owners file that is not strictly valid; an ownership name of a dataspace offer that resolves to no owner (catalogue-only datasets are not checked); with `--dataspace`, an owner of an organization-bound offer without a DID |
 | `input` | a path matching no `governance.yaml`, a missing overlay directory, an overlay that applies to no checked base (a warning) |
 
 Every finding is collected — never only the first. Exit **1** if any error remains

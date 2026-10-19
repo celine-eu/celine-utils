@@ -342,11 +342,44 @@ def test_ownership_names_resolve_against_the_owners(tmp_path):
     owners = _write(tmp_path / "owners.yaml", OWNERS)
     ok = {"ownership": [{"name": "rec", "type": "DATA_OWNER"}]}
     bad = {"ownership": [{"name": "nobody", "type": "DATA_OWNER"}]}
-    _app(tmp_path, "a", {"ds.a": {**_rule("internal", PERSON, ORGANIZATION), **ok}})
+    _app(tmp_path, "a", {"ds.a": {**_offer(ALLOW_PERSON, ORGANIZATION), **ok}})
     assert check_governance([tmp_path / "apps"], owners_files=[owners]).ok(strict=True)
-    _app(tmp_path, "a", {"ds.a": {**_rule("internal", PERSON, ORGANIZATION), **bad}})
+    _app(tmp_path, "a", {"ds.a": {**_offer(ALLOW_PERSON, ORGANIZATION), **bad}})
     [finding] = check_governance([tmp_path / "apps"], owners_files=[owners]).failures()
     assert finding.rule == "owners" and "'nobody'" in finding.detail
+    assert finding.dataset is None and "ds.a" in finding.detail
+
+
+# @verifies REQ-0014
+def test_an_owner_named_in_defaults_is_checked_where_it_is_offered(tmp_path):
+    owners = _write(tmp_path / "owners.yaml", OWNERS)
+    bad = {"ownership": [{"name": "nobody", "type": "DATA_OWNER"}]}
+    listed = _rule("internal", PERSON, ORGANIZATION)
+    _app(tmp_path, "a", {"ds.listed": listed}, defaults=bad)
+    assert check_governance([tmp_path / "apps"], owners_files=[owners]).ok(strict=True)
+    _app(
+        tmp_path,
+        "a",
+        {"ds.listed": listed, "ds.offered": _offer(ALLOW_PERSON, ORGANIZATION)},
+        defaults=bad,
+    )
+    [finding] = check_governance([tmp_path / "apps"], owners_files=[owners]).failures()
+    assert "'nobody'" in finding.detail and "(ds.offered)" in finding.detail
+
+
+# @verifies REQ-0014
+def test_an_owner_of_a_dataset_only_listed_in_the_catalogue_is_not_checked(tmp_path):
+    owners = _write(tmp_path / "owners.yaml", OWNERS)
+    bad = {"ownership": [{"name": "nobody", "type": "DATA_OWNER"}]}
+    _app(
+        tmp_path,
+        "a",
+        {
+            "ds.listed": {**_rule("open"), **bad},
+            "ds.unexposed": {**_rule("internal", expose=False), **bad},
+        },
+    )
+    assert check_governance([tmp_path / "apps"], owners_files=[owners]).ok(strict=True)
 
 
 # @verifies REQ-0014
