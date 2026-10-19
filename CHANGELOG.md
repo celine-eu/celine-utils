@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v2.8.0 (2026-10-19)
+
+### Features
+
+- The owners rule checks dataspace offers only
+  ([`70d3d4b`](https://github.com/celine-eu/celine-utils/commit/70d3d4b7e3d388c54e6324acfdb8dee97fc19c6a))
+
+### Testing
+
+- State each case without external references
+  ([`95e54cd`](https://github.com/celine-eu/celine-utils/commit/95e54cdafd7af2c648a4ed1bda291eae81d7d3b1))
+
+
 ## v2.7.0 (2026-10-17)
 
 ### Features
