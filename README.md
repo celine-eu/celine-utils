@@ -87,7 +87,7 @@ The `DatasetClient` enables:
 
 ### Platform integrations
 
-- MQTT pipeline run events, published through `celine-sdk`
+- Pipeline run events, POSTed to the URLs in `RUN_EVENTS_URLS` (or, deprecated, published on MQTT through `celine-sdk`)
 - Keycloak client-credentials tokens, for authenticating to a protected Marquez
 
 Keycloak and Superset **administration** was removed in 2.3.0 along with the

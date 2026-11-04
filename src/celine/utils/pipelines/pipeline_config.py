@@ -1,9 +1,10 @@
 import os
-from typing import Optional
+from typing import Annotated, Optional
 
 from celine.sdk.posture import PostureGuard
 from celine.sdk.settings import OidcSettings, SdkSettings
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import NoDecode
 
 from celine.utils.common.config.settings import AppBaseSettings
 
@@ -75,7 +76,44 @@ class PipelineConfig(AppBaseSettings):
         description="Enable MQTT pipeline event publishing",
     )
 
+    # Run events over HTTP: one relay per environment, no token (the relays'
+    # boundary is the network). Set, this replaces the MQTT transport.
+    run_events_urls: Annotated[list[str], NoDecode] = Field(
+        default_factory=list,
+        alias="RUN_EVENTS_URLS",
+        description="Comma-separated relay URLs each run event is POSTed to",
+    )
+    run_events_timeout: float = Field(
+        default=5.0,
+        alias="RUN_EVENTS_TIMEOUT",
+        description="Seconds per POST attempt to one relay (one retry follows a failure)",
+    )
+
     sdk: SdkSettings = Field(default_factory=_default_sdk_settings)
+
+    @field_validator("run_events_urls", mode="before")
+    @classmethod
+    def _split_run_events_urls(cls, value: object) -> object:
+        """Read ``RUN_EVENTS_URLS`` as a comma-separated list of http(s) URLs.
+
+        An empty value means no URL. An empty item or a URL that is not
+        http(s) is refused, so a typo fails at start rather than losing every
+        event in silence.
+        """
+        if value is None:
+            return []
+        if isinstance(value, str):
+            if not value.strip():
+                return []
+            value = [item.strip() for item in value.split(",")]
+        urls = list(value)  # type: ignore[arg-type]
+        for url in urls:
+            if not url or not str(url).startswith(("http://", "https://")):
+                raise ValueError(
+                    f"RUN_EVENTS_URLS: {url!r} is not an http(s) URL "
+                    "(expected a comma-separated list, no empty items)"
+                )
+        return urls
 
     @model_validator(mode="after")
     def _check_posture(self) -> "PipelineConfig":
@@ -117,6 +155,11 @@ class PipelineConfig(AppBaseSettings):
 
             if value is None:
                 continue
+
+            if isinstance(value, list):
+                if not value:
+                    continue
+                value = ",".join(str(v) for v in value)
 
             if isinstance(alias, (list, tuple)):
                 env_key = alias[0]

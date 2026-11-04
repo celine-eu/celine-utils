@@ -125,9 +125,6 @@ class PipelineRunner:
             ),
         }
 
-    def _emit_mqtt_pipeline_event(self, *args, **kwargs):
-        pass  # Replaced by pipeline_publisher context manager in mqtt.py
-
     def _emit_event(
         self,
         job_name: str,
