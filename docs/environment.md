@@ -122,9 +122,33 @@ together with the `celine-utils admin` command tree. Keycloak provisioning lives
 
 ---
 
-## MQTT — pipeline run events
+## Pipeline run events
 
-Published through `celine-sdk`, and configured with its `CELINE_*` names:
+`flow_hooks` reports each flow run as `started`, `completed` or `failed`
+(a `celine-sdk` `PipelineRunEvent`). The transport is chosen at run time:
+
+1. `RUN_EVENTS_URLS` set → **HTTP**. MQTT is not used, even when enabled.
+2. Otherwise `MQTT_EVENTS_ENABLED` → **MQTT** (deprecated).
+3. Neither → no event.
+
+### HTTP
+
+| Variable | Meaning |
+|---|---|
+| `RUN_EVENTS_URLS` | Comma-separated `http(s)` URLs, one per receiver (a sync_tables relay per environment). An empty item or a non-http(s) URL is refused when the config is built |
+| `RUN_EVENTS_TIMEOUT` | Seconds per attempt to one URL (default `5`) |
+
+The event is POSTed as JSON, **with no token**: a receiver is reachable only from
+the pipelines' own network, and that is its access control. Every URL is tried
+concurrently and on its own, with one retry after a 5xx or a connection failure
+(a 4xx is not retried), so one receiver that is down or hanging never keeps the
+event from the others. The completion and failure hooks wait at most 12 s for the
+send; nothing in this path ever fails a pipeline.
+
+### MQTT (deprecated)
+
+Published through `celine-sdk`, and configured with its `CELINE_*` names. Used
+only when `RUN_EVENTS_URLS` is not set:
 
 | Variable | Meaning |
 |---|---|

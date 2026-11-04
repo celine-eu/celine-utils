@@ -1,75 +1,64 @@
-from contextlib import asynccontextmanager
-from os import path
-import asyncio
+import inspect
+import logging
 import threading
 import time
-import inspect
+from os import path
 from types import FrameType
 from typing import Any
 from uuid import uuid4
 
-from celine.utils.pipelines.mqtt import emit_pipeline_event
 from celine.utils.pipelines.pipeline_config import PipelineConfig
 from celine.utils.pipelines.pipeline_result import PipelineStatus
+from celine.utils.pipelines.run_events import emit_run_event
 from celine.utils.pipelines.utils import get_namespace
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
 
+#: Seconds the completion and failure hooks wait for their event to go out
+#: before the pod may terminate. Above two HTTP attempts at the default 5 s.
+HOOK_JOIN_TIMEOUT = 12.0
+
+
 def _emit_in_thread(cfg, namespace, flow_name, status, run_id, **kwargs):
     """
-    Run emit_pipeline_event in a brand-new daemon thread with its own event
-    loop. This is the only safe way to call async MQTT code from a Prefect
-    sync flow hook.
+    Send a run event (``emit_run_event``) in a brand-new daemon thread.
 
     WHY: Prefect's sync flow hooks are called via run_coro_as_sync(), which
-    posts work to a shared portal event loop in a background thread. If our
-    hook is async, it gets scheduled on that same portal loop. When
-    broker.connect() then tries to schedule asyncio.sleep() on that loop,
-    it deadlocks — the loop is blocked waiting for the hook to finish, but
-    the hook is waiting for the loop to run the sleep.
-
-    By spawning a fresh thread with asyncio.run(), we get a completely
-    independent event loop. No shared state, no deadlock possible.
-    The thread is daemon so it never prevents process exit.
+    posts work to a shared portal event loop in a background thread. The MQTT
+    transport is async: scheduled on that portal loop, broker.connect() would
+    deadlock it. ``emit_run_event`` runs the MQTT path with asyncio.run() inside
+    this thread, so it gets an independent event loop; the HTTP path is plain
+    synchronous code. The thread is daemon so it never prevents process exit,
+    and it swallows every error: a hook never raises.
     """
 
     def _run():
         try:
-            asyncio.run(
-                emit_pipeline_event(cfg, namespace, flow_name, status, run_id, **kwargs)
-            )
+            emit_run_event(cfg, namespace, flow_name, status, run_id, **kwargs)
         except Exception:
-            pass
+            logger.warning(
+                "Run event %s for %s not sent", status, flow_name, exc_info=True
+            )
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     # Fire and forget — hook returns immediately, flow is not delayed.
+    return t
 
 
-def _emit_in_thread_and_wait(
-    cfg, namespace, flow_name, status, run_id, timeout=12, **kwargs
-):
+def _emit_in_thread_and_wait(cfg, namespace, flow_name, status, run_id, **kwargs):
     """
-    Same as _emit_in_thread but joins up to `timeout` seconds.
+    Same as _emit_in_thread but joins up to ``HOOK_JOIN_TIMEOUT`` seconds.
     Used for completion/failure hooks where we want to flush before the
     pod terminates.
     """
-
-    def _run():
-        try:
-            asyncio.run(
-                emit_pipeline_event(cfg, namespace, flow_name, status, run_id, **kwargs)
-            )
-        except Exception:
-            pass
-
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-    t.join(timeout=timeout)
+    t = _emit_in_thread(cfg, namespace, flow_name, status, run_id, **kwargs)
+    t.join(timeout=HOOK_JOIN_TIMEOUT)
 
 
 # ---------------------------------------------------------------------------
@@ -115,19 +104,21 @@ def infer_flow_from_flows_dir(
 
 
 # ---------------------------------------------------------------------------
-# mqtt_flow_hooks — for Prefect @flow usage
+# flow_hooks — for Prefect @flow usage
 # ---------------------------------------------------------------------------
 
 
 def flow_hooks(cfg: PipelineConfig):
     """
     Returns (on_running, on_completion, on_failure) SYNC Prefect state-change
-    hooks that emit MQTT events without ever touching Prefect's event loop.
+    hooks that send run events (HTTP to ``RUN_EVENTS_URLS``, else the
+    deprecated MQTT transport; see ``run_events``) without ever touching
+    Prefect's event loop.
 
     Usage::
 
         _cfg = PipelineConfig()
-        _on_running, _on_completion, _on_failure = mqtt_flow_hooks(_cfg)
+        _on_running, _on_completion, _on_failure = flow_hooks(_cfg)
 
         @flow(
             name="my-flow",

@@ -60,6 +60,9 @@ pipelines = [
     # was the first that did); a floor below that let uv fork the resolution by
     # interpreter.
     "celine-sdk>=2.0.0",
+    # Run events over HTTP (celine.utils.pipelines.run_events). celine-sdk
+    # brings it today; named because this package imports it.
+    "httpx>=0.28.1",
 ]
 # Just the attrs GovernanceDatasetFacet class. `celine.governance.build_facet`
 # returns a plain dict and needs none of this.
