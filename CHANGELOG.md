@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v2.9.0 (2026-11-05)
+
+### Documentation
+
+- ADR-0005 strict, materialized validation; examples name generic owners
+  ([`0b9cdf8`](https://github.com/celine-eu/celine-utils/commit/0b9cdf88f9bc4250572cdbfa26b42ea63b03692a))
+
+### Features
+
+- **pipelines**: Run events over HTTP
+  ([`4f47e34`](https://github.com/celine-eu/celine-utils/commit/4f47e34b1554707b45b9e345201fc80b86b39e79))
+
+
 ## v2.8.0 (2026-10-19)
 
 ### Features
